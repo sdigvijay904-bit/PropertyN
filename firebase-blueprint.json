@@ -1,0 +1,17 @@
+{
+  "collections": {
+    "settings": {
+      "payment_config": {
+        "upiId": "propertyn@ybl",
+        "merchantName": "PropertyN Ventures",
+        "qrCodeUrl": "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=600",
+        "minDeposit": 250,
+        "maxDeposit": 100000,
+        "updatedAt": "2026-07-16T12:00:00.000Z"
+      }
+    },
+    "deposits": {},
+    "users": {},
+    "logs": {}
+  }
+}

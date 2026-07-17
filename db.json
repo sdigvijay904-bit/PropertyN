@@ -1,0 +1,183 @@
+{
+  "usersList": [
+    {
+      "id": "usr_demo",
+      "name": "Ajay Kumar",
+      "phone": "+91 9876543210",
+      "balance": 1540,
+      "totalEarnings": 3250,
+      "dailyEarned": 420,
+      "checkedInToday": false,
+      "inviteCode": "47523",
+      "bankAccount": {
+        "bankName": "State Bank of India",
+        "accountHolder": "Ajay Kumar",
+        "accountNumber": "304592018422",
+        "ifscCode": "SBIN0004523"
+      },
+      "role": "user",
+      "password": "password123"
+    },
+    {
+      "id": "usr_sandeep",
+      "name": "Sandeep Kumar",
+      "phone": "+91 9870014120",
+      "balance": 850,
+      "totalEarnings": 1500,
+      "dailyEarned": 103,
+      "checkedInToday": false,
+      "inviteCode": "10385",
+      "role": "user",
+      "password": "password123"
+    },
+    {
+      "id": "usr_1783942951139",
+      "name": "Vinod",
+      "phone": "+91 8233403077",
+      "balance": 110,
+      "totalEarnings": 110,
+      "dailyEarned": 0,
+      "checkedInToday": true,
+      "inviteCode": "73005",
+      "lastCheckInDate": "Tue Jul 14 2026",
+      "role": "user",
+      "password": "d8233403077"
+    },
+    {
+      "id": "usr_admin",
+      "name": "System Admin",
+      "phone": "+91 9999999999",
+      "balance": 100000,
+      "totalEarnings": 100000,
+      "dailyEarned": 0,
+      "checkedInToday": false,
+      "inviteCode": "88888",
+      "role": "admin",
+      "password": "admin123"
+    }
+  ],
+  "plans": [
+    {
+      "id": "plan_special_offer",
+      "type": "vip",
+      "title": "DLF Luxury Residencies Fund",
+      "price": 750,
+      "dailyIncome": 4536,
+      "durationDays": 2,
+      "totalProfit": 9072,
+      "image": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80",
+      "slotsMax": 10,
+      "slotsPurchased": 0
+    },
+    {
+      "id": "plan_product_a",
+      "type": "daily",
+      "title": "Urban Smart Studio Fund",
+      "price": 280,
+      "dailyIncome": 240,
+      "durationDays": 50,
+      "totalProfit": 12000,
+      "image": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80",
+      "slotsMax": 10,
+      "slotsPurchased": 3
+    },
+    {
+      "id": "plan_apex_ultima",
+      "type": "daily",
+      "title": "Sovereign Commercial Plaza Fund",
+      "price": 1200,
+      "dailyIncome": 510,
+      "durationDays": 45,
+      "totalProfit": 22950,
+      "image": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80",
+      "slotsMax": 15,
+      "slotsPurchased": 5
+    },
+    {
+      "id": "plan_royale_luxury",
+      "type": "daily",
+      "title": "Prestige Waterfront Villa Fund",
+      "price": 3500,
+      "dailyIncome": 1580,
+      "durationDays": 40,
+      "totalProfit": 63200,
+      "image": "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=600&q=80",
+      "slotsMax": 12,
+      "slotsPurchased": 2
+    },
+    {
+      "id": "plan_tractor_emulsion",
+      "type": "daily",
+      "title": "Affordable Housing Prime Fund",
+      "price": 8000,
+      "dailyIncome": 3850,
+      "durationDays": 35,
+      "totalProfit": 134750,
+      "image": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80",
+      "slotsMax": 8,
+      "slotsPurchased": 1
+    },
+    {
+      "id": "plan_vip_elite",
+      "type": "vip",
+      "title": "Emaar Premium Penthouse Syndicate",
+      "price": 15000,
+      "dailyIncome": 9500,
+      "durationDays": 4,
+      "totalProfit": 38000,
+      "image": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80",
+      "slotsMax": 5,
+      "slotsPurchased": 1
+    },
+    {
+      "id": "plan_vip_mega",
+      "type": "vip",
+      "title": "Grand Metro Mall Equity Venture",
+      "price": 50000,
+      "dailyIncome": 35000,
+      "durationDays": 3,
+      "totalProfit": 105000,
+      "image": "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=600&q=80",
+      "slotsMax": 5,
+      "slotsPurchased": 0
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx_1783942951139",
+      "type": "checkin",
+      "amount": 100,
+      "date": "7/13/2026, 5:12:31 PM",
+      "status": "success",
+      "description": "Signup Registration Bonus credited",
+      "userId": "usr_1783942951139",
+      "userPhone": "+91 8233403077"
+    },
+    {
+      "id": "tx_check_1783967905451",
+      "type": "checkin",
+      "amount": 10,
+      "date": "7/14/2026, 12:08:25 AM",
+      "status": "success",
+      "description": "Daily Check-in Reward claimed",
+      "userId": "usr_1783942951139",
+      "userPhone": "+91 8233403077"
+    }
+  ],
+  "purchasesByUserId": {
+    "usr_1783942951139": []
+  },
+  "config": {
+    "adpaint_upi_id": "sdigvijay904-3@oksbi",
+    "adpaint_upi_name": "PropertyN Solutions",
+    "adpaint_tg_channel": "https://t.me/PropertyNc",
+    "adpaint_tg_support": "https://t.me/PropertyN_Support",
+    "adpaint_platform_name": "PropertyN",
+    "adpaint_daily_bonus": "10",
+    "adpaint_min_withdrawal": "300",
+    "adpaint_min_recharge": "250",
+    "adpaint_recharge_presets": "250, 500, 750, 1000, 2200, 4840",
+    "adpaint_withdraw_time": "12:30AM - 11:59PM"
+  },
+  "customTicker": "Kiran***290\n\nRecharged ₹490"
+}

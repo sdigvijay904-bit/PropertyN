@@ -1,0 +1,6 @@
+{
+  "name": "PropertyN Property Investments",
+  "description": "A high-fidelity mobile-first real estate crowdfunding platform where users invest in premium property funds, earn real-time daily rental dividends, track level referral commissions, and manage transactions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

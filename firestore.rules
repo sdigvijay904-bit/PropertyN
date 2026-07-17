@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Deposits Collection:
+    // Anyone can read/write deposits as auth is handled in full-stack Express layer.
+    match /deposits/{depositId} {
+      allow read, write: if true;
+    }
+
+    // Users Collection:
+    // Anyone can read/write users as auth is handled in full-stack Express layer.
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Settings Collection:
+    // Anyone can read/write settings.
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Payment Logs:
+    // Anyone can read/write logs.
+    match /logs/{logId} {
+      allow read, write: if true;
+    }
+  }
+}
