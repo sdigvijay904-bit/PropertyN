@@ -41,7 +41,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
   };
 
   return (
-    <div className="space-y-6 pb-24 text-slate-800">
+    <div className="space-y-6 pb-4 text-slate-800">
       {/* Premium Header Banner matching ProfileSection exactly */}
       <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white pt-8 pb-16 px-6 rounded-b-[2.5rem] shadow-md relative overflow-hidden">
         {/* Decorative elements */}

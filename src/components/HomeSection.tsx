@@ -123,7 +123,7 @@ export default function HomeSection({
   });
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="space-y-5 pb-4">
       {/* Top Brand Header */}
       <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white p-4 rounded-b-2xl shadow-md flex items-center justify-between">
         <div className="flex items-center gap-3">

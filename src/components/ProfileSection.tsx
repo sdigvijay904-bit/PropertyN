@@ -843,7 +843,7 @@ export default function ProfileSection({
   };
 
   return (
-    <div className="pb-24">
+    <div className="pb-4">
       {/* Header Banner only when in main subview */}
       {subView === 'main' && (
         <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white pt-8 pb-16 px-6 rounded-b-[2.5rem] shadow-md relative overflow-hidden">

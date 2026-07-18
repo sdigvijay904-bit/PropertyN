@@ -418,6 +418,27 @@ export default function RechargeModal({
                 </div>
 
 
+                {/* Dedicated Payment Button Box */}
+                <div className="p-3 bg-gradient-to-r from-indigo-50/50 to-violet-50/50 rounded-2xl border border-indigo-100/40 shadow-sm space-y-2 mt-1 text-center">
+                  <span className="text-[8.5px] font-black uppercase text-indigo-500 tracking-wider">
+                    ⚡ Instant Payment Button / त्वरित भुगतान बटन
+                  </span>
+                  <a
+                    href={`upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl transition-all shadow flex items-center justify-between active:scale-98 cursor-pointer border border-indigo-500/10"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Smartphone className="w-4 h-4 text-indigo-100 animate-bounce shrink-0" />
+                      <div className="text-left">
+                        <p className="font-black text-[10.5px] tracking-wider text-white">PAY VIA ANY UPI APP</p>
+                        <p className="text-[8.5px] text-indigo-100/90 font-medium tracking-normal normal-case">Paytm, PhonePe, GPay, आदि से सीधा भुगतान करें</p>
+                      </div>
+                    </div>
+                    <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-bold text-white shrink-0">RECOMMENDED</span>
+                  </a>
+                </div>
+
+
                 {/* Verification block */}
                 <div className="space-y-4 pt-2">
                   <div className="space-y-2">
@@ -492,48 +513,20 @@ export default function RechargeModal({
                     <span>{isSubmitting ? 'Verifying Transaction...' : 'Submit Deposit Request'}</span>
                   </button>
 
-                  {/* Quick Payment Apps (Moved to very bottom / "sab se last me") */}
-                  <div className="w-full space-y-2.5 border-t border-slate-100 pt-4 mt-2">
-                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider block text-center">
-                      Or pay directly via UPI Apps / या सीधे भुगतान करें:
-                    </span>
-                    
-                    <div className="grid grid-cols-1 gap-2 w-full">
-                      {/* PhonePe Button */}
-                      <a
-                        href={`phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`}
-                        className="w-full py-3.5 px-4 bg-[#5f259f] hover:bg-[#4f1e85] text-white text-center text-[11px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-sm flex items-center justify-between active:scale-98"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="w-3.5 h-3.5 text-purple-200" />
-                          <span>Pay via PhonePe</span>
-                        </div>
-                        <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-bold text-white/95">FAST</span>
-                      </a>
+                  {/* Webhook or status instructions space */}
 
-                      {/* Paytm Button */}
-                      <a
-                        href={`paytmmp://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`}
-                        className="w-full py-3.5 px-4 bg-[#002970] hover:bg-[#001f54] text-white text-center text-[11px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-sm flex items-center justify-between active:scale-98"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="w-3.5 h-3.5 text-sky-200" />
-                          <span>Pay via Paytm</span>
-                        </div>
-                        <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-bold text-white/95">FAST</span>
-                      </a>
-
-                      {/* Google Pay Button */}
-                      <a
-                        href={`gpay://to?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`}
-                        className="w-full py-3.5 px-4 bg-[#00875a] hover:bg-[#006f4a] text-white text-center text-[11px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-sm flex items-center justify-between active:scale-98"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Smartphone className="w-3.5 h-3.5 text-emerald-200" />
-                          <span>Pay via GPay (Google Pay)</span>
-                        </div>
-                        <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-bold text-white/95">FAST</span>
-                      </a>
+                  {/* WebView / APK Support fallback warning box */}
+                  <div className="p-4 bg-amber-50/90 rounded-3xl border border-amber-200/60 text-[10.5px] text-amber-900 font-sans space-y-2.5 leading-relaxed text-left mt-2 shadow-inner">
+                    <p className="font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5 text-[10px]">
+                      <Info className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+                      <span>💡 If UPI Apps Not Opening / पेटीएम, फोनपे न खुलने पर:</span>
+                    </p>
+                    <div className="space-y-1.5 font-medium leading-relaxed">
+                      <p>यदि direct बटन दबाने पर <strong>Paytm, PhonePe या GPay</strong> नहीं खुल रहा है (यह Android WebView/APK की सुरक्षा वजह से होता है), तो कृपया ये 100% काम करने वाले आसान तरीके अपनाएं:</p>
+                      <div className="pl-2.5 border-l-2 border-amber-400 space-y-2 mt-1">
+                        <p>1. <strong className="text-slate-900 bg-amber-100 px-1 py-0.5 rounded">UPI ID Copy करें:</strong> ऊपर दिए गए <strong className="text-indigo-950 font-bold">UPI ID</strong> को Copy 📋 करें और अपने Paytm/PhonePe ऐप में "Pay to UPI ID" पर जाकर पेस्ट करें।</p>
+                        <p>2. <strong className="text-slate-900 bg-amber-100 px-1 py-0.5 rounded">QR Code का Screenshot लें:</strong> QR Code का स्क्रीनशॉट 📸 लें या उसे गैलery में सेव करें, फिर अपने पेमेंट ऐप में जाकर "Scan from Gallery" द्वारा पेमेंट पूरा करें।</p>
+                      </div>
                     </div>
                   </div>
 
