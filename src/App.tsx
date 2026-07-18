@@ -142,6 +142,7 @@ export default function App() {
   const usersListRef = React.useRef<UserProfile[]>(usersList);
   const purchasesRef = React.useRef<PurchaseRecord[]>(purchases);
   const userProfileRef = React.useRef<UserProfile | null>(userProfile);
+  const pushTimeoutRef = React.useRef<any>(null);
 
   plansRef.current = plans;
   transactionsRef.current = transactions;
@@ -552,61 +553,84 @@ export default function App() {
   };
 
   // API: Post and merge state updates to the server database
-  const pushStateToServer = async (
-    user: UserProfile | null = userProfile,
+  const pushStateToServer = (
+    user: UserProfile | null = userProfileRef.current,
     currentPlans?: InvestmentPlan[],
     currentPurchases?: PurchaseRecord[],
     currentTransactions?: TransactionRecord[],
     currentUsersList?: UserProfile[]
   ) => {
-    try {
-      const activeUser = user || userProfile;
-      const userId = activeUser ? activeUser.id : '';
-      
-      const localConfig: Record<string, string> = {};
-      const keysToSync = [
-        'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
-        'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
-        'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
-        'adpaint_withdraw_time', 'adpaint_cashier_url'
-      ];
-      keysToSync.forEach(key => {
-        const val = localStorage.getItem(key);
-        if (val) localConfig[key] = val;
-      });
-
-      const payload = {
-        userId,
-        usersList: currentUsersList || usersList,
-        plans: currentPlans || plans,
-        transactions: currentTransactions || transactions,
-        purchases: currentPurchases || purchases,
-        config: localConfig,
-        customTicker: localStorage.getItem('adpaint_custom_ticker')
-      };
-
-      const data = await firestoreSaveState(payload);
-      if (data) {
-        if (data.plans && data.plans.length > 0) {
-          setPlans(data.plans);
-          localStorage.setItem('adpaint_plans', JSON.stringify(data.plans));
-        }
-        if (data.usersList && data.usersList.length > 0) {
-          setUsersList(data.usersList);
-          localStorage.setItem('adpaint_users_list', JSON.stringify(data.usersList));
-        }
-        if (data.transactions) {
-          setTransactions(data.transactions);
-          localStorage.setItem('adpaint_transactions', JSON.stringify(data.transactions));
-        }
-        if (userId && data.purchases) {
-          setPurchases(data.purchases);
-          localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(data.purchases));
-        }
-      }
-    } catch (e) {
-      console.warn("Network transmission error (persisted locally):", e);
+    if (pushTimeoutRef.current) {
+      clearTimeout(pushTimeoutRef.current);
     }
+
+    const targetUser = user !== undefined ? user : userProfileRef.current;
+    const targetPlans = currentPlans || plansRef.current;
+    const targetPurchases = currentPurchases || purchasesRef.current;
+    const targetTransactions = currentTransactions || transactionsRef.current;
+    const targetUsersList = currentUsersList || usersListRef.current;
+
+    pushTimeoutRef.current = setTimeout(async () => {
+      try {
+        const userId = targetUser ? targetUser.id : '';
+        
+        const localConfig: Record<string, string> = {};
+        const keysToSync = [
+          'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
+          'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
+          'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
+          'adpaint_withdraw_time', 'adpaint_cashier_url'
+        ];
+        keysToSync.forEach(key => {
+          const val = localStorage.getItem(key);
+          if (val) localConfig[key] = val;
+        });
+
+        const payload = {
+          userId,
+          usersList: targetUsersList,
+          plans: targetPlans,
+          transactions: targetTransactions,
+          purchases: targetPurchases,
+          config: localConfig,
+          customTicker: localStorage.getItem('adpaint_custom_ticker')
+        };
+
+        const data = await firestoreSaveState(payload);
+        if (data) {
+          if (data.plans && data.plans.length > 0) {
+            setPlans(data.plans);
+            localStorage.setItem('adpaint_plans', JSON.stringify(data.plans));
+            plansRef.current = data.plans;
+          }
+          if (data.usersList && data.usersList.length > 0) {
+            setUsersList(data.usersList);
+            localStorage.setItem('adpaint_users_list', JSON.stringify(data.usersList));
+            usersListRef.current = data.usersList;
+            if (userId) {
+              const latestMe = data.usersList.find((u: any) => u.id === userId);
+              if (latestMe) {
+                setUserProfile(latestMe);
+                localStorage.setItem('adpaint_user', JSON.stringify(latestMe));
+                userProfileRef.current = latestMe;
+              }
+            }
+          }
+          if (data.transactions) {
+            setTransactions(data.transactions);
+            localStorage.setItem('adpaint_transactions', JSON.stringify(data.transactions));
+            transactionsRef.current = data.transactions;
+          }
+          if (userId && data.purchases) {
+            setPurchases(data.purchases);
+            localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(data.purchases));
+            purchasesRef.current = data.purchases;
+          }
+        }
+      } catch (e) {
+        console.warn("Network transmission error (persisted locally):", e);
+      }
+    }, 100);
   };
 
   // Sync state to local storage when changed and push to server database
@@ -1136,40 +1160,44 @@ export default function App() {
   }, [isLoggedIn, lastActivity]);
 
   const handleAdminSetUsersList = (action: React.SetStateAction<UserProfile[]>) => {
-    setUsersList((prev) => {
-      const updated = typeof action === 'function' ? (action as Function)(prev) : action;
-      localStorage.setItem('adpaint_users_list', JSON.stringify(updated));
-      // Sync with current logged in user if they are updated
-      let currentMe = userProfile;
-      if (userProfile) {
-        const matching = updated.find((u: UserProfile) => u.id === userProfile.id);
-        if (matching) {
-          currentMe = matching;
-          setUserProfile(matching);
-          localStorage.setItem('adpaint_user', JSON.stringify(matching));
-        }
+    const updated = typeof action === 'function' ? (action as Function)(usersListRef.current) : action;
+    
+    localStorage.setItem('adpaint_users_list', JSON.stringify(updated));
+    usersListRef.current = updated;
+    setUsersList(updated);
+
+    let currentMe = userProfileRef.current;
+    if (currentMe) {
+      const matching = updated.find((u: UserProfile) => u.id === currentMe!.id);
+      if (matching) {
+        currentMe = matching;
+        setUserProfile(matching);
+        userProfileRef.current = matching;
+        localStorage.setItem('adpaint_user', JSON.stringify(matching));
       }
-      pushStateToServer(currentMe, plans, purchases, transactions, updated);
-      return updated;
-    });
+    }
+    
+    pushStateToServer(currentMe, plansRef.current, purchasesRef.current, transactionsRef.current, updated);
   };
 
   const handleAdminSetPlans = (action: React.SetStateAction<InvestmentPlan[]>) => {
-    setPlans((prev) => {
-      const updated = typeof action === 'function' ? (action as Function)(prev) : action;
-      localStorage.setItem('adpaint_plans', JSON.stringify(updated));
-      pushStateToServer(userProfile, updated, purchases, transactions, usersList);
-      return updated;
-    });
+    const updated = typeof action === 'function' ? (action as Function)(plansRef.current) : action;
+    
+    localStorage.setItem('adpaint_plans', JSON.stringify(updated));
+    plansRef.current = updated;
+    setPlans(updated);
+    
+    pushStateToServer(userProfileRef.current, updated, purchasesRef.current, transactionsRef.current, usersListRef.current);
   };
 
   const handleAdminSetTransactions = (action: React.SetStateAction<TransactionRecord[]>) => {
-    setTransactions((prev) => {
-      const updated = typeof action === 'function' ? (action as Function)(prev) : action;
-      localStorage.setItem('adpaint_transactions', JSON.stringify(updated));
-      pushStateToServer(userProfile, plans, purchases, updated, usersList);
-      return updated;
-    });
+    const updated = typeof action === 'function' ? (action as Function)(transactionsRef.current) : action;
+    
+    localStorage.setItem('adpaint_transactions', JSON.stringify(updated));
+    transactionsRef.current = updated;
+    setTransactions(updated);
+    
+    pushStateToServer(userProfileRef.current, plansRef.current, purchasesRef.current, updated, usersListRef.current);
   };
 
   // Daily Check-In Option
