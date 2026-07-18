@@ -562,11 +562,18 @@ export async function firestoreSaveState(payload: {
 }): Promise<any> {
   await seedDatabaseIfEmpty();
   const { userId, usersList, plans, transactions, purchases, config, customTicker } = payload;
+  const isAdmin = userId === 'usr_admin';
   try {
     // 1. Merge usersList in Firestore
     if (Array.isArray(usersList)) {
       const userBatch = writeBatch(db);
       for (const u of usersList) {
+        // SECURITY / STABILITY PROTECTION:
+        // Non-admin users are strictly forbidden from writing other users' profiles!
+        if (!isAdmin && u.id !== userId) {
+          continue;
+        }
+
         const docRef = doc(db, "users", u.id);
         
         // Load latest to check security/protections
@@ -578,7 +585,7 @@ export async function firestoreSaveState(payload: {
           
           // PROTECTIONS mirror server.ts exactly:
           // 1. Prevent non-owner/non-admin clients from overwriting other users' passwords
-          if (u.id !== userId && userId !== 'usr_admin') {
+          if (u.id !== userId && !isAdmin) {
             finalUser.password = existing.password;
           }
           // 2. Prevent overwriting a custom password with the default 'password123'
@@ -593,14 +600,16 @@ export async function firestoreSaveState(payload: {
     }
 
     // 2. Update global configuration
-    const configDocRef = doc(db, "global", "config");
-    await setDoc(configDocRef, {
-      config,
-      customTicker
-    }, { merge: true });
+    if (isAdmin) {
+      const configDocRef = doc(db, "global", "config");
+      await setDoc(configDocRef, {
+        config,
+        customTicker
+      }, { merge: true });
+    }
 
     // 3. Update plans
-    if (Array.isArray(plans) && plans.length > 0) {
+    if (isAdmin && Array.isArray(plans) && plans.length > 0) {
       const plansBatch = writeBatch(db);
       for (const plan of plans) {
         plansBatch.set(doc(db, "plans", plan.id), plan, { merge: true });
@@ -612,6 +621,10 @@ export async function firestoreSaveState(payload: {
     if (Array.isArray(transactions)) {
       const txBatch = writeBatch(db);
       for (const tx of transactions) {
+        // Non-admin users are only allowed to write transactions that belong to them
+        if (!isAdmin && tx.userId !== userId) {
+          continue;
+        }
         txBatch.set(doc(db, "transactions", tx.id), tx, { merge: true });
       }
       await txBatch.commit();
@@ -623,6 +636,10 @@ export async function firestoreSaveState(payload: {
       
       // Since batch writes require knowing matching keys, and we want to replace or merge user purchases:
       for (const purchase of purchases) {
+        // Non-admin users are only allowed to write purchases that belong to them
+        if (!isAdmin && (purchase as any).userId !== userId) {
+          continue;
+        }
         purchasesBatch.set(doc(db, "purchases", purchase.id), purchase, { merge: true });
       }
       await purchasesBatch.commit();

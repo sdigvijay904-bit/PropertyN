@@ -699,12 +699,17 @@ export default function App() {
 
   // Set up periodic real-time background sync loop
   useEffect(() => {
-    syncWithServer(userProfile);
+    if (!isLoggedIn) return;
+
+    // Initial sync upon login/mount
+    syncWithServer();
+
     const interval = setInterval(() => {
-      syncWithServer(userProfile);
-    }, 4000);
+      syncWithServer();
+    }, 8000); // 8 seconds interval provides real-time responsiveness without overloading state or triggering loops
+
     return () => clearInterval(interval);
-  }, [userProfile]);
+  }, [isLoggedIn]);
 
   // Helper to get user-specific team members dynamically based on registration hierarchy
   const getDynamicTeamMembers = (user: UserProfile, allUsers: UserProfile[]): TeamMember[] => {
@@ -1124,40 +1129,8 @@ export default function App() {
     }
   };
 
-  // Session Expiry & Inactivity Auto-Logout (15 minutes limit)
-  useEffect(() => {
-    if (!isLoggedIn) return;
-
-    const resetActivity = () => {
-      setLastActivity(Date.now());
-      localStorage.setItem('adpaint_last_activity', Date.now().toString());
-    };
-
-    // Listen to standard interaction events
-    const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
-    events.forEach(name => window.addEventListener(name, resetActivity));
-
-    // Timer check every 10 seconds
-    const interval = setInterval(() => {
-      const storedLastAct = localStorage.getItem('adpaint_last_activity');
-      const actTime = storedLastAct ? parseInt(storedLastAct, 10) : lastActivity;
-      const inactiveMs = Date.now() - actTime;
-
-      // 15 minutes of inactivity = automatic secure logout
-      if (inactiveMs > 15 * 60 * 1000) {
-        saveStateToStorage(null);
-        setIsLoggedIn(false);
-        setActiveTab('home');
-        setIsAdminMode(false);
-        triggerToast('Session expired due to inactivity. Please log in again. (निष्क्रियता के कारण सत्र समाप्त हो गया।)', 'info');
-      }
-    }, 10000);
-
-    return () => {
-      events.forEach(name => window.removeEventListener(name, resetActivity));
-      clearInterval(interval);
-    };
-  }, [isLoggedIn, lastActivity]);
+  // Automatic inactivity auto-logout disabled as requested by the user
+  // Users will remain logged in until they explicitly click the Logout button.
 
   const handleAdminSetUsersList = (action: React.SetStateAction<UserProfile[]>) => {
     const updated = typeof action === 'function' ? (action as Function)(usersListRef.current) : action;
