@@ -5,3 +5,32 @@
   --font-sans: "Outfit", "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
+
+/* Force prevent pull-to-refresh reload in Android WebView and Chrome Mobile */
+html, body, #root, [class*="overflow-y-auto"], .flex-1 {
+  overscroll-behavior-y: contain !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  scroll-behavior: smooth;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+}
+
+/* Apply scroll velocity & overscroll containment to all scrollable wrappers */
+.overflow-y-auto {
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* Smoothen active press responses on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+input, textarea {
+  user-select: text !important;
+}
