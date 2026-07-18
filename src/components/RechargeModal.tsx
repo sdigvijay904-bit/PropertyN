@@ -164,13 +164,12 @@ export default function RechargeModal({
   // Use public QR Server to render the dynamic QR scanner
   const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPayloadLink)}`;
 
-  const handleDirectUpiPay = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
+  const handleDirectUpiPay = () => {
     setIsRedirecting(true);
+    // Keep the overlay visible for 3 seconds for secure transition feel, then hide
     setTimeout(() => {
       setIsRedirecting(false);
-      window.location.href = upiPayloadLink;
-    }, 2000);
+    }, 3000);
   };
 
   return (
