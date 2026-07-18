@@ -1,4 +1,8 @@
 {
+  "firestore": {
+    "rules": "firestore.rules",
+    "database": "ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769-c63579d84978"
+  },
   "hosting": {
     "public": "dist",
     "ignore": [

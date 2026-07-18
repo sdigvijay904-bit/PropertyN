@@ -27,6 +27,15 @@ import PurchaseModal from './components/PurchaseModal';
 import WelcomeNoticeModal from './components/WelcomeNoticeModal';
 import DownloadAppModal from './components/DownloadAppModal';
 
+import {
+  firestoreCheckPhone,
+  firestoreLogin,
+  firestoreRegister,
+  firestoreResetPassword,
+  firestoreGetState,
+  firestoreSaveState
+} from './lib/db';
+
 export default function App() {
   // Navigation & Authentication states
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -396,10 +405,8 @@ export default function App() {
       const activeUser = currentUser || userProfileRef.current;
       const userId = activeUser ? activeUser.id : '';
       
-      const res = await fetch(`/api/get-state?userId=${userId}`);
-      if (res.ok) {
-        const data = await res.json();
-        
+      const data = await firestoreGetState(userId);
+      if (data) {
         const currentPlans = plansRef.current;
         const currentPurchases = purchasesRef.current;
         const currentTransactions = transactionsRef.current;
@@ -578,14 +585,8 @@ export default function App() {
         customTicker: localStorage.getItem('adpaint_custom_ticker')
       };
 
-      const res = await fetch('/api/save-state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      if (res.ok) {
-        const data = await res.json();
+      const data = await firestoreSaveState(payload);
+      if (data) {
         if (data.plans && data.plans.length > 0) {
           setPlans(data.plans);
           localStorage.setItem('adpaint_plans', JSON.stringify(data.plans));
@@ -849,13 +850,10 @@ export default function App() {
     const targetPhone = `+91 ${mobileNumber}`;
     
     try {
-      const checkRes = await fetch(`/api/check-phone?phone=${encodeURIComponent(targetPhone)}`);
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        if (checkData.exists) {
-          setAuthError('Mobile number already registered! Please log in. (यह मोबाइल नंबर पहले से ही पंजीकृत है! कृपया लॉगिन करें)');
-          return;
-        }
+      const checkData = await firestoreCheckPhone(targetPhone);
+      if (checkData.exists) {
+        setAuthError('Mobile number already registered! Please log in. (यह मोबाइल नंबर पहले से ही पंजीकृत है! कृपया लॉगिन करें)');
+        return;
       }
     } catch (err) {
       console.warn("Check phone error:", err);
@@ -865,24 +863,12 @@ export default function App() {
     const finalInviterCode = invitationCode || localStorage.getItem('adpaint_pending_invite_code') || undefined;
 
     try {
-      const regRes = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: fullName,
-          phone: targetPhone,
-          password: password,
-          inviterCode: finalInviterCode
-        })
+      const regData = await firestoreRegister({
+        name: fullName,
+        phone: targetPhone,
+        password_entered: password,
+        inviterCode: finalInviterCode
       });
-
-      if (!regRes.ok) {
-        const errorData = await regRes.json();
-        setAuthError(errorData.error || 'Registration failed. (पंजीकरण विफल रहा।)');
-        return;
-      }
-
-      const regData = await regRes.json();
       const serverUser = regData.user;
 
       // Update state and persist
@@ -935,19 +921,7 @@ export default function App() {
     const targetPhone = `+91 ${mobileNumber}`;
 
     try {
-      const loginRes = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: targetPhone, password })
-      });
-
-      if (!loginRes.ok) {
-        const errData = await loginRes.json();
-        setAuthError(errData.error || 'Login failed.');
-        return;
-      }
-
-      const loginData = await loginRes.json();
+      const loginData = await firestoreLogin({ phone: targetPhone, password_entered: password });
       const serverUser = loginData.user;
       const serverPurchases = loginData.purchases;
 
@@ -970,8 +944,8 @@ export default function App() {
       // Reset fields
       setMobileNumber('');
       setPassword('');
-    } catch (err) {
-      setAuthError('Server communication error. Please try again. (सर्वर त्रुटि। पुनः प्रयास करें।)');
+    } catch (err: any) {
+      setAuthError(err.message || 'Server communication error. Please try again. (सर्वर त्रुटि। पुनः प्रयास करें।)');
     }
   };
 
@@ -988,13 +962,10 @@ export default function App() {
     const targetPhone = `+91 ${forgotPhone}`;
     
     try {
-      const checkRes = await fetch(`/api/check-phone?phone=${encodeURIComponent(targetPhone)}`);
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        if (!checkData.exists) {
-          setAuthError('This mobile number is not registered! (यह मोबाइल नंबर पंजीकृत नहीं है!)');
-          return;
-        }
+      const checkData = await firestoreCheckPhone(targetPhone);
+      if (!checkData.exists) {
+        setAuthError('This mobile number is not registered! (यह मोबाइल नंबर पंजीकृत नहीं है!)');
+        return;
       }
     } catch (err) {
       console.warn("Check phone error:", err);
@@ -1034,17 +1005,7 @@ export default function App() {
     const targetPhone = `+91 ${forgotPhone}`;
 
     try {
-      const resetRes = await fetch('/api/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: targetPhone, password: forgotNewPassword })
-      });
-
-      if (!resetRes.ok) {
-        const errData = await resetRes.json();
-        setAuthError(errData.error || 'Password reset failed.');
-        return;
-      }
+      await firestoreResetPassword({ phone: targetPhone, password_entered: forgotNewPassword });
 
       const updatedList = usersList.map(u => {
         if (u.phone === targetPhone) {
