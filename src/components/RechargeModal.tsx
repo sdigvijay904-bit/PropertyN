@@ -489,15 +489,7 @@ export default function RechargeModal({
                     <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-bold text-white shrink-0">RECOMMENDED</span>
                   </a>
 
-                  {/* WebView / APK Support Info */}
-                  <div className="pt-1.5 border-t border-indigo-100/30 text-left space-y-1">
-                    <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
-                      💡 <span className="font-bold text-slate-700">Note for App Users:</span> If PhonePe/Paytm does not open directly from the app, please copy the <span className="font-bold text-indigo-600">UPI ID</span> above or scan the <span className="font-bold text-indigo-600">QR Code</span> to pay easily from any UPI app.
-                    </p>
-                    <p className="text-[8.5px] text-slate-400 font-medium leading-relaxed">
-                      👉 यदि बटन से ऐप नहीं खुलता है, तो ऊपर से <span className="font-bold text-indigo-600">UPI ID कॉपी करें</span> या <span className="font-bold text-indigo-600">QR कोड स्कैन</span> करके किसी भी ऐप से भुगतान कर दें।
-                    </p>
-                  </div>
+
                 </div>
 
 

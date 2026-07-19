@@ -50,6 +50,11 @@ export default function ProfileSection({
     .filter((t) => t.type === 'recharge' && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  // Sum successful claim transactions (only plan earnings!)
+  const totalPlanEarnings = transactions
+    .filter((t) => t.type === 'claim' && t.status === 'success')
+    .reduce((sum, t) => sum + t.amount, 0);
+
   // Bank Form State
   const [bankName, setBankName] = useState<string>(user.bankAccount?.bankName || '');
   const [holderName, setHolderName] = useState<string>(user.bankAccount?.accountHolder || '');
@@ -705,14 +710,17 @@ export default function ProfileSection({
           <div className="space-y-6">
             {/* 3D Glassmorphic Stats Grid floating card (Matches Screenshot exactly!) */}
             <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_15px_35px_-4px_rgba(0,0,0,0.05)] overflow-hidden text-center relative">
-              <div className="grid grid-cols-3 divide-x divide-slate-100 py-6 px-2 relative z-10">
+              <div className="grid grid-cols-3 divide-x divide-slate-100 py-6 px-1 relative z-10">
                 {/* Balance Column */}
-                <div className="flex flex-col items-center justify-center">
+                <div className="flex flex-col items-center justify-center min-w-0">
                   <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(99,102,241,0.22)] mb-2 shrink-0 group-hover:scale-105 transition-transform">
                     <Wallet className="w-5 h-5" />
                   </div>
-                  <span className="text-sm font-black text-slate-900 tracking-tight block">
-                    ₹{user.balance.toFixed(2)}
+                  <span 
+                    className="text-[11px] min-[375px]:text-xs sm:text-sm font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
+                    title={`₹${user.balance.toFixed(2)}`}
+                  >
+                    ₹{Math.round(user.balance).toLocaleString('en-IN')}
                   </span>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
                     BALANCE
@@ -720,12 +728,15 @@ export default function ProfileSection({
                 </div>
 
                 {/* Recharged Column */}
-                <div className="flex flex-col items-center justify-center">
+                <div className="flex flex-col items-center justify-center min-w-0">
                   <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(245,158,11,0.22)] mb-2 shrink-0">
                     <Banknote className="w-5 h-5" />
                   </div>
-                  <span className="text-sm font-black text-slate-900 tracking-tight block">
-                    ₹{totalRecharged.toFixed(2)}
+                  <span 
+                    className="text-[11px] min-[375px]:text-xs sm:text-sm font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
+                    title={`₹${totalRecharged.toFixed(2)}`}
+                  >
+                    ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
                   </span>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
                     RECHARGED
@@ -733,12 +744,15 @@ export default function ProfileSection({
                 </div>
 
                 {/* Total Income Column */}
-                <div className="flex flex-col items-center justify-center">
+                <div className="flex flex-col items-center justify-center min-w-0">
                   <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(16,185,129,0.22)] mb-2 shrink-0">
                     <TrendingUp className="w-5 h-5" />
                   </div>
-                  <span className="text-sm font-black text-slate-900 tracking-tight block">
-                    ₹{user.totalEarnings.toFixed(2)}
+                  <span 
+                    className="text-[11px] min-[375px]:text-xs sm:text-sm font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
+                    title={`₹${totalPlanEarnings.toFixed(2)}`}
+                  >
+                    ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
                   </span>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
                     TOTAL INCOME

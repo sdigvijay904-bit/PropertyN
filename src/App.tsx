@@ -1439,7 +1439,7 @@ export default function App() {
       {/* Main Responsive Layout Wrapper (Max-width 450px on desktop for users to look identical to native mobile viewports, stretches wide for Admin Control Room on laptops) */}
       <div className={`w-full ${
         isLoggedIn && userProfile?.role === 'admin'
-          ? 'max-w-7xl h-screen md:h-[96vh] md:my-2 md:rounded-3xl'
+          ? 'max-w-none w-screen h-screen md:h-screen md:my-0 md:rounded-none border-none'
           : 'max-w-md h-[100dvh] md:h-[92vh] md:my-4 md:rounded-[3rem]'
       } bg-slate-50 overflow-hidden shadow-2xl flex flex-col relative border border-slate-800/20 transition-all duration-300`}>
         
@@ -1471,6 +1471,7 @@ export default function App() {
                   <HomeSection
                     user={userProfile}
                     plans={plans}
+                    transactions={transactions.filter(t => t.userId === userProfile.id)}
                     onOpenRecharge={() => {
                       setRechargePrefillAmount(undefined);
                       setIsRechargeOpen(true);
@@ -1547,7 +1548,7 @@ export default function App() {
                   className="absolute bottom-24 right-5 z-40 w-14 h-14 rounded-full border-2 border-white shadow-[0_8px_30px_rgba(124,58,237,0.3)] overflow-hidden cursor-pointer active:scale-95 transition-transform"
                 >
                   <img
-                    src="https://images.unsplash.com/photo-1549923746-c502d488b3ea?auto=format&fit=crop&q=80&w=256"
+                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256"
                     alt="Customer Support"
                     className="w-full h-full object-cover pointer-events-none"
                     referrerPolicy="no-referrer"
