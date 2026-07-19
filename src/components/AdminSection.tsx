@@ -1201,61 +1201,67 @@ export default function AdminSection({
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {pendingRecharges.map(tx => (
-                      <div key={tx.id} className="p-4 bg-slate-850 rounded-3xl border border-slate-800 space-y-3 shadow-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-xs font-black text-white">{tx.userPhone || 'Anonymous'}</span>
-                            <p className="text-[9px] font-mono text-slate-500">{tx.date}</p>
-                          </div>
-                          <span className="text-sm font-black text-emerald-400 font-mono">₹{tx.amount.toFixed(2)}</span>
-                        </div>
-
-                        {tx.utr && (
-                          <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-900/80 flex items-center justify-between">
-                            <span className="text-[9px] text-slate-500 font-bold uppercase font-mono">UTR Reference</span>
-                            <span className="text-xs font-black text-indigo-300 font-mono select-all">{tx.utr}</span>
-                          </div>
-                        )}
-
-                        {tx.proofImage && (
-                          <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-900/80 flex flex-col gap-2">
-                            <span className="text-[9px] text-slate-500 font-bold uppercase font-mono text-left block">Uploaded Screenshot Proof</span>
-                            <div className="relative overflow-hidden rounded-xl border border-slate-800">
-                              <img 
-                                src={tx.proofImage} 
-                                alt="Payment Receipt" 
-                                className="max-h-48 w-full object-contain bg-slate-900 hover:scale-[1.05] transition-transform duration-300 cursor-pointer"
-                                onClick={() => {
-                                  const win = window.open();
-                                  if (win) {
-                                    win.document.write(`<img src="${tx.proofImage}" style="max-width:100%; height:auto; display:block; margin:auto;" />`);
-                                  }
-                                }}
-                              />
+                    {pendingRecharges.map(tx => {
+                      const txUser = usersList.find(u => (tx.userId && u.id === tx.userId) || (tx.userPhone && u.phone === tx.userPhone));
+                      return (
+                        <div key={tx.id} className="p-4 bg-slate-850 rounded-3xl border border-slate-800 space-y-3 shadow-lg">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-black text-white block">
+                                {txUser ? txUser.name : 'Anonymous'} 
+                                <span className="text-[10px] text-slate-400 font-mono font-medium ml-1.5">({tx.userPhone || 'Anonymous'})</span>
+                              </span>
+                              <p className="text-[9px] font-mono text-slate-500 mt-0.5">{tx.date}</p>
                             </div>
-                            <span className="text-[8px] text-slate-400 font-medium text-center">Click image to view full size</span>
+                            <span className="text-sm font-black text-emerald-400 font-mono">₹{tx.amount.toFixed(2)}</span>
                           </div>
-                        )}
 
-                        <div className="flex gap-2.5 pt-1">
-                          <button
-                            onClick={() => handleRejectRecharge(tx.id)}
-                            className="flex-1 py-2 bg-slate-800 hover:bg-slate-750 text-rose-400 rounded-xl text-[10px] font-black uppercase border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Reject (Trash UTR)</span>
-                          </button>
-                          <button
-                            onClick={() => handleApproveRecharge(tx.id)}
-                            className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 transition-all cursor-pointer"
-                          >
-                            <Check className="w-3.5 h-3.5 text-white" />
-                            <span>Approve Deposit</span>
-                          </button>
+                          {tx.utr && (
+                            <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-900/80 flex items-center justify-between">
+                              <span className="text-[9px] text-slate-500 font-bold uppercase font-mono">UTR Reference</span>
+                              <span className="text-xs font-black text-indigo-300 font-mono select-all">{tx.utr}</span>
+                            </div>
+                          )}
+
+                          {tx.proofImage && (
+                            <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-900/80 flex flex-col gap-2">
+                              <span className="text-[9px] text-slate-500 font-bold uppercase font-mono text-left block">Uploaded Screenshot Proof</span>
+                              <div className="relative overflow-hidden rounded-xl border border-slate-800">
+                                <img 
+                                  src={tx.proofImage} 
+                                  alt="Payment Receipt" 
+                                  className="max-h-48 w-full object-contain bg-slate-900 hover:scale-[1.05] transition-transform duration-300 cursor-pointer"
+                                  onClick={() => {
+                                    const win = window.open();
+                                    if (win) {
+                                      win.document.write(`<img src="${tx.proofImage}" style="max-width:100%; height:auto; display:block; margin:auto;" />`);
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <span className="text-[8px] text-slate-400 font-medium text-center">Click image to view full size</span>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2.5 pt-1">
+                            <button
+                              onClick={() => handleRejectRecharge(tx.id)}
+                              className="flex-1 py-2 bg-slate-800 hover:bg-slate-750 text-rose-400 rounded-xl text-[10px] font-black uppercase border border-slate-700 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Reject (Trash UTR)</span>
+                            </button>
+                            <button
+                              onClick={() => handleApproveRecharge(tx.id)}
+                              className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 transition-all cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5 text-white" />
+                              <span>Approve Deposit</span>
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1275,13 +1281,16 @@ export default function AdminSection({
                   <div className="space-y-2.5">
                     {pendingWithdrawals.map(tx => {
                       // Fetch current bank details of user
-                      const user = usersList.find(u => u.id === tx.userId);
+                      const user = usersList.find(u => (tx.userId && u.id === tx.userId) || (tx.userPhone && u.phone === tx.userPhone));
                       return (
                         <div key={tx.id} className="p-4 bg-slate-850 rounded-3xl border border-slate-800 space-y-3 shadow-lg">
                           <div className="flex items-center justify-between">
                             <div>
-                              <span className="text-xs font-black text-white">{tx.userPhone || 'Anonymous'}</span>
-                              <p className="text-[9px] font-mono text-slate-500">{tx.date}</p>
+                              <span className="text-xs font-black text-white block">
+                                {user ? user.name : 'Anonymous'} 
+                                <span className="text-[10px] text-slate-400 font-mono font-medium ml-1.5">({tx.userPhone || 'Anonymous'})</span>
+                              </span>
+                              <p className="text-[9px] font-mono text-slate-500 mt-0.5">{tx.date}</p>
                             </div>
                             <span className="text-sm font-black text-rose-400 font-mono">₹{tx.amount.toFixed(2)}</span>
                           </div>

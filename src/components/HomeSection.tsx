@@ -396,48 +396,48 @@ export default function HomeSection({
 
                 {/* Grid Specifications */}
                 <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-3.5 text-left">
+                  <div className="grid grid-cols-2 gap-3 text-left">
                     {/* Price */}
-                    <div className="relative p-3 pl-3.5 bg-gradient-to-b from-white to-slate-50 border border-slate-200/80 shadow-[0_5px_12px_-4px_rgba(0,0,0,0.04),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2.5 min-h-[72px]">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(124,58,237,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
-                        <Wallet className="w-4.5 h-4.5" />
+                    <div className="relative p-2.5 px-3 bg-gradient-to-b from-white to-slate-50 border border-slate-200/80 shadow-[0_5px_12px_-4px_rgba(0,0,0,0.04),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2 min-h-[68px]">
+                      <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(124,58,237,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
+                        <Wallet className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Price</span>
-                        <span className="text-[13px] font-black text-slate-900 font-sans mt-1 block truncate">₹{plan.price.toLocaleString('en-IN')}</span>
+                        <span className="text-[12.5px] sm:text-[13px] font-black text-slate-900 font-sans mt-1.5 block whitespace-nowrap">₹{plan.price.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
 
                     {/* Daily Income */}
-                    <div className="relative p-3 pl-3.5 bg-gradient-to-b from-white to-amber-50/10 border border-amber-100/70 shadow-[0_5px_12px_-4px_rgba(245,158,11,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2.5 min-h-[72px]">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(245,158,11,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
-                        <TrendingUp className="w-4.5 h-4.5" />
+                    <div className="relative p-2.5 px-3 bg-gradient-to-b from-white to-amber-50/10 border border-amber-100/70 shadow-[0_5px_12px_-4px_rgba(245,158,11,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2 min-h-[68px]">
+                      <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(245,158,11,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
+                        <TrendingUp className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Daily Income</span>
-                        <span className="text-[13px] font-black text-amber-600 font-sans mt-1 block truncate">₹{plan.dailyIncome.toLocaleString('en-IN')}</span>
+                        <span className="text-[12.5px] sm:text-[13px] font-black text-amber-600 font-sans mt-1.5 block whitespace-nowrap">₹{plan.dailyIncome.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
 
                     {/* Duration */}
-                    <div className="relative p-3 pl-3.5 bg-gradient-to-b from-white to-sky-50/10 border border-sky-100/70 shadow-[0_5px_12px_-4px_rgba(14,165,233,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2.5 min-h-[72px]">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(14,165,233,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
-                        <Calendar className="w-4.5 h-4.5" />
+                    <div className="relative p-2.5 px-3 bg-gradient-to-b from-white to-sky-50/10 border border-sky-100/70 shadow-[0_5px_12px_-4px_rgba(14,165,233,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2 min-h-[68px]">
+                      <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(14,165,233,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
+                        <Calendar className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Duration</span>
-                        <span className="text-[13px] font-black text-slate-900 font-sans mt-1 block truncate">{plan.durationDays} Days</span>
+                        <span className="text-[12.5px] sm:text-[13px] font-black text-slate-900 font-sans mt-1.5 block whitespace-nowrap">{plan.durationDays} Days</span>
                       </div>
                     </div>
 
                     {/* Total Profit */}
-                    <div className="relative p-3 pl-3.5 bg-gradient-to-b from-white to-emerald-50/10 border border-emerald-100/70 shadow-[0_5px_12px_-4px_rgba(16,185,129,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2.5 min-h-[72px]">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(16,185,129,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
-                        <Award className="w-4.5 h-4.5" />
+                    <div className="relative p-2.5 px-3 bg-gradient-to-b from-white to-emerald-50/10 border border-emerald-100/70 shadow-[0_5px_12px_-4px_rgba(16,185,129,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex items-center gap-2 min-h-[68px]">
+                      <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(16,185,129,0.22),_inset_0_1px_0_rgba(255,255,255,0.3)] shrink-0">
+                        <Award className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Total Profit</span>
-                        <span className="text-[13px] font-black text-emerald-600 font-sans mt-1 block truncate">₹{plan.totalProfit.toLocaleString('en-IN')}</span>
+                        <span className="text-[12.5px] sm:text-[13px] font-black text-emerald-600 font-sans mt-1.5 block whitespace-nowrap">₹{plan.totalProfit.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
                   </div>

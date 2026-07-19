@@ -566,13 +566,19 @@ export default function App() {
 
     const targetUser = user !== undefined ? user : userProfileRef.current;
     const targetPlans = currentPlans || plansRef.current;
-    const targetPurchases = currentPurchases || purchasesRef.current;
+    const rawPurchases = currentPurchases || purchasesRef.current;
     const targetTransactions = currentTransactions || transactionsRef.current;
     const targetUsersList = currentUsersList || usersListRef.current;
 
     pushTimeoutRef.current = setTimeout(async () => {
       try {
         const userId = targetUser ? targetUser.id : '';
+        const targetPurchases = rawPurchases.map(p => {
+          if (!p.userId && userId) {
+            return { ...p, userId };
+          }
+          return p;
+        });
         
         const localConfig: Record<string, string> = {};
         const keysToSync = [
@@ -667,11 +673,17 @@ export default function App() {
     }
     if (updatedPurchases) {
       const userId = user ? user.id : (userProfile ? userProfile.id : '');
+      const refinedPurchases = updatedPurchases.map(p => {
+        if (!p.userId && userId) {
+          return { ...p, userId };
+        }
+        return p;
+      });
       if (userId) {
-        localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(updatedPurchases));
+        localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(refinedPurchases));
       }
-      localStorage.setItem('adpaint_purchases', JSON.stringify(updatedPurchases));
-      setPurchases(updatedPurchases);
+      localStorage.setItem('adpaint_purchases', JSON.stringify(refinedPurchases));
+      setPurchases(refinedPurchases);
     }
     if (updatedTx) {
       // Ensure all transactions have phone and userId fields if matched to some user
@@ -1225,6 +1237,7 @@ export default function App() {
 
     const newPurchase: PurchaseRecord = {
       id: `pur_${Date.now()}`,
+      userId: userProfile.id,
       planId: plan.id,
       planTitle: `${plan.title} (${quantity} Slots)`,
       price: totalCost,
@@ -1423,8 +1436,12 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Main Responsive Layout Wrapper (Max-width 450px on desktop to look identical to native mobile viewports) */}
-      <div className="w-full max-w-md h-[100dvh] md:h-[92vh] md:my-4 md:rounded-[3rem] bg-slate-50 overflow-hidden shadow-2xl flex flex-col relative border border-slate-800/20">
+      {/* Main Responsive Layout Wrapper (Max-width 450px on desktop for users to look identical to native mobile viewports, stretches wide for Admin Control Room on laptops) */}
+      <div className={`w-full ${
+        isLoggedIn && userProfile?.role === 'admin'
+          ? 'max-w-7xl h-screen md:h-[96vh] md:my-2 md:rounded-3xl'
+          : 'max-w-md h-[100dvh] md:h-[92vh] md:my-4 md:rounded-[3rem]'
+      } bg-slate-50 overflow-hidden shadow-2xl flex flex-col relative border border-slate-800/20 transition-all duration-300`}>
         
         {/* If logged in, show app sections, else show Auth Gate */}
         {isLoggedIn && userProfile ? (
