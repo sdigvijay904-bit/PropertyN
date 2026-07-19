@@ -488,6 +488,16 @@ export default function RechargeModal({
                     </div>
                     <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-bold text-white shrink-0">RECOMMENDED</span>
                   </a>
+
+                  {/* WebView / APK Support Info */}
+                  <div className="pt-1.5 border-t border-indigo-100/30 text-left space-y-1">
+                    <p className="text-[9px] text-slate-500 font-medium leading-relaxed">
+                      💡 <span className="font-bold text-slate-700">Note for App Users:</span> If PhonePe/Paytm does not open directly from the app, please copy the <span className="font-bold text-indigo-600">UPI ID</span> above or scan the <span className="font-bold text-indigo-600">QR Code</span> to pay easily from any UPI app.
+                    </p>
+                    <p className="text-[8.5px] text-slate-400 font-medium leading-relaxed">
+                      👉 यदि बटन से ऐप नहीं खुलता है, तो ऊपर से <span className="font-bold text-indigo-600">UPI ID कॉपी करें</span> या <span className="font-bold text-indigo-600">QR कोड स्कैन</span> करके किसी भी ऐप से भुगतान कर दें।
+                    </p>
+                  </div>
                 </div>
 
 
@@ -567,20 +577,7 @@ export default function RechargeModal({
 
                   {/* Webhook or status instructions space */}
 
-                  {/* WebView / APK Support fallback warning box */}
-                  <div className="p-4 bg-amber-50/90 rounded-3xl border border-amber-200/60 text-[10.5px] text-amber-900 font-sans space-y-2.5 leading-relaxed text-left mt-2 shadow-inner">
-                    <p className="font-black text-amber-800 uppercase tracking-wider flex items-center gap-1.5 text-[10px]">
-                      <Info className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
-                      <span>💡 If UPI Apps Not Opening / पेटीएम, फोनपे न खुलने पर:</span>
-                    </p>
-                    <div className="space-y-1.5 font-medium leading-relaxed">
-                      <p>यदि direct बटन दबाने पर <strong>Paytm, PhonePe या GPay</strong> नहीं खुल रहा है (यह Android WebView/APK की सुरक्षा वजह से होता है), तो कृपया ये 100% काम करने वाले आसान तरीके अपनाएं:</p>
-                      <div className="pl-2.5 border-l-2 border-amber-400 space-y-2 mt-1">
-                        <p>1. <strong className="text-slate-900 bg-amber-100 px-1 py-0.5 rounded">UPI ID Copy करें:</strong> ऊपर दिए गए <strong className="text-indigo-950 font-bold">UPI ID</strong> को Copy 📋 करें और अपने Paytm/PhonePe ऐप में "Pay to UPI ID" पर जाकर पेस्ट करें।</p>
-                        <p>2. <strong className="text-slate-900 bg-amber-100 px-1 py-0.5 rounded">QR Code का Screenshot लें:</strong> QR Code का स्क्रीनशॉट 📸 लें या उसे गैलery में सेव करें, फिर अपने पेमेंट ऐप में जाकर "Scan from Gallery" द्वारा पेमेंट पूरा करें।</p>
-                      </div>
-                    </div>
-                  </div>
+
 
                   {/* Easy Step-by-Step Payment Guide */}
                   <div className="p-4 bg-slate-50 rounded-3xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-2.5 leading-relaxed text-left mt-2">
