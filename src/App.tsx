@@ -139,6 +139,7 @@ export default function App() {
     }
   });
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   // Keep references to state values up-to-date to avoid stale closures in setInterval background sync callbacks
   const plansRef = React.useRef<InvestmentPlan[]>(plans);
@@ -406,9 +407,12 @@ export default function App() {
   }, []);
 
   // API: Synchronize current memory states with full stack server database (real-time sync)
-  const syncWithServer = async (currentUser: UserProfile | null = userProfileRef.current) => {
+  const syncWithServer = async (
+    currentUser: UserProfile | null = userProfileRef.current,
+    force: boolean = false
+  ) => {
     // If the local state was updated in the last 6 seconds, we defer syncing to prevent clobbering!
-    if (Date.now() - lastLocalUpdateRef.current < 6000) {
+    if (!force && Date.now() - lastLocalUpdateRef.current < 6000) {
       console.log("Deferring syncWithServer to allow pending pushStateToServer to complete...");
       return;
     }
@@ -723,19 +727,55 @@ export default function App() {
     }
   };
 
-  // Set up periodic real-time background sync loop
+  // Set up periodic real-time background sync loop and foreground listener
   useEffect(() => {
     if (!isLoggedIn) return;
 
     // Initial sync upon login/mount
     syncWithServer();
 
+    // Trigger sync when app is brought to foreground (extremely helpful on mobile!)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log("App foregrounded. Triggering sync...");
+        syncWithServer();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const interval = setInterval(() => {
       syncWithServer();
     }, 8000); // 8 seconds interval provides real-time responsiveness without overloading state or triggering loops
 
-    return () => clearInterval(interval);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(interval);
+    };
   }, [isLoggedIn]);
+
+  // Manual refresh and sync trigger
+  const handleSyncData = async () => {
+    if (!isLoggedIn || !userProfile) return;
+    setIsSyncing(true);
+    triggerToast('Connecting to database and updating records...', 'info');
+    try {
+      // Force sync with server bypassing local update safety timers
+      await syncWithServer(userProfile, true);
+      
+      // Load user-specific purchases to update UI immediately
+      const userPurchasesStr = localStorage.getItem(`adpaint_purchases_${userProfile.id}`);
+      if (userPurchasesStr) {
+        setPurchases(JSON.parse(userPurchasesStr));
+      }
+      
+      triggerToast('Database updated! Plans, balance, and ledger are up-to-date.', 'success');
+    } catch (e: any) {
+      console.error("Manual sync failed:", e);
+      triggerToast(`Sync failed: ${e.message || 'Network timeout'}`, 'error');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Helper to get user-specific team members dynamically based on registration hierarchy
   const getDynamicTeamMembers = (user: UserProfile, allUsers: UserProfile[]): TeamMember[] => {
@@ -1573,6 +1613,8 @@ export default function App() {
                     }}
                     triggerToast={triggerToast}
                     onOpenDownloadApp={() => setIsDownloadAppOpen(true)}
+                    onSyncData={handleSyncData}
+                    isSyncing={isSyncing}
                   />
                 )}
               </div>

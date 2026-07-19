@@ -25,6 +25,8 @@ interface ProfileSectionProps {
   onEnterAdminTerminal: () => void;
   triggerToast?: (text: string, type: 'success' | 'info' | 'error') => void;
   onOpenDownloadApp?: () => void;
+  onSyncData?: () => void;
+  isSyncing?: boolean;
 }
 
 export default function ProfileSection({
@@ -40,7 +42,9 @@ export default function ProfileSection({
   onLogout,
   onEnterAdminTerminal,
   triggerToast,
-  onOpenDownloadApp
+  onOpenDownloadApp,
+  onSyncData,
+  isSyncing = false
 }: ProfileSectionProps) {
   const [subView, setSubView] = useState<'main' | 'orders' | 'bank' | 'password' | 'transactions' | 'about'>('main');
   const [isCertOpen, setIsCertOpen] = useState<boolean>(false);
@@ -227,7 +231,7 @@ export default function ProfileSection({
                 })}
               </div>
             ) : (
-              <div className="py-16 text-center bg-white rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center p-5 space-y-3">
+              <div className="py-16 text-center bg-white rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center p-5 space-y-4">
                 <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-150">
                   <ShoppingBag className="w-6 h-6" />
                 </div>
@@ -235,6 +239,17 @@ export default function ProfileSection({
                   <p className="text-sm font-black text-slate-800">No Active Plans Found</p>
                   <p className="text-xs text-gray-400 max-w-[200px] mt-0.5">Please purchase our Special Offer or Product plans on the home screen to start generating daily yields.</p>
                 </div>
+                {onSyncData && (
+                  <button
+                    type="button"
+                    onClick={onSyncData}
+                    disabled={isSyncing}
+                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs rounded-xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span>{isSyncing ? 'Syncing...' : 'Sync & Refresh Plans'}</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -865,26 +880,41 @@ export default function ProfileSection({
           <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-xl translate-x-6 -translate-y-6"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-6 translate-y-6"></div>
           
-          <div className="flex items-center gap-4 relative z-10 text-left">
-            {/* Premium branded avatar/logo matching PropertyN style exactly */}
-            <div className="w-16 h-16 rounded-[1.25rem] bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center p-2 shrink-0 border border-slate-100/50">
-              <div className="flex items-center gap-0.5">
-                <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">P</span>
-                <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-teal-600 to-teal-600 bg-clip-text text-transparent">N</span>
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-4 text-left">
+              {/* Premium branded avatar/logo matching PropertyN style exactly */}
+              <div className="w-16 h-16 rounded-[1.25rem] bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center p-2 shrink-0 border border-slate-100/50">
+                <div className="flex items-center gap-0.5">
+                  <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">P</span>
+                  <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-teal-600 to-teal-600 bg-clip-text text-transparent">N</span>
+                </div>
+                <span className="text-[7.5px] font-black text-slate-500 tracking-wider uppercase -mt-0.5 block">PropertyN</span>
               </div>
-              <span className="text-[7.5px] font-black text-slate-500 tracking-wider uppercase -mt-0.5 block">PropertyN</span>
+
+              <div>
+                <h2 className="text-lg font-black tracking-tight flex items-center gap-1.5 text-white">
+                  ID : {user.phone.substring(0, 6)}**{user.phone.substring(user.phone.length - 2)}
+                </h2>
+                {/* VIP Member pill badge with golden dot */}
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-bold text-white/95 border border-white/10 mt-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>VIP Member</span>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <h2 className="text-lg font-black tracking-tight flex items-center gap-1.5 text-white">
-                ID : {user.phone.substring(0, 6)}**{user.phone.substring(user.phone.length - 2)}
-              </h2>
-              {/* VIP Member pill badge with golden dot */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-bold text-white/95 border border-white/10 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                <span>VIP Member</span>
-              </div>
-            </div>
+            {/* Manual Sync Icon Button */}
+            {onSyncData && (
+              <button
+                type="button"
+                onClick={onSyncData}
+                disabled={isSyncing}
+                className="p-3 bg-white/10 hover:bg-white/20 active:scale-95 disabled:opacity-50 transition-all rounded-2xl border border-white/10 flex items-center justify-center cursor-pointer shadow-inner shrink-0"
+                title="Sync and Refresh Account Data"
+              >
+                <RefreshCw className={`w-5 h-5 text-white ${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
+            )}
           </div>
         </div>
       )}
