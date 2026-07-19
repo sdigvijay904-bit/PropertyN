@@ -239,17 +239,7 @@ export default function ProfileSection({
                   <p className="text-sm font-black text-slate-800">No Active Plans Found</p>
                   <p className="text-xs text-gray-400 max-w-[200px] mt-0.5">Please purchase our Special Offer or Product plans on the home screen to start generating daily yields.</p>
                 </div>
-                {onSyncData && (
-                  <button
-                    type="button"
-                    onClick={onSyncData}
-                    disabled={isSyncing}
-                    className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs rounded-xl shadow-sm hover:shadow active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                    <span>{isSyncing ? 'Syncing...' : 'Sync & Refresh Plans'}</span>
-                  </button>
-                )}
+
               </div>
             )}
           </div>
@@ -805,16 +795,15 @@ export default function ProfileSection({
             {/* Account List details with color coded 3D icons */}
             <div className="bg-white rounded-[2rem] border border-slate-100/80 shadow-[0_12px_40px_rgba(0,0,0,0.03)] overflow-hidden text-left">
               <div className="divide-y divide-slate-100/50">
-                {[
+                {([
                   ...(user.role === 'admin' ? [{ label: 'Admin Panel Control Room', desc: 'Manage users, approvals, plans, & notifications', icon: ShieldCheck, action: onEnterAdminTerminal, highlight: true, grad: 'from-teal-500 to-teal-600' }] : []),
-                  { label: 'My Orders', desc: 'Earnings & active plans', icon: ShoppingBag, action: () => setSubView('orders'), badge: purchases.filter(p => !p.completed).length || undefined, grad: 'from-emerald-400 to-teal-500' },
                   { label: 'Daily Check-in', desc: 'Check in daily to earn free rewards', icon: CheckSquare, action: onDailyCheckIn, highlight: !user.checkedInToday, grad: 'from-teal-400 to-emerald-600' },
                   { label: 'Bank Account', desc: 'Bank details & withdrawal settings', icon: Landmark, action: () => setSubView('bank'), verified: !!user.bankAccount, grad: 'from-amber-400 to-orange-500' },
                   { label: 'Password', desc: 'Password & Security', icon: Lock, action: () => setSubView('password'), grad: 'from-sky-400 to-blue-500' },
                   { label: 'Transaction Records', desc: 'Full recharge & withdrawal history', icon: FileText, action: () => setSubView('transactions'), grad: 'from-pink-400 to-rose-500' },
                   { label: 'About Company', desc: 'Our story, ad sponsors & information', icon: Building, action: () => setSubView('about'), grad: 'from-slate-400 to-slate-600' },
                   { label: 'Download App', desc: 'Get the latest Android APK build package', icon: Download, action: handleDownloadApp, grad: 'from-rose-400 to-pink-500' }
-                ].map((item, idx) => {
+                ] as Array<{ label: string; desc: string; icon: any; action: () => void; highlight?: boolean; badge?: any; verified?: boolean; grad: string }>).map((item, idx) => {
                   const Icon = item.icon;
                   return (
                     <button

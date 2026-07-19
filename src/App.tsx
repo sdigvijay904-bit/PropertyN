@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Home, Users, Gift, User, ShieldCheck, RefreshCw, Eye, EyeOff, Lock, Phone, UserCheck,
   Smartphone, Sparkles, X, CheckCircle2, TrendingUp, AlertTriangle, MessageSquare, Landmark, HelpCircle,
-  Check
+  Check, ShoppingBag
 } from 'lucide-react';
 
 import { UserProfile, InvestmentPlan, PurchaseRecord, TransactionRecord, TeamMember, BankAccount } from './types';
@@ -19,6 +19,7 @@ import InviteSection from './components/InviteSection';
 import TeamSection from './components/TeamSection';
 import ProfileSection from './components/ProfileSection';
 import AdminSection from './components/AdminSection';
+import OrdersSection from './components/OrdersSection';
 
 import RechargeModal from './components/RechargeModal';
 import WithdrawModal from './components/WithdrawModal';
@@ -44,7 +45,7 @@ export default function App() {
   // Navigation & Authentication states
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authTab, setAuthTab] = useState<'login' | 'register' | 'forgot'>('login');
-  const [activeTab, setActiveTab] = useState<'home' | 'invite' | 'team' | 'profile'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'invite' | 'orders' | 'team' | 'profile'>('home');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1583,6 +1584,13 @@ export default function App() {
                   />
                 )}
 
+                {activeTab === 'orders' && (
+                  <OrdersSection
+                    purchases={purchases}
+                    onClaimOrderEarnings={handleClaimOrderEarnings}
+                  />
+                )}
+
                 {activeTab === 'team' && (
                   <TeamSection
                     teamMembers={getDynamicTeamMembers(userProfile, usersList)}
@@ -1647,37 +1655,68 @@ export default function App() {
                 </motion.button>
               )}
 
-              {/* Bottom Navigation rail (Matches screenshot 1 & 4 layout exactly!) */}
-              <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around pt-2 pb-6 md:pb-2 px-1.5 z-40 shadow-[0_-8px_24px_rgba(15,23,42,0.06)]">
+              {/* Bottom Navigation rail (Matches screenshot 1 & 4 layout exactly, optimized for custom user request) */}
+              <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around h-13 z-40 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] overflow-visible px-1">
                 {[
                   { id: 'home', label: 'Home', icon: Home },
                   { id: 'invite', label: 'Invite', icon: Gift },
+                  { id: 'orders', label: 'Orders', icon: ShoppingBag, isSpecial: true },
                   { id: 'team', label: 'Team', icon: Users },
                   { id: 'profile', label: 'Profile', icon: User }
                 ].map((tab) => {
                   const Icon = tab.icon;
                   const isSelected = activeTab === tab.id;
+                  
+                  if (tab.isSpecial) {
+                    const activeOrdersCount = purchases.filter(p => !p.completed).length;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className="flex flex-col items-center justify-center flex-1 relative -top-3.5 group cursor-pointer select-none"
+                      >
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_4px_12px_rgba(16,185,129,0.3)] relative ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-teal-700 text-white scale-110 ring-4 ring-white shadow-[0_6px_16px_rgba(16,185,129,0.4)]'
+                            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 ring-2 ring-white'
+                        }`}>
+                          <Icon className="w-5 h-5 transition-transform group-active:scale-90" />
+                          {activeOrdersCount > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center bg-rose-500 text-white text-[8px] font-black rounded-full border border-white shadow-sm">
+                              {activeOrdersCount}
+                            </span>
+                          )}
+                        </div>
+                        <span className={`text-[8px] font-extrabold tracking-wider uppercase absolute -bottom-5 transition-all duration-200 ${
+                          isSelected ? 'text-teal-600 font-black scale-105' : 'text-slate-400 group-hover:text-slate-500'
+                        }`}>
+                          {tab.label}
+                        </span>
+                      </button>
+                    );
+                  }
+
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className="flex flex-col items-center justify-center flex-1 py-0.5 group cursor-pointer select-none"
+                      className="flex flex-col items-center justify-center flex-1 py-1 group cursor-pointer select-none"
                     >
-                      <div className={`p-1.5 rounded-xl transition-all duration-300 relative ${
+                      <div className={`p-1 rounded-lg transition-all duration-300 relative ${
                         isSelected
-                          ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-teal-700 text-white shadow-[0_5px_12px_rgba(109,40,217,0.35),inset_0_1px_1px_rgba(255,255,255,0.4),0_1px_2px_rgba(0,0,0,0.1)] scale-[1.08] border-t border-white/25'
-                          : 'text-slate-400 group-hover:text-slate-600 hover:bg-slate-50'
+                          ? 'text-teal-600 scale-105'
+                          : 'text-slate-400 group-hover:text-slate-600'
                       }`}>
-                        <Icon className="w-4.5 h-4.5 transition-transform group-active:scale-90" />
+                        <Icon className="w-4 h-4 transition-transform group-active:scale-90" />
                         {isSelected && (
-                          <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-400"></span>
+                          <span className="absolute -top-0.5 -right-0.5 flex h-1 w-1">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1 w-1 bg-teal-500"></span>
                           </span>
                         )}
                       </div>
-                      <span className={`text-[9px] font-black mt-1 tracking-wider uppercase transition-all duration-200 ${
-                        isSelected ? 'text-teal-600 font-extrabold scale-105' : 'text-slate-400 group-hover:text-slate-500'
+                      <span className={`text-[8px] font-bold mt-0.5 tracking-wider uppercase transition-all duration-200 ${
+                        isSelected ? 'text-teal-600 font-black scale-105' : 'text-slate-400 group-hover:text-slate-500'
                       }`}>
                         {tab.label}
                       </span>

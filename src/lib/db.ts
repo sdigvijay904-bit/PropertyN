@@ -317,14 +317,67 @@ export async function seedDatabaseIfEmpty() {
   }
 }
 
+export function cleanPhoneNumber(phone: string): string {
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, "");
+  let finalDigits = digits;
+  if (digits.length === 10) {
+    finalDigits = "91" + digits;
+  } else if (digits.length === 12 && digits.startsWith("91")) {
+    finalDigits = digits;
+  } else if (digits.length > 10) {
+    // Keep the last 10 digits prefixed by 91
+    const last10 = digits.substring(digits.length - 10);
+    finalDigits = "91" + last10;
+  }
+  
+  if (finalDigits.length === 12 && finalDigits.startsWith("91")) {
+    return `+91 ${finalDigits.substring(2)}`;
+  }
+  
+  return phone.trim();
+}
+
 // Check phone registered
 export async function firestoreCheckPhone(phone: string): Promise<{ exists: boolean }> {
   await seedDatabaseIfEmpty();
+  const cleanedPhone = cleanPhoneNumber(phone);
   try {
     const usersColl = collection(db, "users");
-    const q = query(usersColl, where("phone", "==", phone));
+    const q = query(usersColl, where("phone", "==", cleanedPhone));
     const querySnapshot = await getDocs(q);
-    return { exists: !querySnapshot.empty };
+    if (!querySnapshot.empty) {
+      return { exists: true };
+    }
+
+    // Also check deterministic user doc ID as fallback / double check
+    const digitsOnly = cleanedPhone.replace(/\D/g, "");
+    if (digitsOnly.length >= 10) {
+      const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
+      const userDocRef = doc(db, "users", `usr_${last10Digits}`);
+      const userSnap = await getDoc(userDocRef);
+      if (userSnap.exists()) {
+        return { exists: true };
+      }
+
+      // Broad scan check for last 10 digits in phone field
+      const allUsersSnap = await getDocs(usersColl);
+      let found = false;
+      allUsersSnap.forEach((docSnap) => {
+        const u = docSnap.data() as UserProfile;
+        if (u.phone) {
+          const uDigits = u.phone.replace(/\D/g, "");
+          if (uDigits.endsWith(last10Digits)) {
+            found = true;
+          }
+        }
+      });
+      if (found) {
+        return { exists: true };
+      }
+    }
+
+    return { exists: false };
   } catch (err) {
     console.error("firestoreCheckPhone error:", err);
     return { exists: false };
@@ -335,17 +388,44 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
 export async function firestoreLogin(payload: { phone: string; password_entered: string }): Promise<any> {
   await seedDatabaseIfEmpty();
   const { phone, password_entered } = payload;
+  const cleanedPhone = cleanPhoneNumber(phone);
   try {
     const usersColl = collection(db, "users");
-    const q = query(usersColl, where("phone", "==", phone));
-    const querySnapshot = await getDocs(q);
+    let q = query(usersColl, where("phone", "==", cleanedPhone));
+    let querySnapshot = await getDocs(q);
+    let user: UserProfile | null = null;
     
-    if (querySnapshot.empty) {
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      user = userDoc.data() as UserProfile;
+    } else {
+      // If query by phone field did not match, try querying by deterministic document ID
+      const digitsOnly = cleanedPhone.replace(/\D/g, "");
+      if (digitsOnly.length >= 10) {
+        const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
+        const userDocRef = doc(db, "users", `usr_${last10Digits}`);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          user = userSnap.data() as UserProfile;
+        } else {
+          // Broad scan check as fallback
+          const allUsersSnap = await getDocs(usersColl);
+          allUsersSnap.forEach((docSnap) => {
+            const u = docSnap.data() as UserProfile;
+            if (u.phone) {
+              const uDigits = u.phone.replace(/\D/g, "");
+              if (uDigits.endsWith(last10Digits)) {
+                user = u;
+              }
+            }
+          });
+        }
+      }
+    }
+
+    if (!user) {
       throw new Error("Mobile number not registered! Please sign up first.");
     }
-    
-    const userDoc = querySnapshot.docs[0];
-    const user = userDoc.data() as UserProfile;
     
     if (user.status === 'blocked') {
       throw new Error("Your account has been suspended by Admin.");
@@ -393,20 +473,35 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
 export async function firestoreRegister(payload: { name: string; phone: string; password_entered: string; inviterCode?: string }): Promise<any> {
   await seedDatabaseIfEmpty();
   const { name, phone, password_entered, inviterCode } = payload;
+  const cleanedPhone = cleanPhoneNumber(phone);
   try {
     const usersColl = collection(db, "users");
-    const q = query(usersColl, where("phone", "==", phone));
+    const q = query(usersColl, where("phone", "==", cleanedPhone));
     const querySnapshot = await getDocs(q);
     
     if (!querySnapshot.empty) {
       throw new Error("Mobile number already registered! Please log in.");
     }
 
-    const newUserId = `usr_${Date.now()}`;
+    // Generate a deterministic unique user ID based on phone number to physically prevent duplicates!
+    const digitsOnly = cleanedPhone.replace(/\D/g, "");
+    if (digitsOnly.length < 10) {
+      throw new Error("Please provide a valid mobile number.");
+    }
+    const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
+    const newUserId = `usr_${last10Digits}`;
+
+    // Double check document existence for safety
+    const userDocRef = doc(db, "users", newUserId);
+    const existingDoc = await getDoc(userDocRef);
+    if (existingDoc.exists()) {
+      throw new Error("Mobile number already registered! Please log in.");
+    }
+
     const newUser: UserProfile = {
       id: newUserId,
       name,
-      phone,
+      phone: cleanedPhone,
       balance: 100, // free signup bonus
       totalEarnings: 100,
       dailyEarned: 0,
@@ -439,7 +534,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     };
 
     // Save user
-    await setDoc(doc(db, "users", newUser.id), cleanUndefined(newUser));
+    await setDoc(userDocRef, cleanUndefined(newUser));
 
     // Save transaction
     await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
@@ -492,18 +587,47 @@ export function cleanUndefined<T>(obj: T): T {
 export async function firestoreResetPassword(payload: { phone: string; password_entered: string }): Promise<any> {
   await seedDatabaseIfEmpty();
   const { phone, password_entered } = payload;
+  const cleanedPhone = cleanPhoneNumber(phone);
   try {
     const usersColl = collection(db, "users");
-    const q = query(usersColl, where("phone", "==", phone));
+    const q = query(usersColl, where("phone", "==", cleanedPhone));
     const querySnapshot = await getDocs(q);
     
-    if (querySnapshot.empty) {
+    let userDocRef = null;
+
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      userDocRef = doc(db, "users", userDoc.id);
+    } else {
+      // Try by deterministic document ID
+      const digitsOnly = cleanedPhone.replace(/\D/g, "");
+      if (digitsOnly.length >= 10) {
+        const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
+        const deterministicRef = doc(db, "users", `usr_${last10Digits}`);
+        const userSnap = await getDoc(deterministicRef);
+        if (userSnap.exists()) {
+          userDocRef = deterministicRef;
+        } else {
+          // Broad scan check as fallback
+          const allUsersSnap = await getDocs(usersColl);
+          allUsersSnap.forEach((docSnap) => {
+            const u = docSnap.data() as UserProfile;
+            if (u.phone) {
+              const uDigits = u.phone.replace(/\D/g, "");
+              if (uDigits.endsWith(last10Digits)) {
+                userDocRef = doc(db, "users", docSnap.id);
+              }
+            }
+          });
+        }
+      }
+    }
+
+    if (!userDocRef) {
       throw new Error("This mobile number is not registered!");
     }
 
-    const userDoc = querySnapshot.docs[0];
-    const userRef = doc(db, "users", userDoc.id);
-    await updateDoc(userRef, { password: password_entered });
+    await updateDoc(userDocRef, { password: password_entered });
     return { success: true };
   } catch (err: any) {
     throw err;
