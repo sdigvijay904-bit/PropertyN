@@ -26,15 +26,16 @@ import {
   where,
   Firestore
 } from 'firebase/firestore';
+import firebaseConfigJson from '../../firebase-applet-config.json';
 
 // Default Firebase configuration fallbacks or actual environment variables
 const firebaseConfig = {
-  apiKey: (import.meta as any).env?.VITE_FIREBASE_API_KEY || "AIzaSyDummyKeyForPropertyNDepositPage",
-  authDomain: (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || "propertyn-earnings.firebaseapp.com",
-  projectId: (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || "propertyn-earnings",
-  storageBucket: (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || "propertyn-earnings.appspot.com",
-  messagingSenderId: (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
-  appId: (import.meta as any).env?.VITE_FIREBASE_APP_ID || "1:1234567890:web:dummyappid"
+  apiKey: firebaseConfigJson?.apiKey || (import.meta as any).env?.VITE_FIREBASE_API_KEY || "AIzaSyDummyKeyForPropertyNDepositPage",
+  authDomain: firebaseConfigJson?.authDomain || (import.meta as any).env?.VITE_FIREBASE_AUTH_DOMAIN || "propertyn-earnings.firebaseapp.com",
+  projectId: firebaseConfigJson?.projectId || (import.meta as any).env?.VITE_FIREBASE_PROJECT_ID || "propertyn-earnings",
+  storageBucket: firebaseConfigJson?.storageBucket || (import.meta as any).env?.VITE_FIREBASE_STORAGE_BUCKET || "propertyn-earnings.appspot.com",
+  messagingSenderId: firebaseConfigJson?.messagingSenderId || (import.meta as any).env?.VITE_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
+  appId: firebaseConfigJson?.appId || (import.meta as any).env?.VITE_FIREBASE_APP_ID || "1:1234567890:web:dummyappid"
 };
 
 // Initialize real Firebase services wrapped in try-catch to allow graceful local sandbox simulation fallback
@@ -44,7 +45,7 @@ let db: any = null;
 let isRealFirebaseActive = false;
 
 try {
-  const apiKey = (import.meta as any).env?.VITE_FIREBASE_API_KEY;
+  const apiKey = firebaseConfig.apiKey;
   const hasRealCredentials = apiKey && !apiKey.includes("Dummy") && apiKey.length > 20;
 
   if (hasRealCredentials) {
@@ -54,7 +55,9 @@ try {
       app = getApp();
     }
     auth = getAuth(app);
-    db = getFirestore(app);
+    // CRITICAL: Load from firestoreDatabaseId if configured in the applet config json
+    const customDbId = firebaseConfigJson?.firestoreDatabaseId;
+    db = customDbId ? getFirestore(app, customDbId) : getFirestore(app);
     isRealFirebaseActive = true;
     console.log("Firebase successfully initialized inside PropertyN!");
   } else {
