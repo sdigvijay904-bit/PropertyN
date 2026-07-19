@@ -81,7 +81,7 @@ export default function PurchaseModal({
           {/* Close Button 'X' */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-20 w-8 h-8 bg-violet-50 hover:bg-violet-100 text-violet-600 rounded-full flex items-center justify-center transition-colors active:scale-90"
+            className="absolute top-4 right-4 z-20 w-8 h-8 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center transition-colors active:scale-90"
             aria-label="Close"
           >
             <X className="w-4 h-4" strokeWidth={3} />
@@ -127,7 +127,7 @@ export default function PurchaseModal({
               {/* Title overlay at the bottom */}
               <div className="absolute bottom-5 left-5 right-5 text-left text-white">
                 <h3 className="text-xl font-black tracking-tight drop-shadow-sm">{plan.title}</h3>
-                <p className="text-[10px] text-violet-100 font-bold mt-1 flex items-center gap-1">
+                <p className="text-[10px] text-emerald-100 font-bold mt-1 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-amber-300 animate-pulse" />
                   <span>Real-Estate Advertisement Slot Sponsorship</span>
                 </p>
@@ -138,7 +138,7 @@ export default function PurchaseModal({
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-black text-slate-800">Select Quantity (Slots)</span>
-                <span className="bg-violet-600 text-white font-extrabold text-sm px-4 py-1.5 rounded-full shadow-sm shadow-violet-200">
+                <span className="bg-emerald-600 text-white font-extrabold text-sm px-4 py-1.5 rounded-full shadow-sm shadow-emerald-200">
                   {quantity}
                 </span>
               </div>
@@ -152,9 +152,9 @@ export default function PurchaseModal({
                   step="1"
                   value={quantity}
                   onChange={handleSliderChange}
-                  className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-violet-600 focus:outline-none focus:ring-0"
+                  className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none focus:ring-0"
                   style={{
-                    background: `linear-gradient(to right, #7c3aed 0%, #7c3aed ${((quantity - 1) / (sliderMax - 1)) * 100}%, #f1f5f9 ${((quantity - 1) / (sliderMax - 1)) * 100}%, #f1f5f9 100%)`
+                    background: `linear-gradient(to right, #0da193 0%, #0da193 ${((quantity - 1) / (sliderMax - 1)) * 100}%, #f1f5f9 ${((quantity - 1) / (sliderMax - 1)) * 100}%, #f1f5f9 100%)`
                   }}
                 />
                 
@@ -164,7 +164,7 @@ export default function PurchaseModal({
                     <span
                       key={num}
                       className={`transition-colors duration-200 ${
-                        quantity === num ? 'text-violet-600 font-black scale-110' : 'text-slate-400'
+                        quantity === num ? 'text-emerald-600 font-black scale-110' : 'text-slate-400'
                       }`}
                     >
                       {num}
@@ -181,7 +181,7 @@ export default function PurchaseModal({
             </div>
 
             {/* Total Payable Card */}
-            <div className="bg-violet-50/70 border border-violet-100/60 rounded-xl p-5 flex items-center justify-between shadow-sm">
+            <div className="bg-emerald-50/70 border border-emerald-100/60 rounded-xl p-5 flex items-center justify-between shadow-sm">
               <div className="text-left space-y-1">
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Total Payable</span>
                 <span className="text-xs font-black text-emerald-600 block flex items-center gap-1">
@@ -190,7 +190,7 @@ export default function PurchaseModal({
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-black text-violet-700 font-sans">
+                <span className="text-2xl font-black text-emerald-700 font-sans">
                   ₹{totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -199,7 +199,7 @@ export default function PurchaseModal({
             {/* Confirm Purchase Button */}
             <button
               onClick={handleConfirm}
-              className="w-full py-4.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-xl shadow-md shadow-violet-100 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+              className="w-full py-4.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm rounded-xl shadow-md shadow-emerald-100 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
             >
               <ShoppingCart className="w-5 h-5 text-white" />
               <span>Confirm Purchase</span>

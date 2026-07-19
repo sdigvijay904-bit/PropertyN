@@ -186,7 +186,7 @@ export default function ProfileSection({
                       {/* Plan Summary header */}
                       <div className="flex items-start justify-between">
                         <div>
-                          <h4 className="text-sm font-black text-indigo-950">{item.planTitle}</h4>
+                          <h4 className="text-sm font-black text-teal-950">{item.planTitle}</h4>
                           <p className="text-[10px] text-gray-400 font-sans font-bold mt-0.5">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</p>
                         </div>
                         <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${item.completed ? 'bg-gray-100 text-gray-500' : 'bg-emerald-50 text-emerald-600 animate-pulse'}`}>
@@ -198,11 +198,11 @@ export default function ProfileSection({
                       <div className="grid grid-cols-3 gap-2 text-center">
                         <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
                           <span className="text-[9px] font-bold text-gray-400 uppercase block">Daily Yield</span>
-                          <span className="text-xs font-black text-indigo-950 font-sans">₹{item.dailyIncome}</span>
+                          <span className="text-xs font-black text-teal-950 font-sans">₹{item.dailyIncome}</span>
                         </div>
                         <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
                           <span className="text-[9px] font-bold text-gray-400 uppercase block">Total Claimed</span>
-                          <span className="text-xs font-black text-indigo-950 font-sans">₹{item.totalClaimed.toFixed(2)}</span>
+                          <span className="text-xs font-black text-teal-950 font-sans">₹{item.totalClaimed.toFixed(2)}</span>
                         </div>
                         <div className="p-2 bg-emerald-50/40 rounded-xl border border-emerald-100/10">
                           <span className="text-[9px] font-bold text-emerald-600 uppercase block">Accruing Now</span>
@@ -216,7 +216,7 @@ export default function ProfileSection({
                           type="button"
                           onClick={() => onClaimOrderEarnings(item.id)}
                           disabled={!canClaim}
-                          className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 disabled:from-gray-100 disabled:to-gray-150 disabled:text-gray-400 disabled:shadow-none text-white text-xs font-black rounded-xl shadow-md shadow-violet-100 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                          className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 disabled:from-gray-100 disabled:to-gray-150 disabled:text-gray-400 disabled:shadow-none text-white text-xs font-black rounded-xl shadow-md shadow-emerald-100 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
                         >
                           <TrendingUp className="w-4 h-4 animate-bounce" />
                           <span>Claim Accumulated ₹{accrued.toFixed(2)}</span>
@@ -251,9 +251,9 @@ export default function ProfileSection({
             </div>
 
             <form onSubmit={handleSaveBank} className="bg-white p-5 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 text-left">
-              <div className="p-3 bg-violet-50/50 border border-violet-100 rounded-2xl mb-2 flex items-start gap-2">
-                <Landmark className="w-4 h-4 text-violet-600 mt-0.5" />
-                <p className="text-[11px] text-violet-900 font-medium leading-relaxed">
+              <div className="p-3 bg-emerald-50/50 border border-emerald-100 rounded-2xl mb-2 flex items-start gap-2">
+                <Landmark className="w-4 h-4 text-emerald-600 mt-0.5" />
+                <p className="text-[11px] text-emerald-900 font-medium leading-relaxed">
                   Please ensure your IFSC code and Account details are perfectly matched to your Bank Passbook. Verified cards enable instant automated payouts.
                 </p>
               </div>
@@ -267,7 +267,7 @@ export default function ProfileSection({
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
                   placeholder="e.g. State Bank of India, HDFC Bank"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
                 />
               </div>
 
@@ -280,7 +280,7 @@ export default function ProfileSection({
                   value={holderName}
                   onChange={(e) => setHolderName(e.target.value)}
                   placeholder="e.g. Rahul Sharma"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
                 />
               </div>
 
@@ -293,7 +293,7 @@ export default function ProfileSection({
                   value={accountNo}
                   onChange={(e) => setAccountNo(e.target.value.replace(/\D/g, ''))}
                   placeholder="e.g. 302195028420"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all font-sans"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-sans"
                 />
               </div>
 
@@ -307,7 +307,7 @@ export default function ProfileSection({
                   value={ifsc}
                   onChange={(e) => setIfsc(e.target.value.toUpperCase())}
                   placeholder="e.g. SBIN0001043"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all font-sans"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-sans"
                 />
               </div>
 
@@ -320,7 +320,7 @@ export default function ProfileSection({
 
               <button
                 type="submit"
-                className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-2xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm rounded-2xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
               >
                 <Save className="w-4.5 h-4.5" />
                 <span>Save Bank Details</span>
@@ -356,7 +356,7 @@ export default function ProfileSection({
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Enter min 4 digit security password"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all font-sans"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-sans"
                 />
               </div>
 
@@ -369,7 +369,7 @@ export default function ProfileSection({
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter security password"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all font-sans"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-sans"
                 />
               </div>
 
@@ -384,7 +384,7 @@ export default function ProfileSection({
 
               <button
                 type="submit"
-                className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-2xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm rounded-2xl shadow-md active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
               >
                 <Save className="w-4.5 h-4.5" />
                 <span>Save Password</span>
@@ -423,7 +423,7 @@ export default function ProfileSection({
                       <div>
                         <p className="text-xs font-bold text-slate-800">{tx.description}</p>
                         <p className="text-[10px] text-gray-400 font-sans font-bold mt-0.5">{tx.date}</p>
-                        {tx.utr && <p className="text-[9px] text-violet-600 font-sans font-bold bg-violet-50 px-1.5 py-0.5 rounded w-max mt-1">Ref: {tx.utr}</p>}
+                        {tx.utr && <p className="text-[9px] text-emerald-600 font-sans font-bold bg-emerald-50 px-1.5 py-0.5 rounded w-max mt-1">Ref: {tx.utr}</p>}
                       </div>
                     </div>
 
@@ -464,7 +464,7 @@ export default function ProfileSection({
             </div>
 
             {/* Branded Banner */}
-            <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-3xl p-6 text-left relative overflow-hidden shadow-lg shadow-indigo-100/50">
+            <div className="bg-gradient-to-br from-teal-900 to-slate-900 text-white rounded-3xl p-6 text-left relative overflow-hidden shadow-lg shadow-teal-100/50">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
               <div className="relative z-10 space-y-2">
                 <span className="px-2.5 py-0.5 bg-amber-400 text-amber-950 font-black text-[9px] uppercase tracking-wider rounded-md">
@@ -473,7 +473,7 @@ export default function ProfileSection({
                 <h4 className="text-base font-black tracking-tight text-white font-sans">
                   PropertyN Investment Solutions Pvt. Ltd.
                 </h4>
-                <p className="text-[10px] text-indigo-200/90 leading-normal font-medium">
+                <p className="text-[10px] text-teal-200/90 leading-normal font-medium">
                   CIN: U74899DL2025PTC139580 • Registered Office: Connaught Place, New Delhi, Delhi 110001 • MCA Registered Operations
                 </p>
               </div>
@@ -481,11 +481,11 @@ export default function ProfileSection({
 
             {/* Company Detailed Overview card */}
             <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm space-y-4 text-left leading-relaxed text-xs text-gray-600 font-medium">
-              <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center p-2 mb-2 shadow-inner text-violet-700">
+              <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center p-2 mb-2 shadow-inner text-emerald-700">
                 <Building className="w-6 h-6" />
               </div>
 
-              <h4 className="text-sm font-black text-indigo-950">1. Premium Real-Estate Portfolio Aggregation</h4>
+              <h4 className="text-sm font-black text-teal-950">1. Premium Real-Estate Portfolio Aggregation</h4>
               <p>
                 PropertyN operates as a premier digital properties and commercial real-estate sponsorship platform. Registered under the Indian Companies Act, 2013, our corporate registration verifies our authorization to acquire, aggregate, lease, and trade premium commercial and residential land portfolios.
               </p>
@@ -493,12 +493,12 @@ export default function ProfileSection({
                 Through crowdsourced sponsorship capital, PropertyN manages a diverse portfolio of grade-A office spaces, warehousing networks, digital billboards, and roadside commercial sites. We provide access to commercial real-estate yields with a secure and fully certified digital ledger.
               </p>
 
-              <h4 className="text-sm font-black text-indigo-950 mt-4">2. High-Yield Leaseback & Rental Returns</h4>
+              <h4 className="text-sm font-black text-teal-950 mt-4">2. High-Yield Leaseback & Rental Returns</h4>
               <p>
                 The rental yields, lease revenues, and advertising fee collections are pooled on a daily basis. PropertyN distributes these proceeds directly into our sponsors' wallets as **Daily-Income** and **VIP-Income** payouts. Our operations are fully backed by corporate rental agreements and real lease documents with Fortune 500 tech companies and premium retail brands.
               </p>
 
-              <h4 className="text-sm font-black text-indigo-950 mt-4">3. Security, RERA Alignment & Government Approvals</h4>
+              <h4 className="text-sm font-black text-teal-950 mt-4">3. Security, RERA Alignment & Government Approvals</h4>
               <p>
                 Every single property listed on the PropertyN application is verified, RERA-approved (Real Estate Regulatory Authority), and legally registered. We maintain a strict Capital Protection Fund to guarantee that your sponsored investments are protected by actual collateralized physical properties.
               </p>
@@ -506,7 +506,7 @@ export default function ProfileSection({
                 Our platform has been awarded the ISO 9001:2015 certification for Quality Investment Management Systems and the ISO 27001:2022 certification for absolute data and transaction security, ensuring that all payment details, bank records, and personal user wallets are fully secure.
               </p>
 
-              <h4 className="text-sm font-black text-indigo-950 mt-4">4. Property Investment & Sponsoring License</h4>
+              <h4 className="text-sm font-black text-teal-950 mt-4">4. Property Investment & Sponsoring License</h4>
               <p>
                 PropertyN operates with full legal clearance under Ministry of Corporate Affairs (MCA) registration number **U74899DL2025PTC139580**. This authorization certificate empowers our platform to act as a fractional real-estate sponsor and investment conduit across major Indian smart cities.
               </p>
@@ -516,7 +516,7 @@ export default function ProfileSection({
             <div className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm text-left space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wider">OFFICIAL AUTHORITY CERTIFICATION</h4>
+                  <h4 className="text-xs font-black text-teal-950 uppercase tracking-wider">OFFICIAL AUTHORITY CERTIFICATION</h4>
                   <p className="text-[10px] text-gray-400 font-bold mt-0.5">Verified Property Investment License Status</p>
                 </div>
                 <span className="text-[9px] bg-emerald-50 text-emerald-600 font-black px-2 py-0.5 rounded-full uppercase shrink-0">
@@ -527,7 +527,7 @@ export default function ProfileSection({
               {/* Certificate Miniature Preview Screen */}
               <div 
                 onClick={() => setIsCertOpen(true)}
-                className="relative bg-slate-50 border border-slate-200/80 rounded-2xl p-4 cursor-pointer hover:border-violet-400 group overflow-hidden transition-all duration-300 shadow-inner select-none active:scale-[0.98]"
+                className="relative bg-slate-50 border border-slate-200/80 rounded-2xl p-4 cursor-pointer hover:border-emerald-400 group overflow-hidden transition-all duration-300 shadow-inner select-none active:scale-[0.98]"
               >
                 {/* Golden/Double Border Inner Decorative Element */}
                 <div className="border-2 border-double border-amber-500/60 p-3 rounded-xl bg-white text-center space-y-1 relative">
@@ -537,7 +537,7 @@ export default function ProfileSection({
                   </div>
 
                   <span className="text-[8px] font-bold text-amber-600 uppercase tracking-widest block">Certificate of Compliance</span>
-                  <h5 className="text-[10px] font-black text-indigo-950 leading-tight block">PROPERTYN LEASING SOLUTIONS PRIVATE LIMITED</h5>
+                  <h5 className="text-[10px] font-black text-teal-950 leading-tight block">PROPERTYN LEASING SOLUTIONS PRIVATE LIMITED</h5>
                   <p className="text-[7.5px] text-slate-400 leading-normal max-w-xs mx-auto">
                     ISO 9001:2015 &amp; ISO 27001:2022 Certified Real-Estate Portfolio Sponsoring Security and Asset Management Regulations.
                   </p>
@@ -553,8 +553,8 @@ export default function ProfileSection({
                 </div>
 
                 {/* Hover overlay inviting to view full screen */}
-                <div className="absolute inset-0 bg-violet-600/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
-                  <span className="bg-violet-600 text-white font-black text-[10px] px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                <div className="absolute inset-0 bg-emerald-600/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-300">
+                  <span className="bg-emerald-600 text-white font-black text-[10px] px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
                     <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
                     View Full Certificate
                   </span>
@@ -564,9 +564,9 @@ export default function ProfileSection({
               <button
                 type="button"
                 onClick={() => setIsCertOpen(true)}
-                className="w-full py-3 rounded-[1.25rem] bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-black flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full py-3 rounded-[1.25rem] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-black flex items-center justify-center gap-1.5 transition-colors"
               >
-                <CheckCircle2 className="w-4 h-4 text-violet-600" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <span>View Full-Screen Certificate</span>
               </button>
             </div>
@@ -574,7 +574,7 @@ export default function ProfileSection({
             {/* Trust Badges */}
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm text-left">
-                <span className="text-[8px] font-black text-violet-600 uppercase tracking-widest block">ISO 9001:2015</span>
+                <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest block">ISO 9001:2015</span>
                 <span className="text-[11px] font-black text-slate-800 block mt-0.5">Quality Audited</span>
                 <p className="text-[9px] text-gray-400 mt-1">Platform processes, daily yields, and security payouts audited for maximum operational efficiency.</p>
               </div>
@@ -652,7 +652,7 @@ export default function ProfileSection({
                       {/* Certification Badges Footer inside Modal */}
                       <div className="grid grid-cols-3 gap-2 py-1 text-[8px] font-bold text-slate-500">
                         <div className="p-1 bg-slate-50 rounded-lg border border-slate-100">
-                          <span className="text-indigo-600 block">ISO 9001</span>
+                          <span className="text-teal-600 block">ISO 9001</span>
                           <span>Yield Audited</span>
                         </div>
                         <div className="p-1 bg-slate-50 rounded-lg border border-slate-100">
@@ -668,7 +668,7 @@ export default function ProfileSection({
                       {/* Digital Signatures and Seals */}
                       <div className="flex items-center justify-between pt-4 px-3 border-t border-slate-100">
                         <div className="text-left">
-                          <span className="font-serif italic text-indigo-900 text-xs tracking-wide block leading-none font-black">R. Mehta</span>
+                          <span className="font-serif italic text-teal-900 text-xs tracking-wide block leading-none font-black">R. Mehta</span>
                           <span className="text-[8px] text-gray-400 block mt-0.5 font-bold uppercase">Director of Operations</span>
                         </div>
                         
@@ -680,7 +680,7 @@ export default function ProfileSection({
                         </div>
 
                         <div className="text-right">
-                          <span className="font-serif italic text-indigo-900 text-xs tracking-wide block leading-none font-black">Ananya S.</span>
+                          <span className="font-serif italic text-teal-900 text-xs tracking-wide block leading-none font-black">Ananya S.</span>
                           <span className="text-[8px] text-gray-400 block mt-0.5 font-bold uppercase">Chief Compliance Officer</span>
                         </div>
                       </div>
@@ -713,7 +713,7 @@ export default function ProfileSection({
               <div className="grid grid-cols-3 divide-x divide-slate-100 py-6 px-1 relative z-10">
                 {/* Balance Column */}
                 <div className="flex flex-col items-center justify-center min-w-0">
-                  <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(99,102,241,0.22)] mb-2 shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-teal-500 to-teal-700 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(99,102,241,0.22)] mb-2 shrink-0 group-hover:scale-105 transition-transform">
                     <Wallet className="w-5 h-5" />
                   </div>
                   <span 
@@ -765,9 +765,9 @@ export default function ProfileSection({
                 <button
                   type="button"
                   onClick={onOpenRecharge}
-                  className="py-4.5 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-indigo-600 border-r border-slate-100 cursor-pointer group"
+                  className="py-4.5 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-teal-600 border-r border-slate-100 cursor-pointer group"
                 >
-                  <Wallet className="w-4.5 h-4.5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                  <Wallet className="w-4.5 h-4.5 text-teal-500 group-hover:scale-110 transition-transform" />
                   <span>Recharge</span>
                 </button>
                 <button
@@ -783,17 +783,17 @@ export default function ProfileSection({
 
             {/* Title with left accent bar */}
             <div className="flex items-center gap-2 text-left mt-2">
-              <div className="w-1.5 h-5 bg-indigo-600 rounded-full shadow-sm"></div>
-              <span className="text-sm font-black text-indigo-950 uppercase tracking-wider">My Account</span>
+              <div className="w-1.5 h-5 bg-teal-600 rounded-full shadow-sm"></div>
+              <span className="text-sm font-black text-teal-950 uppercase tracking-wider">My Account</span>
             </div>
 
             {/* Account List details with color coded 3D icons */}
             <div className="bg-white rounded-[2rem] border border-slate-100/80 shadow-[0_12px_40px_rgba(0,0,0,0.03)] overflow-hidden text-left">
               <div className="divide-y divide-slate-100/50">
                 {[
-                  ...(user.role === 'admin' ? [{ label: 'Admin Panel Control Room', desc: 'Manage users, approvals, plans, & notifications', icon: ShieldCheck, action: onEnterAdminTerminal, highlight: true, grad: 'from-purple-500 to-indigo-600' }] : []),
+                  ...(user.role === 'admin' ? [{ label: 'Admin Panel Control Room', desc: 'Manage users, approvals, plans, & notifications', icon: ShieldCheck, action: onEnterAdminTerminal, highlight: true, grad: 'from-teal-500 to-teal-600' }] : []),
                   { label: 'My Orders', desc: 'Earnings & active plans', icon: ShoppingBag, action: () => setSubView('orders'), badge: purchases.filter(p => !p.completed).length || undefined, grad: 'from-emerald-400 to-teal-500' },
-                  { label: 'Daily Check-in', desc: 'Check in daily to earn free rewards', icon: CheckSquare, action: onDailyCheckIn, highlight: !user.checkedInToday, grad: 'from-indigo-400 to-violet-600' },
+                  { label: 'Daily Check-in', desc: 'Check in daily to earn free rewards', icon: CheckSquare, action: onDailyCheckIn, highlight: !user.checkedInToday, grad: 'from-teal-400 to-emerald-600' },
                   { label: 'Bank Account', desc: 'Bank details & withdrawal settings', icon: Landmark, action: () => setSubView('bank'), verified: !!user.bankAccount, grad: 'from-amber-400 to-orange-500' },
                   { label: 'Password', desc: 'Password & Security', icon: Lock, action: () => setSubView('password'), grad: 'from-sky-400 to-blue-500' },
                   { label: 'Transaction Records', desc: 'Full recharge & withdrawal history', icon: FileText, action: () => setSubView('transactions'), grad: 'from-pink-400 to-rose-500' },
@@ -820,7 +820,7 @@ export default function ProfileSection({
 
                       <div className="flex items-center gap-1.5 shrink-0">
                         {item.badge && (
-                          <span className="bg-violet-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-sm shadow-violet-200">
+                          <span className="bg-emerald-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full shadow-sm shadow-emerald-200">
                             {item.badge}
                           </span>
                         )}
@@ -860,7 +860,7 @@ export default function ProfileSection({
     <div className="pb-4">
       {/* Header Banner only when in main subview */}
       {subView === 'main' && (
-        <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white pt-8 pb-16 px-6 rounded-b-[2.5rem] shadow-md relative overflow-hidden">
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 text-white pt-8 pb-16 px-6 rounded-b-[2.5rem] shadow-md relative overflow-hidden">
           {/* Decorative shapes */}
           <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-xl translate-x-6 -translate-y-6"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-6 translate-y-6"></div>
@@ -869,8 +869,8 @@ export default function ProfileSection({
             {/* Premium branded avatar/logo matching PropertyN style exactly */}
             <div className="w-16 h-16 rounded-[1.25rem] bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center p-2 shrink-0 border border-slate-100/50">
               <div className="flex items-center gap-0.5">
-                <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">P</span>
-                <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">N</span>
+                <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">P</span>
+                <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-teal-600 to-teal-600 bg-clip-text text-transparent">N</span>
               </div>
               <span className="text-[7.5px] font-black text-slate-500 tracking-wider uppercase -mt-0.5 block">PropertyN</span>
             </div>

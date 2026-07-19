@@ -728,16 +728,16 @@ export default function AdminSection({
     <div className="flex-1 bg-slate-900 text-slate-100 flex flex-col h-full min-h-screen">
       
       {/* Admin Top Banner */}
-      <div className="bg-gradient-to-r from-violet-700 via-purple-700 to-indigo-800 p-5 rounded-b-[2rem] shadow-xl border-b border-indigo-500/20">
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-teal-800 p-5 rounded-b-[2rem] shadow-xl border-b border-teal-500/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-white/10 rounded-2xl border border-white/20 backdrop-blur-sm">
-              <Database className="w-5 h-5 text-indigo-200 animate-pulse" />
+              <Database className="w-5 h-5 text-teal-200 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs bg-emerald-500/90 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest text-[8px]">ROOT SERVER</span>
-                <span className="text-[10px] text-indigo-200 font-mono">v4.9-Stable</span>
+                <span className="text-[10px] text-teal-200 font-mono">v4.9-Stable</span>
               </div>
               <h2 className="text-lg font-black tracking-tight text-white mt-0.5 uppercase">Admin Control Room</h2>
             </div>
@@ -776,7 +776,7 @@ export default function AdminSection({
               }}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black transition-all shrink-0 cursor-pointer ${
                 isSelected
-                  ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-900/30 border border-violet-500/20'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/30 border border-emerald-500/20'
                   : 'bg-slate-800/50 hover:bg-slate-800 text-slate-400 border border-transparent'
               }`}
             >
@@ -810,7 +810,7 @@ export default function AdminSection({
                 <div className="bg-slate-850 p-4 rounded-3xl border border-slate-800 flex flex-col justify-between shadow-lg">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Users</span>
-                    <Users className="w-4 h-4 text-violet-400" />
+                    <Users className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div className="mt-2.5">
                     <span className="text-2xl font-black font-mono tracking-tight text-white">{totalUsers}</span>
@@ -846,7 +846,7 @@ export default function AdminSection({
                 <div className="bg-slate-850 p-4 rounded-3xl border border-slate-800 flex flex-col justify-between shadow-lg">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">User Ledgers</span>
-                    <Wallet className="w-4 h-4 text-indigo-400" />
+                    <Wallet className="w-4 h-4 text-teal-400" />
                   </div>
                   <div className="mt-2.5">
                     <span className="text-xl font-black font-mono tracking-tight text-white">₹{systemTotalBalance.toFixed(2)}</span>
@@ -857,7 +857,7 @@ export default function AdminSection({
 
               {/* Server health check logs */}
               <div className="bg-slate-950/60 p-4 rounded-[1.8rem] border border-slate-850 font-mono space-y-2">
-                <h4 className="text-[10px] text-indigo-400 font-black uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="text-[10px] text-teal-400 font-black uppercase tracking-wider flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
                   <span>Terminal Diagnostics</span>
                 </h4>
@@ -871,8 +871,8 @@ export default function AdminSection({
               </div>
 
               {/* Shortcut Panel */}
-              <div className="bg-gradient-to-r from-violet-950/40 to-indigo-950/40 p-4 rounded-3xl border border-violet-900/20 space-y-3">
-                <h4 className="text-xs font-black text-violet-300 flex items-center gap-1.5">
+              <div className="bg-gradient-to-r from-emerald-950/40 to-teal-950/40 p-4 rounded-3xl border border-emerald-900/20 space-y-3">
+                <h4 className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   <span>Evaluation Quick Tools</span>
                 </h4>
@@ -944,7 +944,7 @@ export default function AdminSection({
                   placeholder="Search user by name or +91 phone..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-mono"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-mono"
                 />
               </div>
 
@@ -971,7 +971,7 @@ export default function AdminSection({
 
                   {/* Balance Adjustment Form */}
                   <form onSubmit={handleAdjustBalance} className="space-y-3.5">
-                    <h5 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">Adjust Wallet Funds</h5>
+                    <h5 className="text-[10px] font-black text-teal-400 uppercase tracking-widest block">Adjust Wallet Funds</h5>
                     <div className="flex gap-2">
                       <button
                         type="button"
@@ -1005,12 +1005,12 @@ export default function AdminSection({
                           value={amountAdjust}
                           onChange={(e) => setAmountAdjust(e.target.value)}
                           placeholder="Amount in Rupees"
-                          className="w-full pl-8 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-violet-500 font-mono"
+                          className="w-full pl-8 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 font-mono"
                         />
                       </div>
                       <button
                         type="submit"
-                        className="px-5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider"
+                        className="px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider"
                       >
                         Apply
                       </button>
@@ -1019,7 +1019,7 @@ export default function AdminSection({
 
                   {/* Bank Details Config Form (Override channel) */}
                   <div className="space-y-3.5 pt-4 border-t border-slate-800">
-                    <h5 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block">Bank Account Override</h5>
+                    <h5 className="text-[10px] font-black text-teal-400 uppercase tracking-widest block">Bank Account Override</h5>
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
@@ -1075,7 +1075,7 @@ export default function AdminSection({
 
                   {/* Profile Credentials Override Form */}
                   <div className="space-y-3.5 pt-4 border-t border-slate-800">
-                    <h5 className="text-[10px] font-black text-violet-400 uppercase tracking-widest block">User Credentials & Role</h5>
+                    <h5 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest block">User Credentials & Role</h5>
                     
                     <div className="grid grid-cols-2 gap-2">
                       <div className="space-y-1">
@@ -1125,7 +1125,7 @@ export default function AdminSection({
                       onClick={handleSaveCredentialsOverride}
                       className="w-full py-2.5 mt-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-black uppercase rounded-xl tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
                     >
-                      <Check className="w-4 h-4 text-violet-400" />
+                      <Check className="w-4 h-4 text-emerald-400" />
                       <span>Save Profile Credentials</span>
                     </button>
                   </div>
@@ -1169,7 +1169,7 @@ export default function AdminSection({
                     </div>
                     <div className="bg-slate-950/40 p-2.5 rounded-2xl border border-slate-900">
                       <p className="text-[9px] text-slate-500 font-bold uppercase">Total Earned</p>
-                      <span className="text-xs font-black text-indigo-300 font-mono">₹{editingUser.totalEarnings.toFixed(2)}</span>
+                      <span className="text-xs font-black text-teal-300 font-mono">₹{editingUser.totalEarnings.toFixed(2)}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -1188,14 +1188,14 @@ export default function AdminSection({
                         <div
                           key={user.id}
                           className={`p-4 bg-slate-850 rounded-3xl border ${
-                            isCurrent ? 'border-violet-600/60' : 'border-slate-800/80'
+                            isCurrent ? 'border-emerald-600/60' : 'border-slate-800/80'
                           } flex items-center justify-between shadow-md`}
                         >
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-black text-white">{user.name}</span>
                               {isCurrent && (
-                                <span className="bg-violet-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                                <span className="bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">
                                   Current Session
                                 </span>
                               )}
@@ -1203,7 +1203,7 @@ export default function AdminSection({
                             <p className="text-[10px] font-mono text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5">
                               <span>{user.phone}</span>
                               {user.password && (
-                                <span className="bg-slate-900/80 border border-violet-500/20 text-amber-300 px-2 py-0.5 rounded-lg text-[9px] font-bold tracking-wider flex items-center gap-1">
+                                <span className="bg-slate-900/80 border border-emerald-500/20 text-amber-300 px-2 py-0.5 rounded-lg text-[9px] font-bold tracking-wider flex items-center gap-1">
                                   <span>🔑</span>
                                   <span className="font-mono text-slate-100 select-all">{user.password}</span>
                                 </span>
@@ -1212,11 +1212,11 @@ export default function AdminSection({
 
                             {/* Referral Info */}
                             <div className="flex flex-wrap gap-1.5 mt-1.5">
-                              <span className="text-[9px] bg-slate-900 border border-slate-800 text-indigo-300 px-1.5 py-0.5 rounded-lg font-mono">
+                              <span className="text-[9px] bg-slate-900 border border-slate-800 text-teal-300 px-1.5 py-0.5 rounded-lg font-mono">
                                 My Code: <strong className="text-white font-black">{user.inviteCode}</strong>
                               </span>
                               {user.inviterCode ? (
-                                <span className="text-[9px] bg-indigo-950/40 border border-indigo-900/40 text-emerald-300 px-1.5 py-0.5 rounded-lg font-mono flex items-center gap-1">
+                                <span className="text-[9px] bg-teal-950/40 border border-teal-900/40 text-emerald-300 px-1.5 py-0.5 rounded-lg font-mono flex items-center gap-1">
                                   <span>👤 Sponsor:</span>
                                   <strong className="text-emerald-400 font-black">{user.inviterCode}</strong>
                                   {(() => {
@@ -1238,7 +1238,7 @@ export default function AdminSection({
                               </span>
                               <span className="text-[10px] font-mono text-slate-500">|</span>
                               <span className="text-[10px] font-mono text-slate-400">
-                                Earn: <strong className="text-indigo-400">₹{user.totalEarnings.toFixed(0)}</strong>
+                                Earn: <strong className="text-teal-400">₹{user.totalEarnings.toFixed(0)}</strong>
                               </span>
                             </div>
                           </div>
@@ -1246,14 +1246,14 @@ export default function AdminSection({
                           <div className="flex flex-col gap-1.5 shrink-0">
                             <button
                               onClick={() => handleOpenUserEdit(user)}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-[10px] font-black uppercase text-indigo-300 rounded-xl transition-all flex items-center justify-center gap-1 border border-slate-700/50 cursor-pointer w-24 font-sans"
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-[10px] font-black uppercase text-teal-300 rounded-xl transition-all flex items-center justify-center gap-1 border border-slate-700/50 cursor-pointer w-24 font-sans"
                             >
                               <Edit2 className="w-2.5 h-2.5" />
                               <span>Manage</span>
                             </button>
                             <button
                               onClick={() => setViewingReferralsUser(user)}
-                              className="px-3 py-1.5 bg-violet-950/40 hover:bg-violet-900/40 text-[10px] font-black uppercase text-emerald-400 rounded-xl transition-all flex items-center justify-center gap-1 border border-violet-900/30 cursor-pointer w-24 font-sans"
+                              className="px-3 py-1.5 bg-emerald-950/40 hover:bg-emerald-900/40 text-[10px] font-black uppercase text-emerald-400 rounded-xl transition-all flex items-center justify-center gap-1 border border-emerald-900/30 cursor-pointer w-24 font-sans"
                             >
                               <Users className="w-3 h-3" />
                               <span>View Team</span>
@@ -1279,7 +1279,7 @@ export default function AdminSection({
             >
               {/* Part 1: Pending Deposits (Recharges) */}
               <div className="space-y-3">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-xs font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
                   <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
                   <span>Pending Deposit Recharges ({pendingRecharges.length})</span>
                 </h3>
@@ -1308,7 +1308,7 @@ export default function AdminSection({
                           {tx.utr && (
                             <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-900/80 flex items-center justify-between">
                               <span className="text-[9px] text-slate-500 font-bold uppercase font-mono">UTR Reference</span>
-                              <span className="text-xs font-black text-indigo-300 font-mono select-all">{tx.utr}</span>
+                              <span className="text-xs font-black text-teal-300 font-mono select-all">{tx.utr}</span>
                             </div>
                           )}
 
@@ -1357,7 +1357,7 @@ export default function AdminSection({
 
               {/* Part 2: Pending Withdrawals */}
               <div className="space-y-3 pt-4 border-t border-slate-800">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-xs font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
                   <ArrowUpRight className="w-4 h-4 text-rose-400" />
                   <span>Pending Payout Settlements ({pendingWithdrawals.length})</span>
                 </h3>
@@ -1396,11 +1396,11 @@ export default function AdminSection({
                             </div>
                             <div className="flex items-center justify-between text-[10px]">
                               <span className="text-slate-500 font-bold uppercase font-mono">A/C No</span>
-                              <span className="text-indigo-300 font-bold font-mono select-all">{user?.bankAccount?.accountNumber || 'N/A'}</span>
+                              <span className="text-teal-300 font-bold font-mono select-all">{user?.bankAccount?.accountNumber || 'N/A'}</span>
                             </div>
                             <div className="flex items-center justify-between text-[10px]">
                               <span className="text-slate-500 font-bold uppercase font-mono">IFSC</span>
-                              <span className="text-indigo-300 font-bold font-mono select-all">{user?.bankAccount?.ifscCode || 'N/A'}</span>
+                              <span className="text-teal-300 font-bold font-mono select-all">{user?.bankAccount?.ifscCode || 'N/A'}</span>
                             </div>
                           </div>
 
@@ -1414,7 +1414,7 @@ export default function AdminSection({
                             </button>
                             <button
                               onClick={() => handleApproveWithdrawal(tx.id)}
-                              className="flex-1 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 transition-all cursor-pointer"
+                              className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-1 transition-all cursor-pointer"
                             >
                               <Check className="w-3.5 h-3.5 text-white" />
                               <span>Settle (Approve)</span>
@@ -1470,7 +1470,7 @@ export default function AdminSection({
                         placeholder="e.g. Apex Ultima Gold"
                         value={planTitle}
                         onChange={(e) => setPlanTitle(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-violet-500"
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
                       />
                     </div>
 
@@ -1559,7 +1559,7 @@ export default function AdminSection({
 
                     <button
                       type="submit"
-                      className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer mt-3"
+                      className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer mt-3"
                     >
                       {editingPlan ? 'Update and Save Plan' : 'Publish Plan Live'}
                     </button>
@@ -1581,7 +1581,7 @@ export default function AdminSection({
                         setPlanSlotsMax('10');
                         setIsCreatingPlan(true);
                       }}
-                      className="px-3.5 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-all active:scale-95"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>New Plan</span>
@@ -1610,7 +1610,7 @@ export default function AdminSection({
                           <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-slate-400">
                             <span>Cost: <strong className="text-white">₹{p.price}</strong></span>
                             <span>Daily: <strong className="text-emerald-400">₹{p.dailyIncome}</strong></span>
-                            <span>Days: <strong className="text-indigo-400">{p.durationDays}</strong></span>
+                            <span>Days: <strong className="text-teal-400">{p.durationDays}</strong></span>
                           </div>
                         </div>
 
@@ -1627,7 +1627,7 @@ export default function AdminSection({
                               setPlanImage(p.image);
                               setPlanSlotsMax(p.slotsMax.toString());
                             }}
-                            className="p-1.5 hover:bg-slate-800 text-indigo-400 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 hover:bg-slate-800 text-teal-400 rounded-lg transition-colors cursor-pointer"
                             title="Edit Plan"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -1658,8 +1658,8 @@ export default function AdminSection({
               className="space-y-4"
             >
               <div className="bg-slate-850 p-5 rounded-[2rem] border border-slate-800 space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                  <Send className="w-4 h-4 text-violet-400" />
+                <h3 className="text-xs font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
+                  <Send className="w-4 h-4 text-emerald-400" />
                   <span>Push Custom Ticker Notification</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium">
@@ -1674,13 +1674,13 @@ export default function AdminSection({
                       value={tickerMessage}
                       onChange={(e) => setTickerMessage(e.target.value)}
                       placeholder="e.g., Notice: Server upgrade completed! Withdrawals will process within 10 minutes."
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
                     <span>Push Live Alert Ticker</span>
@@ -1690,7 +1690,7 @@ export default function AdminSection({
 
               {/* Ticker history/recommendations */}
               <div className="bg-slate-950/40 p-4 rounded-3xl border border-slate-900 font-sans space-y-2.5">
-                <h4 className="text-[10px] text-indigo-400 font-black uppercase tracking-wider">Useful Admin Ticker Presets</h4>
+                <h4 className="text-[10px] text-teal-400 font-black uppercase tracking-wider">Useful Admin Ticker Presets</h4>
                 <div className="space-y-2">
                   {[
                     '🔥 Limited Offer: 12% bonus commission on all direct level 1 invites valid today only!',
@@ -1721,8 +1721,8 @@ export default function AdminSection({
             >
               {/* UPI Card */}
               <div className="bg-slate-850 p-5 rounded-[2rem] border border-slate-800 space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                  <QrCode className="w-4 h-4 text-violet-400" />
+                <h3 className="text-xs font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-emerald-400" />
                   <span>Configure UPI Scanner & Merchant ID</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
@@ -1737,7 +1737,7 @@ export default function AdminSection({
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400 font-bold">Current Name:</span>
-                    <span className="font-bold text-violet-300">{savedUpiName}</span>
+                    <span className="font-bold text-emerald-300">{savedUpiName}</span>
                   </div>
                 </div>
 
@@ -1764,7 +1764,7 @@ export default function AdminSection({
                       value={upiIdInput}
                       onChange={(e) => setUpiIdInput(e.target.value)}
                       placeholder="e.g. propertyn@upi"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
@@ -1776,13 +1776,13 @@ export default function AdminSection({
                       value={upiNameInput}
                       onChange={(e) => setUpiNameInput(e.target.value)}
                       placeholder="e.g. PropertyN Solutions"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
                     <span>Save Payment Details</span>
@@ -1809,7 +1809,7 @@ export default function AdminSection({
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400 font-bold">Current Support Chat:</span>
-                    <span className="font-mono text-violet-300 font-black truncate max-w-[180px]">
+                    <span className="font-mono text-emerald-300 font-black truncate max-w-[180px]">
                       {savedTgSupport}
                     </span>
                   </div>
@@ -1836,7 +1836,7 @@ export default function AdminSection({
                       value={tgChannelInput}
                       onChange={(e) => setTgChannelInput(e.target.value)}
                       placeholder="e.g. https://t.me/PropertyN_99"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
@@ -1848,7 +1848,7 @@ export default function AdminSection({
                       value={tgSupportInput}
                       onChange={(e) => setTgSupportInput(e.target.value)}
                       placeholder="e.g. https://t.me/PropertyN_Support"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
@@ -1864,8 +1864,8 @@ export default function AdminSection({
 
               {/* APK Download URL Card */}
               <div className="bg-slate-850 p-5 rounded-[2rem] border border-slate-800 space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-violet-400" />
+                <h3 className="text-xs font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-emerald-400" />
                   <span>Configure Android App APK Download URL</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
@@ -1876,7 +1876,7 @@ export default function AdminSection({
                 <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-slate-400 font-bold">Current APK URL:</span>
-                    <span className="font-mono text-indigo-400 font-black truncate max-w-[180px]">
+                    <span className="font-mono text-teal-400 font-black truncate max-w-[180px]">
                       {savedApkUrl}
                     </span>
                   </div>
@@ -1905,13 +1905,13 @@ export default function AdminSection({
                       value={apkUrlInput}
                       onChange={(e) => setApkUrlInput(e.target.value)}
                       placeholder="e.g. https://domain.com/PropertyN_Earnings.apk"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans font-mono"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans font-mono"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
                     <span>Save APK Download URL</span>
@@ -1921,8 +1921,8 @@ export default function AdminSection({
 
               {/* System Config & Thresholds Card */}
               <div className="bg-slate-850 p-5 rounded-[2rem] border border-slate-800 space-y-4">
-                <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
-                  <Database className="w-4 h-4 text-violet-400" />
+                <h3 className="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                  <Database className="w-4 h-4 text-emerald-400" />
                   <span>Configure Thresholds, Presets & Bonuses</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
@@ -1941,7 +1941,7 @@ export default function AdminSection({
                     </div>
                     <div>
                       <span className="text-slate-400 font-bold block">Min Recharge:</span>
-                      <span className="text-indigo-400 font-black">₹{savedMinRecharge}</span>
+                      <span className="text-teal-400 font-black">₹{savedMinRecharge}</span>
                     </div>
                     <div>
                       <span className="text-slate-400 font-bold block">Min Withdrawal:</span>
@@ -2007,7 +2007,7 @@ export default function AdminSection({
                       value={platformNameInput}
                       onChange={(e) => setPlatformNameInput(e.target.value)}
                       placeholder="e.g. PropertyN"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
@@ -2020,7 +2020,7 @@ export default function AdminSection({
                       value={dailyBonusInput}
                       onChange={(e) => setDailyBonusInput(e.target.value)}
                       placeholder="e.g. 8"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
@@ -2034,7 +2034,7 @@ export default function AdminSection({
                         value={minRechargeInput}
                         onChange={(e) => setMinRechargeInput(e.target.value)}
                         placeholder="e.g. 250"
-                        className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                        className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                       />
                     </div>
 
@@ -2047,7 +2047,7 @@ export default function AdminSection({
                         value={minWithdrawalInput}
                         onChange={(e) => setMinWithdrawalInput(e.target.value)}
                         placeholder="e.g. 120"
-                        className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                        className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                       />
                     </div>
                   </div>
@@ -2061,7 +2061,7 @@ export default function AdminSection({
                       value={rechargePresetsInput}
                       onChange={(e) => setRechargePresetsInput(e.target.value)}
                       placeholder="e.g. 280, 530, 750, 1000, 2200, 4840"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold font-mono text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all"
                     />
                   </div>
 
@@ -2074,13 +2074,13 @@ export default function AdminSection({
                       value={withdrawTimeInput}
                       onChange={(e) => setWithdrawTimeInput(e.target.value)}
                       placeholder="e.g. 12:30AM - 11:59PM"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-violet-500 placeholder:text-slate-600 transition-all font-sans"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <Check className="w-4 h-4" />
                     <span>Save Thresholds & Presets</span>
@@ -2090,7 +2090,7 @@ export default function AdminSection({
 
               {/* Security Guidance */}
               <div className="bg-slate-950/40 p-4 rounded-3xl border border-slate-900 font-sans space-y-2.5">
-                <h4 className="text-[10px] text-indigo-400 font-black uppercase tracking-wider">UPI & Telegram Configuration Guide</h4>
+                <h4 className="text-[10px] text-teal-400 font-black uppercase tracking-wider">UPI & Telegram Configuration Guide</h4>
                 <div className="text-[10px] text-slate-400 space-y-1.5 font-medium leading-relaxed">
                   <p>1. Make sure to double-check the UPI ID. Incorrect IDs will result in loss of deposits.</p>
                   <p>2. The business name entered here is used as the overlay title in the QR code and merchant info box.</p>
@@ -2119,14 +2119,14 @@ export default function AdminSection({
                 className="bg-slate-900 border border-slate-800 rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[85vh] text-slate-100 font-sans"
               >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-violet-700 via-indigo-700 to-indigo-800 p-5 border-b border-indigo-500/20 flex items-center justify-between">
+                <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-teal-800 p-5 border-b border-teal-500/20 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white/10 rounded-xl">
-                      <Users className="w-5 h-5 text-indigo-200" />
+                      <Users className="w-5 h-5 text-teal-200" />
                     </div>
                     <div>
                       <h3 className="text-sm font-black text-white">{viewingReferralsUser.name}'s Downline</h3>
-                      <p className="text-[10px] font-mono text-indigo-200">Code: {viewingReferralsUser.inviteCode}</p>
+                      <p className="text-[10px] font-mono text-teal-200">Code: {viewingReferralsUser.inviteCode}</p>
                     </div>
                   </div>
                   <button
@@ -2174,7 +2174,7 @@ export default function AdminSection({
                           <div className="space-y-4 text-left">
                             {/* Level 1 Block */}
                             <div className="space-y-2">
-                              <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-violet-400 bg-violet-950/20 border border-violet-900/30 px-3 py-1.5 rounded-xl">
+                              <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-3 py-1.5 rounded-xl">
                                 <span>Level 1 (Direct Referred)</span>
                                 <span>{l1.length} Accounts</span>
                               </div>
@@ -2199,7 +2199,7 @@ export default function AdminSection({
 
                             {/* Level 2 Block */}
                             <div className="space-y-2">
-                              <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-indigo-400 bg-indigo-950/20 border border-indigo-900/30 px-3 py-1.5 rounded-xl">
+                              <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-teal-400 bg-teal-950/20 border border-teal-900/30 px-3 py-1.5 rounded-xl">
                                 <span>Level 2 (Indirect)</span>
                                 <span>{l2.length} Accounts</span>
                               </div>

@@ -43,7 +43,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
   return (
     <div className="space-y-6 pb-4 text-slate-800">
       {/* Premium Header Banner matching ProfileSection exactly */}
-      <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white pt-8 pb-16 px-6 rounded-b-[2.5rem] shadow-md relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 text-white pt-8 pb-16 px-6 rounded-b-[2.5rem] shadow-md relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-xl translate-x-6 -translate-y-6"></div>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-6 translate-y-6"></div>
@@ -55,7 +55,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           </div>
           <div>
             <h2 className="text-xl font-black tracking-tight">Invite Friends</h2>
-            <p className="text-xs text-indigo-100 mt-1 font-medium">Earn lifetime commissions on every property investment referral</p>
+            <p className="text-xs text-teal-100 mt-1 font-medium">Earn lifetime commissions on every property investment referral</p>
           </div>
         </div>
       </div>
@@ -73,7 +73,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
 
         {/* Total Earned */}
         <div className="bg-white p-4 rounded-[1.75rem] border border-slate-100 flex flex-col items-center justify-center text-center shadow-[0_12px_24px_-4px_rgba(0,0,0,0.04),_0_2px_0_rgba(255,255,255,0.95)_inset] group hover:scale-[1.02] transition-transform">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(124,58,237,0.2)] mb-2.5 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(124,58,237,0.2)] mb-2.5 shrink-0">
             <CreditCard className="w-5 h-5" />
           </div>
           <p className="text-lg font-black text-slate-900 font-sans tracking-tight">₹{totalEarnedCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
@@ -92,8 +92,8 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
 
       {/* Title Divider */}
       <div className="flex items-center gap-2 text-left px-4 pt-1">
-        <div className="w-1.5 h-5 bg-indigo-600 rounded-full shadow-sm"></div>
-        <span className="text-sm font-black text-indigo-950 uppercase tracking-wider">My QR Code</span>
+        <div className="w-1.5 h-5 bg-teal-600 rounded-full shadow-sm"></div>
+        <span className="text-sm font-black text-teal-950 uppercase tracking-wider">My QR Code</span>
       </div>
 
       {/* Invite QR & Copy block */}
@@ -103,13 +103,13 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           <div className="bg-white p-4 rounded-2xl border border-slate-200/50 shadow-sm relative overflow-hidden flex items-center justify-center">
             
             {/* Top-Left Target Line */}
-            <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-indigo-600 rounded-tl-md"></div>
+            <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-teal-600 rounded-tl-md"></div>
             {/* Top-Right Target Line */}
-            <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-indigo-600 rounded-tr-md"></div>
+            <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-teal-600 rounded-tr-md"></div>
             {/* Bottom-Left Target Line */}
-            <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-indigo-600 rounded-bl-md"></div>
+            <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-teal-600 rounded-bl-md"></div>
             {/* Bottom-Right Target Line */}
-            <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-indigo-600 rounded-br-md"></div>
+            <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-teal-600 rounded-br-md"></div>
 
             <svg className="w-40 h-40 text-slate-800" viewBox="0 0 100 100" fill="currentColor">
               {/* Corner squares */}
@@ -133,7 +133,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
               <rect x="75" y="80" width="20" height="15" />
             </svg>
             {/* Tiny PropertyN vector logo at the center of invite QR */}
-            <div className="absolute inset-0 m-auto w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-[11px] font-black text-white shadow-md border-2 border-white">
+            <div className="absolute inset-0 m-auto w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center text-[11px] font-black text-white shadow-md border-2 border-white">
               PN
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
                 className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
                   copiedLink
                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_3px_8px_rgba(79,70,229,0.22)]'
+                    : 'bg-teal-600 hover:bg-teal-700 text-white shadow-[0_3px_8px_rgba(79,70,229,0.22)]'
                 }`}
               >
                 {copiedLink ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -168,14 +168,14 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           <div className="text-left space-y-1.5">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Referral Code</span>
             <div className="flex items-center justify-between p-2.5 bg-slate-50/70 rounded-2xl border border-slate-200/60 shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.015)]">
-              <span className="text-sm font-black text-indigo-950 font-sans px-2">{user.inviteCode}</span>
+              <span className="text-sm font-black text-teal-950 font-sans px-2">{user.inviteCode}</span>
               <button
                 type="button"
                 onClick={copyCode}
                 className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer active:scale-95 ${
                   copiedCode
                     ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm'
-                    : 'bg-violet-600 hover:bg-violet-700 text-white shadow-[0_3px_8px_rgba(124,58,237,0.22)]'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_3px_8px_rgba(124,58,237,0.22)]'
                 }`}
               >
                 {copiedCode ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -189,11 +189,11 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
       {/* Rules Divider */}
       <div className="flex items-center gap-2 text-left px-4 pt-1">
         <div className="w-1.5 h-5 bg-amber-500 rounded-full shadow-sm"></div>
-        <span className="text-sm font-black text-indigo-950 uppercase tracking-wider">Commission Rules</span>
+        <span className="text-sm font-black text-teal-950 uppercase tracking-wider">Commission Rules</span>
       </div>
 
       {/* Commission Rules Card */}
-      <div className="mx-4 p-5 bg-gradient-to-br from-indigo-900 to-indigo-950 rounded-[2rem] text-white space-y-4 shadow-xl relative overflow-hidden">
+      <div className="mx-4 p-5 bg-gradient-to-br from-teal-900 to-teal-950 rounded-[2rem] text-white space-y-4 shadow-xl relative overflow-hidden">
         {/* Abstract shape */}
         <div className="absolute right-0 bottom-0 opacity-[0.03]">
           <Gift className="w-48 h-48 text-white translate-x-12 translate-y-12" />
@@ -208,12 +208,12 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           {/* Level 1 */}
           <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-2xl border border-white/5">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-violet-500/20 text-violet-300 flex items-center justify-center font-black text-xs">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-black text-xs">
                 Lv1
               </div>
               <div className="text-left">
                 <p className="text-xs font-black text-white">Direct Referrals</p>
-                <p className="text-[10px] text-indigo-200">Registers directly via your code</p>
+                <p className="text-[10px] text-teal-200">Registers directly via your code</p>
               </div>
             </div>
             <span className="text-sm font-black text-amber-400">10% Commission</span>
@@ -222,15 +222,15 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           {/* Level 2 */}
           <div className="flex items-center justify-between p-3.5 bg-white/5 rounded-2xl border border-white/5">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-black text-xs">
+              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-black text-xs">
                 Lv2
               </div>
               <div className="text-left">
                 <p className="text-xs font-black text-white">Indirect Referrals</p>
-                <p className="text-[10px] text-indigo-200">Invited by your Level 1 members</p>
+                <p className="text-[10px] text-teal-200">Invited by your Level 1 members</p>
               </div>
             </div>
-            <span className="text-sm font-black text-violet-200">5% Commission</span>
+            <span className="text-sm font-black text-emerald-200">5% Commission</span>
           </div>
 
           {/* Level 3 */}
@@ -241,14 +241,14 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
               </div>
               <div className="text-left">
                 <p className="text-xs font-black text-white">Sub-Level Referrals</p>
-                <p className="text-[10px] text-indigo-200">Invited by your Level 2 members</p>
+                <p className="text-[10px] text-teal-200">Invited by your Level 2 members</p>
               </div>
             </div>
             <span className="text-sm font-black text-emerald-400">2% Commission</span>
           </div>
         </div>
 
-        <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5 text-[10px] text-indigo-100/90 leading-relaxed font-medium text-left">
+        <div className="p-3.5 bg-white/5 rounded-2xl border border-white/5 text-[10px] text-teal-100/90 leading-relaxed font-medium text-left">
           <span className="font-black text-white uppercase block mb-1">Earning Demonstration</span>
           If your Level 1 direct referral recharges <strong className="text-amber-400 font-sans font-extrabold">₹1,000</strong>, you instantly receive <strong className="text-emerald-400 font-sans font-extrabold">₹100</strong>. If their Level 2 referral recharges <strong className="text-amber-400 font-sans font-extrabold">₹1,000</strong>, you automatically earn <strong className="text-emerald-400 font-sans font-extrabold">₹50</strong>!
         </div>

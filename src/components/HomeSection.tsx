@@ -137,7 +137,7 @@ export default function HomeSection({
   return (
     <div className="space-y-5 pb-4">
       {/* Top Brand Header Banner */}
-      <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white py-6 px-6 rounded-b-[2rem] shadow-md relative overflow-hidden">
+      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 text-white py-6 px-6 rounded-b-[2rem] shadow-md relative overflow-hidden">
         {/* Decorative shapes */}
         <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-xl translate-x-6 -translate-y-6"></div>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-6 translate-y-6"></div>
@@ -145,7 +145,7 @@ export default function HomeSection({
         <div className="flex items-center justify-between relative z-10 text-left">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-[1.25rem] bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] flex items-center justify-center p-1.5 shrink-0 border border-slate-100/50">
-              <svg viewBox="0 0 100 100" className="w-full h-full text-violet-700" fill="none" stroke="currentColor">
+              <svg viewBox="0 0 100 100" className="w-full h-full text-emerald-700" fill="none" stroke="currentColor">
                 {/* Stylized Modern Properties Building Group */}
                 <rect x="25" y="32" width="18" height="48" rx="2" strokeWidth="6" strokeLinejoin="round" />
                 <rect x="48" y="15" width="28" height="65" rx="3" strokeWidth="6" strokeLinejoin="round" fill="currentColor" fillOpacity="0.1" />
@@ -158,11 +158,11 @@ export default function HomeSection({
             <div>
               <h1 className="text-lg font-black tracking-tight flex items-center gap-1.5 text-white">
                 <span>{localStorage.getItem('adpaint_platform_name') || 'PropertyN'}</span>
-                <span className="text-[9px] uppercase tracking-widest bg-violet-500/30 border border-violet-400/20 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[9px] uppercase tracking-widest bg-emerald-500/30 border border-emerald-400/20 px-2 py-0.5 rounded-full font-bold">
                   Earning
                 </span>
               </h1>
-              <p className="text-[10px] text-violet-200 font-medium">Premium Real-Estate Sponsoring</p>
+              <p className="text-[10px] text-emerald-200 font-medium">Premium Real-Estate Sponsoring</p>
             </div>
           </div>
 
@@ -173,7 +173,7 @@ export default function HomeSection({
               className="p-2.5 bg-white/10 hover:bg-white/15 rounded-2xl transition-all relative flex items-center justify-center cursor-pointer"
             >
               <Bell className="w-5 h-5 text-white" />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-indigo-700 animate-pulse"></span>
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-teal-700 animate-pulse"></span>
             </button>
           </div>
         </div>
@@ -188,17 +188,17 @@ export default function HomeSection({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             transition={{ duration: 0.3 }}
-            className="mx-4 p-2.5 bg-gradient-to-r from-violet-900/90 to-indigo-900/90 backdrop-blur-md rounded-xl text-[11px] font-bold text-white shadow-lg border border-violet-500/20 flex items-center gap-2"
+            className="mx-4 p-2.5 bg-gradient-to-r from-emerald-900/90 to-teal-900/90 backdrop-blur-md rounded-xl text-[11px] font-bold text-white shadow-lg border border-emerald-500/20 flex items-center gap-2"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block shrink-0" />
             <span className="truncate flex-1 font-sans">{liveNotification}</span>
-            <span className="text-[9px] text-violet-300 tracking-wider uppercase font-mono">Live</span>
+            <span className="text-[9px] text-emerald-300 tracking-wider uppercase font-mono">Live</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Hero Carousel Slideshow */}
-      <div className="mx-4 overflow-hidden rounded-2xl relative h-48 shadow-lg border border-indigo-50/20 group">
+      <div className="mx-4 overflow-hidden rounded-2xl relative h-48 shadow-lg border border-teal-50/20 group">
         <div className="absolute inset-0 bg-black/15 z-10" />
         <AnimatePresence mode="wait">
           <motion.img
@@ -215,13 +215,13 @@ export default function HomeSection({
 
         {/* Floating Text on Carousel */}
         <div className="absolute bottom-4 left-4 z-20 text-white space-y-1 max-w-[85%] drop-shadow-md">
-          <span className="bg-violet-600/90 px-2.5 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-widest border border-white/20">
+          <span className="bg-emerald-600/90 px-2.5 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-widest border border-white/20">
             {SLIDE_METADATA[currentSlide].tag}
           </span>
           <h2 className="text-xs font-black leading-tight tracking-tight">
             {SLIDE_METADATA[currentSlide].title}
           </h2>
-          <p className="text-[9px] text-violet-100 font-bold leading-tight">
+          <p className="text-[9px] text-emerald-100 font-bold leading-tight">
             {SLIDE_METADATA[currentSlide].desc}
           </p>
         </div>
@@ -246,7 +246,7 @@ export default function HomeSection({
           <div className="grid grid-cols-3 divide-x divide-slate-100 py-6 px-1 relative z-10">
             {/* Balance Column */}
             <div className="flex flex-col items-center justify-center min-w-0">
-              <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(99,102,241,0.22)] mb-2 shrink-0">
+              <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-teal-500 to-teal-700 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(99,102,241,0.22)] mb-2 shrink-0">
                 <Wallet className="w-5 h-5" />
               </div>
               <span 
@@ -325,11 +325,11 @@ export default function HomeSection({
         {/* Title row */}
         <div className="px-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-5 bg-violet-600 rounded-full"></div>
+            <div className="w-1.5 h-5 bg-emerald-600 rounded-full"></div>
             <h3 className="text-base font-black text-slate-800">Investment Plans</h3>
           </div>
-          <div className="flex items-center gap-1 bg-violet-50 px-2.5 py-1 rounded-full text-[10px] font-bold text-violet-700 border border-violet-100">
-            <Sparkles className="w-3.5 h-3.5 text-violet-500 animate-pulse" />
+          <div className="flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-700 border border-emerald-100">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
             <span>VIP Rewards Active</span>
           </div>
         </div>
@@ -342,7 +342,7 @@ export default function HomeSection({
             onClick={() => setActiveTab('daily')}
             className={`flex-1 py-3 text-xs font-black rounded-xl transition-all ${
               activeTab === 'daily'
-                ? 'bg-gradient-to-b from-violet-500 to-indigo-600 text-white shadow-md'
+                ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white shadow-md'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -352,7 +352,7 @@ export default function HomeSection({
             onClick={() => setActiveTab('vip')}
             className={`flex-1 py-3 text-xs font-black rounded-xl transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'vip'
-                ? 'bg-gradient-to-b from-violet-500 to-indigo-600 text-white shadow-md'
+                ? 'bg-gradient-to-b from-emerald-500 to-teal-600 text-white shadow-md'
                 : 'text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -395,10 +395,10 @@ export default function HomeSection({
                   <div className="absolute bottom-4 left-4 right-4 text-white">
                     <h4 className="text-base font-black tracking-tight">{plan.title}</h4>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="bg-violet-600 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-widest border border-violet-400">
+                      <span className="bg-emerald-600 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-widest border border-emerald-400">
                         Approved
                       </span>
-                      <span className="text-[10px] text-violet-100 font-medium">Verified sponsor earnings</span>
+                      <span className="text-[10px] text-emerald-100 font-medium">Verified sponsor earnings</span>
                     </div>
                   </div>
                 </div>
@@ -446,7 +446,7 @@ export default function HomeSection({
                       e.stopPropagation();
                       onPurchasePlan(plan);
                     }}
-                    className="w-full py-4.5 bg-gradient-to-r from-violet-500 via-indigo-600 to-indigo-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-[0_6px_20px_rgba(109,40,217,0.25),_0_2px_0_rgba(255,255,255,0.35)_inset] border-t border-white/20 flex items-center justify-center gap-2 hover:opacity-95 active:scale-95 transition-all cursor-pointer group"
+                    className="w-full py-4.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-teal-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-[0_6px_20px_rgba(109,40,217,0.25),_0_2px_0_rgba(255,255,255,0.35)_inset] border-t border-white/20 flex items-center justify-center gap-2 hover:opacity-95 active:scale-95 transition-all cursor-pointer group"
                   >
                     <ShoppingBag className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
                     <span>Purchase Now</span>

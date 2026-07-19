@@ -111,16 +111,16 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           className="relative w-full max-w-md bg-slate-50 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[85vh]"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white p-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center border border-white/10">
-                <Bot className="w-5 h-5 text-violet-200" />
+                <Bot className="w-5 h-5 text-emerald-200" />
               </div>
               <div>
                 <h3 className="text-sm font-bold">24/7 Service Desk</h3>
                 <div className="flex items-center gap-1 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[10px] text-violet-200 font-medium">Support Agent is Online</span>
+                  <span className="text-[10px] text-emerald-200 font-medium">Support Agent is Online</span>
                 </div>
               </div>
             </div>
@@ -133,9 +133,9 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           </div>
 
           {/* Secure Badge */}
-          <div className="bg-indigo-50 px-4 py-2 border-b border-indigo-100 flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
-            <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Secure SSL Helpdesk Terminal</span>
+          <div className="bg-teal-50 px-4 py-2 border-b border-teal-100 flex items-center justify-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+            <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">Secure SSL Helpdesk Terminal</span>
           </div>
 
           {/* Chat Panel */}
@@ -149,7 +149,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
               >
                 <div
                   className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs ${
-                    msg.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-white text-violet-600 border border-violet-100 shadow-sm'
+                    msg.sender === 'user' ? 'bg-teal-600 text-white' : 'bg-white text-emerald-600 border border-emerald-100 shadow-sm'
                   }`}
                 >
                   {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
@@ -159,7 +159,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
                   <div
                     className={`p-3 rounded-2xl text-xs leading-relaxed ${
                       msg.sender === 'user'
-                        ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-tr-none shadow-sm shadow-violet-100'
+                        ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-tr-none shadow-sm shadow-emerald-100'
                         : 'bg-white text-gray-800 border border-gray-250/60 rounded-tl-none shadow-sm'
                     }`}
                   >
@@ -178,7 +178,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           {/* Quick FAQ Selector */}
           <div className="px-4 py-2 border-t border-gray-100 bg-white">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <HelpCircle className="w-3.5 h-3.5 text-violet-500" />
+              <HelpCircle className="w-3.5 h-3.5 text-emerald-500" />
               <span>Select Quick FAQ to ask</span>
             </p>
             <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none snap-x">
@@ -187,7 +187,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
                   key={idx}
                   type="button"
                   onClick={() => handleSendMessage(item.q)}
-                  className="shrink-0 snap-center px-3 py-1.5 bg-gray-50 hover:bg-violet-50 border border-gray-150 rounded-xl text-[11px] font-bold text-gray-600 hover:text-violet-700 transition-colors"
+                  className="shrink-0 snap-center px-3 py-1.5 bg-gray-50 hover:bg-emerald-50 border border-gray-150 rounded-xl text-[11px] font-bold text-gray-600 hover:text-emerald-700 transition-colors"
                 >
                   {item.q}
                 </button>
@@ -203,12 +203,12 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Type your question here..."
-              className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all text-gray-800"
+              className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all text-gray-800"
             />
             <button
               type="button"
               onClick={() => handleSendMessage()}
-              className="w-9 h-9 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-md shadow-violet-100"
+              className="w-9 h-9 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-md shadow-emerald-100"
             >
               <Send className="w-4 h-4" />
             </button>

@@ -28,8 +28,8 @@ const PhonePeIcon = ({ className = "w-8 h-8" }: { className?: string }) => (
     <defs>
       <linearGradient id="phonepeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#8231d1" />
-        <stop offset="50%" stopColor="#5f259f" />
-        <stop offset="100%" stopColor="#431478" />
+        <stop offset="50%" stopColor="#00b49c" />
+        <stop offset="100%" stopColor="#00a896" />
       </linearGradient>
     </defs>
     <circle cx="50" cy="50" r="46" fill="url(#phonepeGrad)" />
@@ -228,7 +228,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
     <div className="w-full max-w-md mx-auto bg-slate-50 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
       
       {/* Dynamic Purple Header */}
-      <div className="bg-gradient-to-r from-violet-700 via-indigo-800 to-indigo-900 text-white p-5 rounded-b-[2rem] shadow-[0_4px_20px_rgba(109,40,217,0.15)] relative">
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-800 to-teal-900 text-white p-5 rounded-b-[2rem] shadow-[0_4px_20px_rgba(109,40,217,0.15)] relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-white/10 backdrop-blur-md">
@@ -236,7 +236,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
             </div>
             <div>
               <h2 className="text-lg font-black tracking-wide uppercase">PropertyN Deposit</h2>
-              <p className="text-[10px] text-violet-200 uppercase font-bold tracking-widest">Firebase Payment Engine</p>
+              <p className="text-[10px] text-emerald-200 uppercase font-bold tracking-widest">Firebase Payment Engine</p>
             </div>
           </div>
           {onClose && (
@@ -253,11 +253,11 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
         {/* Current user context */}
         <div className="mt-4 flex items-center justify-between bg-black/10 backdrop-blur-sm rounded-xl p-3 border border-white/5">
           <div className="text-left">
-            <span className="text-[9px] text-indigo-200 block uppercase font-bold tracking-wider">Depositor Account</span>
+            <span className="text-[9px] text-teal-200 block uppercase font-bold tracking-wider">Depositor Account</span>
             <span className="text-xs font-extrabold text-white">{user.name} ({user.phone})</span>
           </div>
           <div className="text-right">
-            <span className="text-[9px] text-indigo-200 block uppercase font-bold tracking-wider">Available Wallet</span>
+            <span className="text-[9px] text-teal-200 block uppercase font-bold tracking-wider">Available Wallet</span>
             <span className="text-sm font-black text-emerald-400">₹{user.balance.toFixed(2)}</span>
           </div>
         </div>
@@ -290,7 +290,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                     value={amountInput}
                     onChange={(e) => setAmountInput(e.target.value)}
                     placeholder="Enter amount"
-                    className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-200/50 rounded-2xl text-center text-2xl font-black text-violet-950 transition-all outline-none"
+                    className="w-full pl-10 pr-4 py-4 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200/50 rounded-2xl text-center text-2xl font-black text-emerald-950 transition-all outline-none"
                   />
                 </div>
 
@@ -306,7 +306,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                         onClick={() => setAmountInput(preset)}
                         className={`py-2 px-1 text-xs font-black rounded-xl border transition-all active:scale-95 ${
                           amountInput === preset
-                            ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white border-transparent shadow-md'
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-transparent shadow-md'
                             : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
                         }`}
                       >
@@ -319,7 +319,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                 <button
                   type="button"
                   onClick={handleStartDeposit}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-sm shadow-md hover:shadow-violet-200 hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm shadow-md hover:shadow-emerald-200 hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
                   <Sparkles className="w-4 h-4 animate-pulse" />
                   <span>Proceed to Pay</span>
@@ -352,7 +352,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                 <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black tracking-wide border uppercase ${
                   timeLeft < 3 * 60 
                     ? 'bg-rose-50 border-rose-100 text-rose-600 animate-pulse'
-                    : 'bg-violet-50 border-violet-100 text-violet-700'
+                    : 'bg-emerald-50 border-emerald-100 text-emerald-700'
                 }`}>
                   <Clock className="w-3.5 h-3.5" />
                   <span>Session Expires: {formatTime(timeLeft)}</span>
@@ -360,7 +360,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
 
                 <div className="space-y-1">
                   <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">DEPOSIT AMOUNT</span>
-                  <span className="text-4xl font-black text-violet-950 font-sans block">₹{amtValue.toLocaleString()}</span>
+                  <span className="text-4xl font-black text-emerald-950 font-sans block">₹{amtValue.toLocaleString()}</span>
                 </div>
 
                 {/* Row of copy buttons for amount & order id */}
@@ -400,7 +400,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                   <button
                     type="button"
                     onClick={() => handleLaunchApp('phonepe')}
-                    className="flex flex-col items-center justify-center p-3.5 bg-white hover:bg-violet-50/40 border border-slate-100 hover:border-violet-200 rounded-xl transition-all active:scale-95 group shadow-sm"
+                    className="flex flex-col items-center justify-center p-3.5 bg-white hover:bg-emerald-50/40 border border-slate-100 hover:border-emerald-200 rounded-xl transition-all active:scale-95 group shadow-sm"
                   >
                     <PhonePeIcon className="w-9 h-9 mb-1.5 group-hover:scale-110 transition-transform" />
                     <span className="text-[10px] font-black text-slate-800">PhonePe</span>
@@ -409,7 +409,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                   <button
                     type="button"
                     onClick={() => handleLaunchApp('gpay')}
-                    className="flex flex-col items-center justify-center p-3.5 bg-white hover:bg-violet-50/40 border border-slate-100 hover:border-violet-200 rounded-xl transition-all active:scale-95 group shadow-sm"
+                    className="flex flex-col items-center justify-center p-3.5 bg-white hover:bg-emerald-50/40 border border-slate-100 hover:border-emerald-200 rounded-xl transition-all active:scale-95 group shadow-sm"
                   >
                     <GPayIcon className="w-9 h-9 mb-1.5 group-hover:scale-110 transition-transform" />
                     <span className="text-[10px] font-black text-slate-800">Google Pay</span>
@@ -418,7 +418,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                   <button
                     type="button"
                     onClick={() => handleLaunchApp('paytm')}
-                    className="flex flex-col items-center justify-center p-3.5 bg-white hover:bg-violet-50/40 border border-slate-100 hover:border-violet-200 rounded-xl transition-all active:scale-95 group shadow-sm"
+                    className="flex flex-col items-center justify-center p-3.5 bg-white hover:bg-emerald-50/40 border border-slate-100 hover:border-emerald-200 rounded-xl transition-all active:scale-95 group shadow-sm"
                   >
                     <PaytmIcon className="w-9 h-9 mb-1.5 group-hover:scale-110 transition-transform" />
                     <span className="text-[10px] font-black text-slate-800">Paytm</span>
@@ -463,14 +463,14 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                 <div className="space-y-1.5 text-left">
                   <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Merchant UPI ID</span>
                   <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-xs font-black font-mono text-violet-950 truncate select-all">{settings.upiId}</span>
+                    <span className="text-xs font-black font-mono text-emerald-950 truncate select-all">{settings.upiId}</span>
                     <button
                       type="button"
                       onClick={() => handleCopy(settings.upiId, 'upi')}
                       className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all shrink-0 ${
                         copiedUpi
                           ? 'bg-emerald-50 border border-emerald-100 text-emerald-600'
-                          : 'bg-violet-50 border border-violet-100 text-violet-600 hover:bg-violet-100'
+                          : 'bg-emerald-50 border border-emerald-100 text-emerald-600 hover:bg-emerald-100'
                       }`}
                     >
                       {copiedUpi ? (
@@ -492,7 +492,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
               {/* UTR Form Card */}
               <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
                 <div className="space-y-1 text-center">
-                  <span className="text-xs font-black text-violet-700 uppercase tracking-wide block">3. Submit 12-digit UTR No.</span>
+                  <span className="text-xs font-black text-emerald-700 uppercase tracking-wide block">3. Submit 12-digit UTR No.</span>
                   <p className="text-[11px] text-slate-400 font-bold leading-relaxed">
                     Once payment is done, copy the 12-digit UTR/Ref No. from your bank app history and paste it below to credit immediately.
                   </p>
@@ -506,7 +506,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                       value={utr}
                       onChange={(e) => setUtr(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="Enter 12-Digit UTR Number"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-200/50 rounded-xl text-center text-sm font-black tracking-[0.2em] font-mono text-slate-800 transition-all outline-none"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200/50 rounded-xl text-center text-sm font-black tracking-[0.2em] font-mono text-slate-800 transition-all outline-none"
                       required
                     />
                   </div>
@@ -545,7 +545,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
               <div className="space-y-2">
                 <h3 className="text-lg font-black text-slate-800">Deposit Submitted!</h3>
                 <p className="text-xs text-slate-400 font-bold leading-relaxed">
-                  Your deposit request of <span className="text-violet-700 font-black">₹{amtValue}</span> has been securely logged with Order ID: <span className="font-mono text-slate-700">{orderId}</span>.
+                  Your deposit request of <span className="text-emerald-700 font-black">₹{amtValue}</span> has been securely logged with Order ID: <span className="font-mono text-slate-700">{orderId}</span>.
                 </p>
                 <p className="text-[11px] text-emerald-600 font-black bg-emerald-50 rounded-lg p-2.5">
                   Your UTR: {utr} is currently being verified. Balance will be updated in your wallet automatically upon admin approval.
@@ -559,7 +559,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                   setStep(1);
                   if (onClose) onClose();
                 }}
-                className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-extrabold text-xs shadow-md"
+                className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-extrabold text-xs shadow-md"
               >
                 Done
               </button>

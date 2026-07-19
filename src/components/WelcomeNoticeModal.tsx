@@ -35,9 +35,9 @@ export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeMod
           className="relative w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10"
         >
           {/* Header with Violet/Indigo Gradient */}
-          <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-violet-700 text-white text-center py-6 px-5 relative">
+          <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white text-center py-6 px-5 relative">
             <h3 className="text-2xl font-black tracking-tight mb-1">Welcome Notice</h3>
-            <p className="text-xs text-violet-100 font-bold opacity-90">Read carefully before you invest</p>
+            <p className="text-xs text-emerald-100 font-bold opacity-90">Read carefully before you invest</p>
           </div>
 
           {/* Body Content */}
@@ -47,7 +47,7 @@ export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeMod
               {/* Row 1: Platform Name */}
               <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl transition-all hover:bg-slate-100/50">
                 <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <Award className="w-4 h-4 text-violet-500" />
+                  <Award className="w-4 h-4 text-emerald-500" />
                   Platform Name
                 </span>
                 <span className="text-xs font-black text-slate-800">{platformName}</span>
@@ -74,10 +74,10 @@ export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeMod
               {/* Row 4: Minimum Recharge */}
               <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-xl transition-all hover:bg-slate-100/50">
                 <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-indigo-500" />
+                  <Wallet className="w-4 h-4 text-teal-500" />
                   Minimum Recharge
                 </span>
-                <span className="text-xs font-black text-indigo-600">₹{minRecharge}</span>
+                <span className="text-xs font-black text-teal-600">₹{minRecharge}</span>
               </div>
 
               {/* Row 5: Withdrawal Time */}
@@ -93,7 +93,7 @@ export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeMod
             {/* OK Got it Button */}
             <button
               onClick={onClose}
-              className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-violet-100 active:scale-95 transition-all cursor-pointer text-center block mt-2"
+              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-100 active:scale-95 transition-all cursor-pointer text-center block mt-2"
             >
               OK, Got it!
             </button>

@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Landmark, Lock, HelpCircle, CheckCircle2, RefreshCw, Eye, EyeOff } from 'lucide-react';
-import { UserProfile, BankAccount } from '../types';
+import { UserProfile, BankAccount, TransactionRecord } from '../types';
 
 interface WithdrawModalProps {
   user: UserProfile;
@@ -15,6 +15,7 @@ interface WithdrawModalProps {
   onWithdrawRequest: (amount: number, withdrawPass: string) => void;
   onOpenBankConfig: () => void;
   hasPurchasedPlan: boolean;
+  transactions: TransactionRecord[];
 }
 
 export default function WithdrawModal({
@@ -23,7 +24,8 @@ export default function WithdrawModal({
   onClose,
   onWithdrawRequest,
   onOpenBankConfig,
-  hasPurchasedPlan
+  hasPurchasedPlan,
+  transactions
 }: WithdrawModalProps) {
   const [amountInput, setAmountInput] = useState<string>('');
   const [withdrawPassword, setWithdrawPassword] = useState<string>('');
@@ -32,6 +34,19 @@ export default function WithdrawModal({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '120');
+
+  // Sum successful claim transactions (only plan earnings!)
+  const totalPlanEarnings = transactions
+    .filter((t) => t.type === 'claim' && t.status === 'success')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  // Sum successful/pending withdraw transactions
+  const totalWithdrawnAmount = transactions
+    .filter((t) => t.type === 'withdraw' && (t.status === 'success' || t.status === 'pending'))
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
+  const withdrawableLimit = Math.min(user.balance, maxWithdrawablePlanEarnings);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +63,12 @@ export default function WithdrawModal({
       return;
     }
 
-    if (amount > user.balance) {
-      setError(`Insufficient balance. Available: ₹${user.balance.toFixed(2)}`);
+    if (amount > withdrawableLimit) {
+      if (amount > user.balance) {
+        setError(`Insufficient wallet balance. Available: ₹${user.balance.toFixed(2)}`);
+      } else {
+        setError(`निकासी सीमा पार: आप केवल अपने प्लान की दैनिक कमाई ही निकाल सकते हैं। आपकी उपलब्ध निकासी योग्य सीमा ₹${maxWithdrawablePlanEarnings.toFixed(2)} है। (Withdrawal limit exceeded: You can only withdraw your daily plan earnings. Your current withdrawable limit is ₹${maxWithdrawablePlanEarnings.toFixed(2)}.)`);
+      }
       return;
     }
 
@@ -93,14 +112,14 @@ export default function WithdrawModal({
           className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white p-5 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/10 rounded-xl">
-                <Landmark className="w-5 h-5 text-violet-200" />
+                <Landmark className="w-5 h-5 text-emerald-200" />
               </div>
               <div>
                 <h3 className="text-lg font-bold">Withdraw Funds</h3>
-                <p className="text-xs text-violet-200">Safe, secure bank transfer</p>
+                <p className="text-xs text-emerald-200">Safe, secure bank transfer</p>
               </div>
             </div>
             <button
@@ -112,16 +131,36 @@ export default function WithdrawModal({
           </div>
 
           <form onSubmit={handleSubmit} className="overflow-y-auto p-5 flex-1 space-y-5">
-            {/* Balance Card */}
-            <div className="p-4 rounded-2xl bg-violet-50 border border-violet-100/80 flex justify-between items-center">
-              <div>
-                <span className="text-xs font-semibold text-violet-500 block uppercase tracking-wider">Withdrawable Balance</span>
-                <span className="text-2xl font-black text-indigo-950 font-sans">₹{user.balance.toFixed(2)}</span>
+            {/* Balance Details Panel */}
+            <div className="space-y-3 bg-emerald-50/50 border border-emerald-100/80 p-4 rounded-3xl">
+              <div className="flex justify-between items-center pb-2.5 border-b border-emerald-100/50">
+                <div>
+                  <span className="text-[10px] font-black text-emerald-600 block uppercase tracking-widest">Withdrawable Limit / निकासी योग्य दैनिक आय</span>
+                  <span className="text-2xl font-black text-emerald-950 font-sans">₹{withdrawableLimit.toFixed(2)}</span>
+                </div>
+                <div className="bg-emerald-100/80 px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <Landmark className="w-3.5 h-3.5 text-emerald-700" />
+                  <span className="text-[9px] font-black text-emerald-800 uppercase tracking-wider">Settlement</span>
+                </div>
               </div>
-              <div className="bg-indigo-100/60 px-3 py-1.5 rounded-full flex items-center gap-1">
-                <Landmark className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="text-[10px] font-bold text-indigo-700 uppercase">Settlement</span>
+
+              <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Wallet Balance</span>
+                  <span className="text-xs font-extrabold text-slate-800 block mt-0.5">₹{user.balance.toFixed(2)}</span>
+                </div>
+                <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Plan Yield</span>
+                  <span className="text-xs font-extrabold text-teal-700 block mt-0.5">₹{totalPlanEarnings.toFixed(2)}</span>
+                </div>
+                <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Withdrawn</span>
+                  <span className="text-xs font-extrabold text-rose-600 block mt-0.5">₹{totalWithdrawnAmount.toFixed(2)}</span>
+                </div>
               </div>
+              <p className="text-[9.5px] text-emerald-700 font-bold text-center mt-1">
+                * Note: आप केवल प्लान की दैनिक आय ही निकाल सकते हैं (Only Daily Plan earnings can be withdrawn)
+              </p>
             </div>
 
             {/* Withdrawal Lock Alert if no plans purchased */}
@@ -150,7 +189,7 @@ export default function WithdrawModal({
                       onClose();
                       onOpenBankConfig();
                     }}
-                    className="text-xs font-bold text-violet-600 hover:underline"
+                    className="text-xs font-bold text-emerald-600 hover:underline"
                   >
                     + Bind Bank Card
                   </button>
@@ -160,7 +199,7 @@ export default function WithdrawModal({
               {user.bankAccount ? (
                 <div className="p-4 rounded-2xl border border-gray-150 bg-gray-50/50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-violet-600">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
                       <Landmark className="w-5 h-5" />
                     </div>
                     <div>
@@ -176,7 +215,7 @@ export default function WithdrawModal({
                       onClose();
                       onOpenBankConfig();
                     }}
-                    className="text-xs font-bold text-gray-500 hover:text-violet-600"
+                    className="text-xs font-bold text-gray-500 hover:text-emerald-600"
                   >
                     Change
                   </button>
@@ -193,7 +232,7 @@ export default function WithdrawModal({
                       onClose();
                       onOpenBankConfig();
                     }}
-                    className="mt-1 px-4 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-extrabold text-xs rounded-xl shadow-sm"
+                    className="mt-1 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-xs rounded-xl shadow-sm"
                   >
                     Bind Bank Card Now
                   </button>
@@ -205,13 +244,13 @@ export default function WithdrawModal({
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Enter Withdrawal Amount</label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-violet-600">₹</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-black text-emerald-600">₹</span>
                 <input
                   type="number"
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
                   placeholder={`Min ₹${minimumWithdraw}`}
-                  className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-base font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all"
+                  className="w-full pl-9 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-base font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all"
                 />
               </div>
             </div>
@@ -221,14 +260,14 @@ export default function WithdrawModal({
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Withdrawal PIN / Password</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  <Lock className="w-4 h-4 text-violet-600" />
+                  <Lock className="w-4 h-4 text-emerald-600" />
                 </span>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={withdrawPassword}
                   onChange={(e) => setWithdrawPassword(e.target.value)}
                   placeholder="Enter withdraw password"
-                  className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:bg-white transition-all font-sans"
+                  className="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-sans"
                 />
                 <button
                   type="button"
@@ -260,7 +299,7 @@ export default function WithdrawModal({
               className={`w-full py-4 rounded-2xl font-extrabold text-base shadow-lg transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
                 !hasPurchasedPlan
                   ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-violet-100 disabled:opacity-75'
+                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-100 disabled:opacity-75'
               }`}
             >
               {isSubmitting ? (

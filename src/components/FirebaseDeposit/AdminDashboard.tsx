@@ -193,7 +193,7 @@ export default function AdminDashboard({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-2 border-b border-slate-100">
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-wide uppercase flex items-center gap-2">
-            <Sliders className="w-5 h-5 text-violet-600" />
+            <Sliders className="w-5 h-5 text-emerald-600" />
             <span>Firebase Deposit Manager</span>
           </h2>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">PropertyN Secure Operations Center</p>
@@ -211,7 +211,7 @@ export default function AdminDashboard({
               onClick={() => setActiveSubTab(tab.id as any)}
               className={`px-3 py-1.5 text-[10px] font-black rounded-lg uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeSubTab === tab.id
-                  ? 'bg-violet-600 text-white shadow-sm'
+                  ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
@@ -238,7 +238,7 @@ export default function AdminDashboard({
         </div>
         <div className="bg-white p-3 border border-slate-100 rounded-xl shadow-sm text-left">
           <span className="text-[9px] text-slate-400 block font-bold uppercase tracking-wider">Approved Vol.</span>
-          <span className="text-lg font-black text-violet-700">₹{approvedVolume.toLocaleString()}</span>
+          <span className="text-lg font-black text-emerald-700">₹{approvedVolume.toLocaleString()}</span>
         </div>
       </div>
 
@@ -261,7 +261,7 @@ export default function AdminDashboard({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by Depositor, Order ID, or 12-Digit UTR..."
-                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 outline-none focus:border-violet-500 transition-all shadow-sm"
+                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 placeholder-slate-400 outline-none focus:border-emerald-500 transition-all shadow-sm"
               />
             </div>
 
@@ -299,7 +299,7 @@ export default function AdminDashboard({
                       <div>
                         <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-widest">Amount & Time</span>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-xl font-black text-violet-950">₹{dep.depositAmount.toLocaleString()}</span>
+                          <span className="text-xl font-black text-emerald-950">₹{dep.depositAmount.toLocaleString()}</span>
                           <span className="text-[10px] text-slate-400 font-bold">({dep.paymentTime})</span>
                         </div>
                       </div>
@@ -313,7 +313,7 @@ export default function AdminDashboard({
                         </div>
                         <div>
                           <span className="text-[8px] text-slate-400 font-bold block uppercase tracking-wider">Order ID / UTR</span>
-                          <span className="text-xs font-black text-indigo-950 font-mono block select-all">{dep.orderId}</span>
+                          <span className="text-xs font-black text-teal-950 font-mono block select-all">{dep.orderId}</span>
                           <span className="text-[10px] font-black text-emerald-600 font-mono block select-all">UTR: {dep.utr}</span>
                         </div>
                       </div>
@@ -357,7 +357,7 @@ export default function AdminDashboard({
             className="bg-white border border-slate-100 p-5 rounded-2xl shadow-sm"
           >
             <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide mb-4 flex items-center gap-1.5 text-left">
-              <Settings className="w-4.5 h-4.5 text-violet-600" />
+              <Settings className="w-4.5 h-4.5 text-emerald-600" />
               <span>Update Deposit Gateways & Limits</span>
             </h3>
 
@@ -370,7 +370,7 @@ export default function AdminDashboard({
                     type="text"
                     value={settings.upiId}
                     onChange={(e) => setSettings({ ...settings, upiId: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-violet-500 transition-all"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-emerald-500 transition-all"
                     required
                   />
                 </div>
@@ -382,7 +382,7 @@ export default function AdminDashboard({
                     type="text"
                     value={settings.merchantName}
                     onChange={(e) => setSettings({ ...settings, merchantName: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-violet-500 transition-all"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-emerald-500 transition-all"
                     required
                   />
                 </div>
@@ -394,7 +394,7 @@ export default function AdminDashboard({
                     type="number"
                     value={settings.minDeposit}
                     onChange={(e) => setSettings({ ...settings, minDeposit: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-violet-500 transition-all"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-emerald-500 transition-all"
                     required
                   />
                 </div>
@@ -406,7 +406,7 @@ export default function AdminDashboard({
                     type="number"
                     value={settings.maxDeposit}
                     onChange={(e) => setSettings({ ...settings, maxDeposit: parseFloat(e.target.value) || 0 })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-violet-500 transition-all"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-emerald-500 transition-all"
                     required
                   />
                 </div>
@@ -418,7 +418,7 @@ export default function AdminDashboard({
                     type="text"
                     value={settings.qrCodeUrl}
                     onChange={(e) => setSettings({ ...settings, qrCodeUrl: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-violet-500 transition-all"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-slate-800 outline-none focus:border-emerald-500 transition-all"
                     required
                   />
                 </div>
@@ -426,7 +426,7 @@ export default function AdminDashboard({
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-extrabold uppercase tracking-widest shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold uppercase tracking-widest shadow-md transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>Save Payment Settings</span>
@@ -460,7 +460,7 @@ export default function AdminDashboard({
                           log.action === 'APPROVED' ? 'bg-emerald-100 text-emerald-800' :
                           log.action === 'REJECTED' ? 'bg-rose-100 text-rose-800' :
                           log.action === 'INITIATED' ? 'bg-blue-100 text-blue-800' :
-                          'bg-violet-100 text-violet-800'
+                          'bg-emerald-100 text-emerald-800'
                         }`}>
                           {log.action}
                         </span>

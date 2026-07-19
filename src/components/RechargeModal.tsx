@@ -91,14 +91,51 @@ export default function RechargeModal({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setError('Image file size must be less than 2MB');
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProofImage(reader.result as string);
-        setError('');
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Max dimensions for screenshot verification
+          const MAX_WIDTH = 600;
+          const MAX_HEIGHT = 1000;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Compress with JPEG quality 0.4
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.4);
+            setProofImage(compressedBase64);
+            setError('');
+          } else {
+            // Fallback to original Base64 if canvas context fails
+            setProofImage(reader.result as string);
+            setError('');
+          }
+        };
+        img.onerror = () => {
+          setProofImage(reader.result as string);
+          setError('');
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -177,13 +214,13 @@ export default function RechargeModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col overflow-y-auto font-sans">
+      <div className="fixed inset-0 z-50 bg-white flex flex-col overflow-y-auto font-sans">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 30 }}
           transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-          className="w-full max-w-md mx-auto bg-white min-h-screen flex flex-col shadow-2xl border-x border-slate-100 relative overflow-hidden"
+          className="w-full bg-white min-h-screen flex flex-col relative overflow-hidden"
         >
           {/* PayU/Razorpay Secure Processing Portal Overlay */}
           <AnimatePresence>
@@ -197,21 +234,21 @@ export default function RechargeModal({
                 <div className="space-y-6 max-w-xs flex flex-col items-center">
                   {/* Glowing Icon */}
                   <div className="relative">
-                    <div className="absolute inset-0 bg-indigo-500/30 rounded-full blur-xl animate-pulse"></div>
-                    <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-full flex items-center justify-center border border-indigo-400/30 shadow-lg relative">
+                    <div className="absolute inset-0 bg-teal-500/30 rounded-full blur-xl animate-pulse"></div>
+                    <div className="w-16 h-16 bg-gradient-to-tr from-teal-600 to-emerald-600 rounded-full flex items-center justify-center border border-teal-400/30 shadow-lg relative">
                       <ShieldCheck className="w-8 h-8 text-white animate-pulse" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-black uppercase tracking-widest text-indigo-300">Secure Gateway</h4>
+                    <h4 className="text-sm font-black uppercase tracking-widest text-teal-300">Secure Gateway</h4>
                     <p className="text-xs text-slate-300 font-medium">Connecting to official merchant checkout via <span className="font-extrabold text-white">Razorpay Secure Network</span>...</p>
                   </div>
 
                   {/* Loading spinner */}
                   <div className="flex flex-col items-center gap-1.5 pt-2">
-                    <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-                    <span className="text-[10px] text-indigo-200/90 font-extrabold uppercase tracking-widest animate-pulse">Handshaking with Paytm/PhonePe...</span>
+                    <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                    <span className="text-[10px] text-teal-200/90 font-extrabold uppercase tracking-widest animate-pulse">Handshaking with Paytm/PhonePe...</span>
                   </div>
 
                   <div className="border-t border-slate-800/80 w-full pt-4 text-[9px] text-slate-400 font-bold space-y-1">
@@ -223,7 +260,7 @@ export default function RechargeModal({
             )}
           </AnimatePresence>
           {/* Header Bar */}
-          <div className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-violet-700 text-white px-5 py-5 shrink-0 flex items-center justify-between shadow-md">
+          <div className="bg-gradient-to-r from-teal-700 via-teal-600 to-emerald-700 text-white px-5 py-5 shrink-0 flex items-center justify-between shadow-md">
             <div className="flex items-center gap-3">
               {step === 'payment' && (
                 <button
@@ -234,11 +271,11 @@ export default function RechargeModal({
                 </button>
               )}
               <div className="p-2 bg-white/15 rounded-xl border border-white/10">
-                <QrCode className="w-5 h-5 text-indigo-100" />
+                <QrCode className="w-5 h-5 text-teal-100" />
               </div>
               <div>
                 <h3 className="text-base font-black tracking-wide">Secure Cashier Gateway</h3>
-                <p className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Fast Deposit • Secure Escrow</p>
+                <p className="text-[10px] text-teal-200 font-bold uppercase tracking-wider">Fast Deposit • Secure Escrow</p>
               </div>
             </div>
             <button
@@ -255,7 +292,7 @@ export default function RechargeModal({
               {/* Connecting line */}
               <div className="absolute left-0 right-0 top-3 h-0.5 bg-slate-200 -z-10" />
               <div 
-                className="absolute left-0 top-3 h-0.5 bg-indigo-600 transition-all duration-300 -z-10" 
+                className="absolute left-0 top-3 h-0.5 bg-teal-600 transition-all duration-300 -z-10" 
                 style={{ width: step === 'amount' ? '0%' : step === 'payment' ? '50%' : '100%' }}
               />
 
@@ -263,43 +300,43 @@ export default function RechargeModal({
               <div className="flex flex-col items-center gap-1 bg-transparent">
                 <div className={`w-6.5 h-6.5 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${
                   step === 'amount' 
-                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' 
-                    : 'bg-indigo-600 text-white'
+                    ? 'bg-teal-600 text-white ring-4 ring-teal-100' 
+                    : 'bg-teal-600 text-white'
                 }`}>
                   {step !== 'amount' ? <Check className="w-3.5 h-3.5" /> : '1'}
                 </div>
-                <span className={`text-[9px] font-black uppercase tracking-wider ${step === 'amount' ? 'text-indigo-600' : 'text-slate-400'}`}>Amount</span>
+                <span className={`text-[9px] font-black uppercase tracking-wider ${step === 'amount' ? 'text-teal-600' : 'text-slate-400'}`}>Amount</span>
               </div>
 
               {/* Step 2 */}
               <div className="flex flex-col items-center gap-1 bg-transparent">
                 <div className={`w-6.5 h-6.5 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${
                   step === 'payment' 
-                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' 
-                    : step === 'success' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
+                    ? 'bg-teal-600 text-white ring-4 ring-teal-100' 
+                    : step === 'success' ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-500'
                 }`}>
                   {step === 'success' ? <Check className="w-3.5 h-3.5" /> : '2'}
                 </div>
-                <span className={`text-[9px] font-black uppercase tracking-wider ${step === 'payment' ? 'text-indigo-600' : 'text-slate-400'}`}>Pay</span>
+                <span className={`text-[9px] font-black uppercase tracking-wider ${step === 'payment' ? 'text-teal-600' : 'text-slate-400'}`}>Pay</span>
               </div>
 
               {/* Step 3 */}
               <div className="flex flex-col items-center gap-1 bg-transparent">
                 <div className={`w-6.5 h-6.5 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${
                   step === 'success' 
-                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' 
+                    ? 'bg-teal-600 text-white ring-4 ring-teal-100' 
                     : 'bg-slate-200 text-slate-500'
                 }`}>
                   3
                 </div>
-                <span className={`text-[9px] font-black uppercase tracking-wider ${step === 'success' ? 'text-indigo-600' : 'text-slate-400'}`}>Review</span>
+                <span className={`text-[9px] font-black uppercase tracking-wider ${step === 'success' ? 'text-teal-600' : 'text-slate-400'}`}>Review</span>
               </div>
             </div>
           </div>
 
           {/* SSL Encrypted Security Bar */}
-          <div className="bg-indigo-50/50 border-b border-indigo-100/40 px-5 py-2 flex items-center justify-center gap-2 text-[10px] text-indigo-700 font-bold tracking-wide shrink-0">
-            <Lock className="w-3.5 h-3.5 text-indigo-600" />
+          <div className="bg-teal-50/50 border-b border-teal-100/40 px-5 py-2 flex items-center justify-center gap-2 text-[10px] text-teal-700 font-bold tracking-wide shrink-0">
+            <Lock className="w-3.5 h-3.5 text-teal-600" />
             <span>256-Bit SSL Encrypted Secure Transaction</span>
           </div>
 
@@ -318,11 +355,11 @@ export default function RechargeModal({
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Enter Deposit Amount</label>
-                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded-full">INR (₹)</span>
+                    <span className="text-[9px] font-black text-teal-600 uppercase tracking-wider bg-teal-50 px-2 py-0.5 rounded-full">INR (₹)</span>
                   </div>
                   
                   <div className="relative">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-3xl font-black text-indigo-600">₹</span>
+                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-3xl font-black text-teal-600">₹</span>
                     <input
                       type="number"
                       required
@@ -333,7 +370,7 @@ export default function RechargeModal({
                         setError('');
                       }}
                       placeholder={`${minRecharge}`}
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 focus:bg-white rounded-3xl text-3xl font-black text-slate-800 placeholder:text-slate-300 focus:outline-none transition-all font-sans shadow-inner"
+                      className="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-slate-100 focus:border-teal-500 focus:bg-white rounded-3xl text-3xl font-black text-slate-800 placeholder:text-slate-300 focus:outline-none transition-all font-sans shadow-inner"
                     />
                   </div>
                   
@@ -361,7 +398,7 @@ export default function RechargeModal({
                           }}
                           className={`py-3 px-1 rounded-2xl text-[11px] font-black font-sans transition-all cursor-pointer border ${
                             isSelected
-                              ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 border-transparent text-white shadow-md shadow-indigo-600/30 scale-98'
+                              ? 'bg-gradient-to-br from-teal-600 to-teal-700 border-transparent text-white shadow-md shadow-teal-600/30 scale-98'
                               : 'bg-white hover:bg-slate-50 border-slate-200/80 text-slate-700 hover:border-slate-300'
                           }`}
                         >
@@ -374,7 +411,7 @@ export default function RechargeModal({
 
                 <button
                   type="submit"
-                  className="w-full py-4 bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35 active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-gradient-to-r from-teal-600 via-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-teal-600/20 hover:shadow-teal-600/35 active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>Proceed to Payment</span>
                   <ArrowRight className="w-4.5 h-4.5" />
@@ -384,11 +421,11 @@ export default function RechargeModal({
                 <div className="p-4 bg-slate-50 rounded-3xl border border-slate-100 space-y-2.5 text-[10.5px] text-slate-500 font-sans">
                   <span className="font-black text-slate-700 uppercase tracking-wider block text-[9px]">Important Instructions</span>
                   <div className="flex gap-2 items-start leading-relaxed text-left">
-                    <span className="text-indigo-600 font-bold">•</span>
+                    <span className="text-teal-600 font-bold">•</span>
                     <p>Enter the correct deposit amount. Any discrepancy will delay account balance update.</p>
                   </div>
                   <div className="flex gap-2 items-start leading-relaxed text-left">
-                    <span className="text-indigo-600 font-bold">•</span>
+                    <span className="text-teal-600 font-bold">•</span>
                     <p>Always copy the exact amount to pay, and make sure to copy the 12-digit UTR on completion.</p>
                   </div>
                 </div>
@@ -398,7 +435,7 @@ export default function RechargeModal({
             {step === 'payment' && (
               <form onSubmit={handlePaymentSubmit} className="space-y-6 text-left">
                 {/* Billing Summary Header - Colorful, vibrant gradient */}
-                <div className="p-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-pink-600 rounded-2xl text-white flex justify-between items-center shadow-md text-left relative overflow-hidden">
+                <div className="p-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-pink-600 rounded-2xl text-white flex justify-between items-center shadow-md text-left relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-lg pointer-events-none"></div>
                   <div className="relative z-10">
                     <span className="text-[9px] font-extrabold text-pink-100 uppercase tracking-widest block">PAYABLE AMOUNT</span>
@@ -415,9 +452,9 @@ export default function RechargeModal({
                 </div>
 
                 {/* QR Section ( Razorpay Style ) */}
-                <div className="flex flex-col items-center p-5 bg-gradient-to-b from-indigo-50/70 to-white rounded-[2rem] border-2 border-indigo-100 space-y-4 shadow-sm">
+                <div className="flex flex-col items-center p-5 bg-gradient-to-b from-teal-50/70 to-white rounded-[2rem] border-2 border-teal-100 space-y-4 shadow-sm">
                   <div className="text-center space-y-1">
-                    <span className="text-[10px] font-black uppercase text-indigo-700 tracking-widest bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-100">
+                    <span className="text-[10px] font-black uppercase text-teal-700 tracking-widest bg-teal-50 px-3.5 py-1 rounded-full border border-teal-100">
                       Scan to Pay / QR Scanner
                     </span>
                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Supports PhonePe, GPay, Paytm & UPI</p>
@@ -425,7 +462,7 @@ export default function RechargeModal({
                   
                   {/* QR Image Box */}
                   <div className="flex flex-col items-center gap-3">
-                    <div className="p-3 bg-white rounded-3xl border-2 border-indigo-100/50 shadow-md relative group">
+                    <div className="p-3 bg-white rounded-3xl border-2 border-teal-100/50 shadow-md relative group">
                       <img
                         src={qrImageSrc}
                         alt="Payment QR Code"
@@ -438,23 +475,23 @@ export default function RechargeModal({
                       type="button"
                       onClick={handleDownloadQr}
                       disabled={downloadingQr}
-                      className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100/80 text-indigo-700 border border-indigo-200/60 rounded-xl font-extrabold text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
+                      className="flex items-center gap-1.5 px-4 py-2.5 bg-teal-50 hover:bg-teal-100/80 text-teal-700 border border-teal-200/60 rounded-xl font-extrabold text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
                     >
-                      <Download className="w-3.5 h-3.5 text-indigo-600 animate-bounce" />
+                      <Download className="w-3.5 h-3.5 text-teal-600 animate-bounce" />
                       <span>{downloadingQr ? 'Downloading...' : 'Save QR to Gallery'}</span>
                     </button>
                   </div>
 
                   {/* Merchant details & Quick Copy */}
-                  <div className="w-full bg-gradient-to-br from-indigo-50/40 via-white to-pink-50/10 p-4 rounded-2.5xl border border-indigo-100/60 text-center space-y-3 shadow-inner">
+                  <div className="w-full bg-gradient-to-br from-teal-50/40 via-white to-pink-50/10 p-4 rounded-2.5xl border border-teal-100/60 text-center space-y-3 shadow-inner">
                     <div className="space-y-1">
-                      <p className="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Official Merchant UPI ID</p>
-                      <div className="flex items-center justify-between gap-2 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/30">
-                        <span className="font-mono font-black text-indigo-950 text-sm select-all tracking-wide truncate">{upiId}</span>
+                      <p className="text-[10px] font-black text-teal-700 uppercase tracking-wider">Official Merchant UPI ID</p>
+                      <div className="flex items-center justify-between gap-2 bg-teal-50/50 p-3 rounded-2xl border border-teal-100/30">
+                        <span className="font-mono font-black text-teal-950 text-sm select-all tracking-wide truncate">{upiId}</span>
                         <button
                           type="button"
                           onClick={handleCopyUpi}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-[10px] uppercase active:scale-95 transition-all shadow-md shrink-0 cursor-pointer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-teal-600 text-white font-extrabold text-[10px] uppercase active:scale-95 transition-all shadow-md shrink-0 cursor-pointer"
                         >
                           {copiedUpi ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                           <span>{copiedUpi ? 'COPIED' : 'COPY'}</span>
@@ -471,24 +508,24 @@ export default function RechargeModal({
 
 
                 {/* Dedicated Payment Button Box */}
-                <div className="bg-gradient-to-b from-purple-50/70 to-white rounded-2xl border-2 border-purple-100 p-3.5 space-y-2.5 shadow-sm mt-1">
+                <div className="bg-gradient-to-b from-teal-50/70 to-white rounded-2xl border-2 border-teal-100 p-3.5 space-y-2.5 shadow-sm mt-1">
                   <div className="flex items-center gap-2">
-                    <span className="w-5.5 h-5.5 rounded-lg bg-purple-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">2</span>
-                    <h4 className="text-[11px] font-black text-purple-900 uppercase tracking-wider">Pay Directly</h4>
+                    <span className="w-5.5 h-5.5 rounded-lg bg-teal-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">2</span>
+                    <h4 className="text-[11px] font-black text-teal-900 uppercase tracking-wider">Pay Directly</h4>
                   </div>
                   
                   <a
                     href={upiPayloadLink}
                     onClick={handleDirectUpiPay}
-                    className="w-full py-2.5 px-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-700 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md shadow-indigo-600/10 flex items-center justify-between active:scale-98 cursor-pointer border border-indigo-500/10"
+                    className="w-full py-2.5 px-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl transition-all shadow-md shadow-teal-600/10 flex items-center justify-between active:scale-98 cursor-pointer border border-teal-500/10"
                   >
                     <div className="flex items-center gap-2 text-left">
                       <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-                        <Smartphone className="w-4 h-4 text-indigo-100 animate-pulse" />
+                        <Smartphone className="w-4 h-4 text-teal-100 animate-pulse" />
                       </div>
                       <div>
                         <p className="font-black text-[10px] tracking-wider text-white">PAY VIA ANY UPI APP</p>
-                        <p className="text-[8px] text-indigo-100 font-medium tracking-normal normal-case">Pay with Paytm, PhonePe, GPay, or any UPI app</p>
+                        <p className="text-[8px] text-teal-100 font-medium tracking-normal normal-case">Pay with Paytm, PhonePe, GPay, or any UPI app</p>
                       </div>
                     </div>
                     <span className="text-[8px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-md font-black shrink-0 tracking-wider">RECOMMENDED</span>
@@ -521,7 +558,7 @@ export default function RechargeModal({
                         setError('');
                       }}
                       placeholder="e.g. 301928475819"
-                      className="w-full px-4 py-4 bg-white border-2 border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200/40 rounded-2xl font-mono text-center text-lg font-black text-slate-900 placeholder:text-slate-300 focus:outline-none transition-all shadow-inner tracking-widest"
+                      className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200/40 rounded-xl font-mono text-center text-sm font-black text-slate-800 placeholder:text-slate-300 focus:outline-none transition-all shadow-inner tracking-widest"
                     />
                   </div>
 
@@ -532,10 +569,10 @@ export default function RechargeModal({
                     </label>
                     
                     {!proofImage ? (
-                      <label className="flex flex-col items-center justify-center p-5 bg-indigo-50/30 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl cursor-pointer transition-all hover:bg-indigo-50/50">
-                        <UploadCloud className="w-8 h-8 text-indigo-500 mb-1.5 animate-pulse" />
+                      <label className="flex flex-col items-center justify-center p-5 bg-teal-50/30 border-2 border-dashed border-teal-200 hover:border-teal-400 rounded-2xl cursor-pointer transition-all hover:bg-teal-50/50">
+                        <UploadCloud className="w-8 h-8 text-teal-500 mb-1.5 animate-pulse" />
                         <span className="text-[10.5px] font-black text-slate-700">Attach screenshot of payment</span>
-                        <span className="text-[9px] text-indigo-500 font-bold mt-0.5">JPEG, PNG files up to 2MB supported</span>
+                        <span className="text-[9px] text-teal-500 font-bold mt-0.5">JPEG, PNG files up to 2MB supported</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -580,38 +617,29 @@ export default function RechargeModal({
 
 
                   {/* Easy Step-by-Step Payment Guide */}
-                  <div className="p-4 bg-white rounded-3xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-3 leading-relaxed text-left mt-2 shadow-inner">
-                    <p className="font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 text-[9px]">
-                      <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <span>Payment Instructions / भुगतान निर्देश</span>
+                  <div className="p-3 bg-white rounded-2xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-2 leading-relaxed text-left mt-2 shadow-inner">
+                    <p className="font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 text-[8.5px]">
+                      <Info className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                      <span>Payment Steps / भुगतान निर्देश</span>
                     </p>
-                    <div className="space-y-3 font-medium">
-                      <div className="flex gap-2 border-b border-slate-100 pb-2">
-                        <span className="font-black text-indigo-600 text-sm">1.</span>
-                        <div>
-                          <p className="text-slate-950 font-bold">English:</p>
-                          <p>Scan the QR code or pay on the above <strong className="text-slate-950 font-bold">UPI ID</strong> to complete the payment.</p>
-                          <p className="text-emerald-700 font-bold mt-1">Hindi / हिंदी:</p>
-                          <p className="text-slate-800">भुगतान पूरा करने के लिए ऊपर दिए गए QR कोड को स्कैन करें या ऊपर दी गई <strong className="text-slate-950 font-bold">UPI ID</strong> पर भुगतान करें।</p>
-                        </div>
+                    <div className="space-y-2 font-medium">
+                      <div className="flex gap-2 border-b border-slate-50 pb-1.5">
+                        <span className="font-black text-teal-600 text-xs">1.</span>
+                        <p className="text-slate-800">
+                          Scan QR or pay to above UPI ID. / QR कोड स्कैन करें या ऊपर दी गई UPI ID पर भुगतान करें।
+                        </p>
                       </div>
-                      <div className="flex gap-2 border-b border-slate-100 pb-2">
-                        <span className="font-black text-indigo-600 text-sm">2.</span>
-                        <div>
-                          <p className="text-slate-950 font-bold">English:</p>
-                          <p>After successful payment, copy the <strong className="text-slate-950 font-bold">12-digit UTR Number / Ref No.</strong> from your bank receipt.</p>
-                          <p className="text-emerald-700 font-bold mt-1">Hindi / हिंदी:</p>
-                          <p className="text-slate-800">सफल भुगतान के बाद, अपनी बैंक रसीद या ऐप से <strong className="text-slate-950 font-bold">12-अंकों का UTR नंबर / Ref No.</strong> कॉपी करें।</p>
-                        </div>
+                      <div className="flex gap-2 border-b border-slate-50 pb-1.5">
+                        <span className="font-black text-teal-600 text-xs">2.</span>
+                        <p className="text-slate-800">
+                          Copy 12-digit UTR/Ref No. from bank receipt. / बैंक रसीद या पेमेंट हिस्ट्री से 12-अंकों का UTR नंबर कॉपी करें।
+                        </p>
                       </div>
                       <div className="flex gap-2">
-                        <span className="font-black text-indigo-600 text-sm">3.</span>
-                        <div>
-                          <p className="text-slate-950 font-bold">English:</p>
-                          <p>Enter the copied UTR number, upload the payment screenshot, and click <strong className="text-slate-950 font-bold">Submit Deposit Request</strong>.</p>
-                          <p className="text-emerald-700 font-bold mt-1">Hindi / हिंदी:</p>
-                          <p className="text-slate-800">कॉपी किया गया UTR नंबर दर्ज करें, भुगतान का स्क्रीनशॉट (पेमेंट प्रूफ) अपलोड करें, और <strong className="text-slate-950 font-bold">Submit Deposit Request</strong> बटन पर क्लिक करें।</p>
-                        </div>
+                        <span className="font-black text-teal-600 text-xs">3.</span>
+                        <p className="text-slate-800">
+                          Paste UTR, upload proof and submit request. / UTR नंबर डालें, स्क्रीनशॉट अपलोड करें और Submit करें।
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -639,7 +667,7 @@ export default function RechargeModal({
                     Your deposit request for <span className="font-extrabold text-slate-900">₹{parseFloat(amountInput).toLocaleString()}</span> has been submitted successfully.
                   </p>
                   <p className="text-slate-600 font-medium">
-                    The amount will be added to your wallet balance within <strong className="text-indigo-600">5-10 minutes</strong> after admin verification of the UTR and receipt.
+                    The amount will be added to your wallet balance within <strong className="text-teal-600">5-10 minutes</strong> after admin verification of the UTR and receipt.
                   </p>
                 </div>
 

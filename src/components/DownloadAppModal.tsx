@@ -89,7 +89,7 @@ export default function DownloadAppModal({ isOpen, onClose, triggerToast }: Down
                 Download Link (If download doesn't start)
               </span>
               <p className="text-[10.5px] text-slate-500 font-medium leading-relaxed">
-                If the download doesn't start automatically after clicking, copy this link and open it in your <strong className="text-indigo-600">Google Chrome browser</strong>:
+                If the download doesn't start automatically after clicking, copy this link and open it in your <strong className="text-teal-600">Google Chrome browser</strong>:
               </p>
               
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-3">

@@ -147,6 +147,7 @@ export default function App() {
   const purchasesRef = React.useRef<PurchaseRecord[]>(purchases);
   const userProfileRef = React.useRef<UserProfile | null>(userProfile);
   const pushTimeoutRef = React.useRef<any>(null);
+  const lastLocalUpdateRef = React.useRef<number>(0);
 
   plansRef.current = plans;
   transactionsRef.current = transactions;
@@ -406,6 +407,11 @@ export default function App() {
 
   // API: Synchronize current memory states with full stack server database (real-time sync)
   const syncWithServer = async (currentUser: UserProfile | null = userProfileRef.current) => {
+    // If the local state was updated in the last 6 seconds, we defer syncing to prevent clobbering!
+    if (Date.now() - lastLocalUpdateRef.current < 6000) {
+      console.log("Deferring syncWithServer to allow pending pushStateToServer to complete...");
+      return;
+    }
     try {
       const activeUser = currentUser || userProfileRef.current;
       const userId = activeUser ? activeUser.id : '';
@@ -651,6 +657,7 @@ export default function App() {
     updatedTx?: TransactionRecord[],
     updatedTeam?: TeamMember[]
   ) => {
+    lastLocalUpdateRef.current = Date.now();
     let nextUsersList = usersList;
     if (user) {
       localStorage.setItem('adpaint_user', JSON.stringify(user));
@@ -1616,19 +1623,19 @@ export default function App() {
                     >
                       <div className={`p-1.5 rounded-xl transition-all duration-300 relative ${
                         isSelected
-                          ? 'bg-gradient-to-br from-violet-500 via-indigo-600 to-indigo-700 text-white shadow-[0_5px_12px_rgba(109,40,217,0.35),inset_0_1px_1px_rgba(255,255,255,0.4),0_1px_2px_rgba(0,0,0,0.1)] scale-[1.08] border-t border-white/25'
+                          ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-teal-700 text-white shadow-[0_5px_12px_rgba(109,40,217,0.35),inset_0_1px_1px_rgba(255,255,255,0.4),0_1px_2px_rgba(0,0,0,0.1)] scale-[1.08] border-t border-white/25'
                           : 'text-slate-400 group-hover:text-slate-600 hover:bg-slate-50'
                       }`}>
                         <Icon className="w-4.5 h-4.5 transition-transform group-active:scale-90" />
                         {isSelected && (
                           <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-300 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-400"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-300 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-400"></span>
                           </span>
                         )}
                       </div>
                       <span className={`text-[9px] font-black mt-1 tracking-wider uppercase transition-all duration-200 ${
-                        isSelected ? 'text-indigo-600 font-extrabold scale-105' : 'text-slate-400 group-hover:text-slate-500'
+                        isSelected ? 'text-teal-600 font-extrabold scale-105' : 'text-slate-400 group-hover:text-slate-500'
                       }`}>
                         {tab.label}
                       </span>
@@ -1640,7 +1647,7 @@ export default function App() {
           )
         ) : (
           /* AUTHENTICATION PORTAL - Styled exactly like the shared screenshot, fully optimized for mobile devices */
-          <div ref={scrollContainerRef} className="flex-1 bg-gradient-to-b from-indigo-700 via-indigo-800 to-indigo-950 text-white flex flex-col justify-between relative overflow-y-auto scrollbar-none">
+          <div ref={scrollContainerRef} className="flex-1 bg-gradient-to-b from-teal-700 via-teal-800 to-teal-950 text-white flex flex-col justify-between relative overflow-y-auto scrollbar-none">
             {/* Subtle background overlay dots */}
             <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none z-0"></div>
             
@@ -1648,14 +1655,14 @@ export default function App() {
             <div className="text-center pt-8 pb-5 z-10 px-6 relative flex flex-col items-center">
               {/* Premium Logo Ring Icon */}
               <div className="w-14 h-14 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-lg border border-white/15 mb-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md">
                   <Home className="w-5.5 h-5.5 stroke-[2.5]" />
                 </div>
               </div>
               <h1 className="text-2xl font-black tracking-[0.15em] text-white font-sans uppercase">
                 Property<span className="text-emerald-400">N</span>
               </h1>
-              <p className="text-[10px] text-indigo-100 font-extrabold tracking-widest mt-1 uppercase opacity-90">
+              <p className="text-[10px] text-teal-100 font-extrabold tracking-widest mt-1 uppercase opacity-90">
                 {authTab === 'login' ? 'Secure Member Login' : 'Create your account in seconds'}
               </p>
             </div>
@@ -1664,7 +1671,7 @@ export default function App() {
             <div className="bg-white text-slate-800 rounded-t-[3rem] px-6 pt-8 pb-6 flex-1 flex flex-col justify-between space-y-6 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
               
               {/* Sleek Switch Toggle (Matches Screenshot 2's pill tabs) */}
-              <div className="p-1.5 bg-violet-50/50 border border-violet-100/50 rounded-3xl flex relative shrink-0 shadow-inner">
+              <div className="p-1.5 bg-emerald-50/50 border border-emerald-100/50 rounded-3xl flex relative shrink-0 shadow-inner">
                 <button
                   type="button"
                   onClick={() => {
@@ -1680,7 +1687,7 @@ export default function App() {
                   {authTab === 'login' && (
                     <motion.div
                       layoutId="authActiveBg"
-                      className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl shadow-lg shadow-violet-200 -z-10"
+                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl shadow-lg shadow-emerald-200 -z-10"
                       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                     />
                   )}
@@ -1701,7 +1708,7 @@ export default function App() {
                   {authTab === 'register' && (
                     <motion.div
                       layoutId="authActiveBg"
-                      className="absolute inset-0 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-2xl shadow-lg shadow-violet-200 -z-10"
+                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl shadow-lg shadow-emerald-200 -z-10"
                       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                     />
                   )}
@@ -1723,16 +1730,16 @@ export default function App() {
                   className="space-y-4 text-left flex-1 flex flex-col justify-center"
                 >
                   <div className="text-center pb-1">
-                    <span className="text-[10px] bg-indigo-50 text-indigo-700 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    <span className="text-[10px] bg-teal-50 text-teal-700 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
                       Step {forgotStep} of 3: {forgotStep === 1 ? "Verify Number" : forgotStep === 2 ? "Enter OTP" : "Set New Password"}
                     </span>
                   </div>
 
                   {forgotStep === 1 && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">REGISTERED MOBILE NUMBER</label>
-                      <div className="relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                        <div className="w-12 h-10 rounded-2xl bg-violet-50 text-violet-600 border border-violet-100/80 flex items-center justify-center font-black text-xs shrink-0 font-mono">
+                      <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">REGISTERED MOBILE NUMBER</label>
+                      <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                        <div className="w-12 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100/80 flex items-center justify-center font-black text-xs shrink-0 font-mono">
                           +91
                         </div>
                         <input
@@ -1750,9 +1757,9 @@ export default function App() {
 
                   {forgotStep === 2 && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">ENTER 4-DIGIT SECURITY OTP</label>
-                      <div className="relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                        <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-violet-100">
+                      <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">ENTER 4-DIGIT SECURITY OTP</label>
+                      <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                           <ShieldCheck className="w-4.5 h-4.5" />
                         </div>
                         <input
@@ -1766,16 +1773,16 @@ export default function App() {
                         />
                       </div>
                       <p className="text-[10px] text-slate-500 font-medium text-center mt-1">
-                        We sent a simulated OTP code to your phone. Check the top notifications toast or look at: <strong className="text-indigo-600 font-mono text-xs">{forgotOtpCode}</strong>
+                        We sent a simulated OTP code to your phone. Check the top notifications toast or look at: <strong className="text-teal-600 font-mono text-xs">{forgotOtpCode}</strong>
                       </p>
                     </div>
                   )}
 
                   {forgotStep === 3 && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">SET NEW PASSWORD</label>
-                      <div className="relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                        <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-violet-100">
+                      <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">SET NEW PASSWORD</label>
+                      <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                           <Lock className="w-4.5 h-4.5" />
                         </div>
                         <input
@@ -1789,7 +1796,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
-                          className="absolute right-3.5 text-violet-400 hover:text-violet-600 transition-colors"
+                          className="absolute right-3.5 text-emerald-400 hover:text-emerald-600 transition-colors"
                         >
                           {showForgotNewPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                         </button>
@@ -1809,7 +1816,7 @@ export default function App() {
 
                   <button
                     type="submit"
-                    className="w-full py-4 rounded-[1.5rem] bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-violet-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-4"
+                    className="w-full py-4 rounded-[1.5rem] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-4"
                   >
                     <UserCheck className="w-4.5 h-4.5" />
                     <span>
@@ -1840,9 +1847,9 @@ export default function App() {
                 {/* Full name (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">FULL NAME</label>
-                    <div className="relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                      <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-violet-100">
+                    <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">FULL NAME</label>
+                    <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                         <User className="w-4.5 h-4.5" />
                       </div>
                       <input
@@ -1859,9 +1866,9 @@ export default function App() {
 
                 {/* Mobile number */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">MOBILE NUMBER</label>
-                  <div className="relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                    <div className="w-12 h-10 rounded-2xl bg-violet-50 text-violet-600 border border-violet-100/80 flex items-center justify-center font-black text-xs shrink-0 font-mono">
+                  <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">MOBILE NUMBER</label>
+                  <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                    <div className="w-12 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100/80 flex items-center justify-center font-black text-xs shrink-0 font-mono">
                       +91
                     </div>
                     <input
@@ -1879,10 +1886,10 @@ export default function App() {
                 {/* Verification Code / Captcha Verification */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">VERIFICATION CODE</label>
+                    <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">VERIFICATION CODE</label>
                     <div className="grid grid-cols-12 gap-2.5 items-center">
-                      <div className="col-span-7 relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                        <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-violet-100">
+                      <div className="col-span-7 relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                           <ShieldCheck className="w-4 h-4" />
                         </div>
                         <input
@@ -1899,12 +1906,12 @@ export default function App() {
                         <div 
                           onClick={generateCaptcha}
                           title="Click to refresh captcha"
-                          className="h-13 bg-gradient-to-r from-violet-600 via-indigo-600 to-indigo-700 text-white rounded-[1.25rem] flex items-center justify-center gap-1.5 font-mono font-black text-base tracking-widest relative overflow-hidden select-none cursor-pointer hover:shadow-lg hover:shadow-indigo-200 active:scale-95 transition-all shadow-md border border-indigo-500/20 px-2 group"
+                          className="h-13 bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 text-white rounded-[1.25rem] flex items-center justify-center gap-1.5 font-mono font-black text-base tracking-widest relative overflow-hidden select-none cursor-pointer hover:shadow-lg hover:shadow-teal-200 active:scale-95 transition-all shadow-md border border-teal-500/20 px-2 group"
                         >
                           {/* Captcha Background Pattern Effect */}
                           <div className="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(45deg,#000,#000_10px,#fff_10px,#fff_20px)] pointer-events-none"></div>
                           <span className="relative drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] animate-pulse">{captchaCode}</span>
-                          <RefreshCw className="w-3.5 h-3.5 text-indigo-200 group-hover:rotate-180 transition-transform duration-500 shrink-0" />
+                          <RefreshCw className="w-3.5 h-3.5 text-teal-200 group-hover:rotate-180 transition-transform duration-500 shrink-0" />
                         </div>
                       </div>
                     </div>
@@ -1913,11 +1920,11 @@ export default function App() {
 
                 {/* Password Input */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">
+                  <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">
                     {authTab === 'register' ? 'CREATE PASSWORD' : 'PASSWORD'}
                   </label>
-                  <div className="relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                    <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-violet-100">
+                  <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                       <Lock className="w-4.5 h-4.5" />
                     </div>
                     <input
@@ -1931,7 +1938,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-violet-400 hover:text-violet-600 transition-colors"
+                      className="absolute right-3.5 text-emerald-400 hover:text-emerald-600 transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
                     </button>
@@ -1947,7 +1954,7 @@ export default function App() {
                         setAuthError('');
                         setForgotStep(1);
                       }}
-                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+                      className="text-[10px] font-black text-teal-600 hover:text-teal-800 transition-colors cursor-pointer"
                     >
                       Forgot Password?
                     </button>
@@ -1957,9 +1964,9 @@ export default function App() {
                 {/* Invitation Code (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-indigo-950/60 uppercase tracking-widest block px-1">INVITATION CODE (OPTIONAL)</label>
-                    <div className="relative flex items-center bg-violet-50/30 border border-violet-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-violet-500 focus-within:bg-white transition-all shadow-inner">
-                      <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-violet-100">
+                    <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">INVITATION CODE (OPTIONAL)</label>
+                    <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                         <Gift className="w-4.5 h-4.5" />
                       </div>
                       <input
@@ -1985,7 +1992,7 @@ export default function App() {
 
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-[1.5rem] bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-xs shadow-lg shadow-violet-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-4"
+                  className="w-full py-4 rounded-[1.5rem] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-4"
                 >
                   <UserCheck className="w-4.5 h-4.5" />
                   <span>{authTab === 'login' ? 'Login Now' : 'Create Account'}</span>
@@ -1996,7 +2003,7 @@ export default function App() {
             </div>
 
             {/* Bottom SSL Safe Protection Indicator */}
-            <div className="flex items-center justify-center gap-1.5 text-[9px] text-indigo-200/75 font-extrabold tracking-widest uppercase z-10 relative py-3 select-none">
+            <div className="flex items-center justify-center gap-1.5 text-[9px] text-teal-200/75 font-extrabold tracking-widest uppercase z-10 relative py-3 select-none">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>SSL Secure Encryption Protected</span>
             </div>
@@ -2027,6 +2034,7 @@ export default function App() {
                 triggerToast('Go to "Bank Account" to bind your payout card.', 'info');
               }}
               hasPurchasedPlan={purchases.length > 0}
+              transactions={transactions}
             />
 
             <SupportModal
