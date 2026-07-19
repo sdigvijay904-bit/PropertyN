@@ -250,7 +250,7 @@ export default function HomeSection({
                 <Wallet className="w-5 h-5" />
               </div>
               <span 
-                className="text-[11px] min-[375px]:text-xs sm:text-sm font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
+                className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
                 title={`₹${user.balance.toFixed(2)}`}
               >
                 ₹{Math.round(user.balance).toLocaleString('en-IN')}
@@ -266,7 +266,7 @@ export default function HomeSection({
                 <Banknote className="w-5 h-5" />
               </div>
               <span 
-                className="text-[11px] min-[375px]:text-xs sm:text-sm font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
+                className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
                 title={`₹${totalRecharged.toFixed(2)}`}
               >
                 ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
@@ -282,7 +282,7 @@ export default function HomeSection({
                 <TrendingUp className="w-5 h-5" />
               </div>
               <span 
-                className="text-[11px] min-[375px]:text-xs sm:text-sm font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
+                className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
                 title={`₹${totalPlanEarnings.toFixed(2)}`}
               >
                 ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
