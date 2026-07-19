@@ -397,24 +397,25 @@ export default function RechargeModal({
 
             {step === 'payment' && (
               <form onSubmit={handlePaymentSubmit} className="space-y-6 text-left">
-                {/* Billing Summary Header */}
-                <div className="p-4.5 bg-gradient-to-r from-slate-900 to-indigo-950 rounded-3xl text-white flex justify-between items-center shadow-md text-left">
-                  <div>
-                    <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest block">PAYABLE AMOUNT</span>
-                    <span className="text-2xl font-black font-sans tracking-wide">₹{parseFloat(amountInput).toFixed(2)}</span>
+                {/* Billing Summary Header - Colorful, vibrant gradient */}
+                <div className="p-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-pink-600 rounded-2xl text-white flex justify-between items-center shadow-md text-left relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-lg pointer-events-none"></div>
+                  <div className="relative z-10">
+                    <span className="text-[9px] font-extrabold text-pink-100 uppercase tracking-widest block">PAYABLE AMOUNT / भुगतान राशि</span>
+                    <span className="text-2xl font-black font-sans tracking-wide block mt-0.5">₹{parseFloat(amountInput).toLocaleString('en-IN')}.00</span>
                   </div>
                   <button
                     type="button"
                     onClick={handleCopyAmount}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 hover:bg-white/15 border border-white/10 rounded-xl text-[10px] font-black text-white transition-all active:scale-95 cursor-pointer"
+                    className="relative z-10 flex items-center gap-1 px-2.5 py-1.5 bg-white/20 hover:bg-white/30 border border-white/20 rounded-xl text-[9px] font-black text-white transition-all active:scale-95 cursor-pointer shadow-sm shrink-0"
                   >
-                    {copiedAmount ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-indigo-300" />}
-                    <span>{copiedAmount ? 'COPIED' : 'COPY'}</span>
+                    {copiedAmount ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5 text-white" />}
+                    <span>{copiedAmount ? 'COPIED' : 'COPY AMOUNT'}</span>
                   </button>
                 </div>
 
                 {/* QR Section ( Razorpay Style ) */}
-                <div className="flex flex-col items-center p-5 bg-slate-50/50 rounded-[2rem] border border-slate-100 space-y-4">
+                <div className="flex flex-col items-center p-5 bg-gradient-to-b from-indigo-50/70 to-white rounded-[2rem] border-2 border-indigo-100 space-y-4 shadow-sm">
                   <div className="text-center space-y-1">
                     <span className="text-[10px] font-black uppercase text-indigo-700 tracking-widest bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-100">
                       Scan to Pay / QR Scanner
@@ -424,7 +425,7 @@ export default function RechargeModal({
                   
                   {/* QR Image Box */}
                   <div className="flex flex-col items-center gap-3">
-                    <div className="p-3 bg-white rounded-3xl border border-slate-100 shadow-md relative group">
+                    <div className="p-3 bg-white rounded-3xl border-2 border-indigo-100/50 shadow-md relative group">
                       <img
                         src={qrImageSrc}
                         alt="Payment QR Code"
@@ -437,25 +438,26 @@ export default function RechargeModal({
                       type="button"
                       onClick={handleDownloadQr}
                       disabled={downloadingQr}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-indigo-600 border border-slate-200 rounded-xl font-black text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
+                      className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100/80 text-indigo-700 border border-indigo-200/60 rounded-xl font-extrabold text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
                     >
                       <Download className="w-3.5 h-3.5 text-indigo-600 animate-bounce" />
-                      <span>{downloadingQr ? 'Downloading...' : 'Save QR to Gallery'}</span>
+                      <span>{downloadingQr ? 'Downloading...' : 'Save QR to Gallery / गैलरी में सेव करें'}</span>
                     </button>
                   </div>
 
                   {/* Merchant details & Quick Copy */}
-                  <div className="w-full bg-white p-4 rounded-2.5xl border border-slate-100 text-center space-y-3">
+                  <div className="w-full bg-gradient-to-br from-indigo-50/40 via-white to-pink-50/10 p-4 rounded-2.5xl border border-indigo-100/60 text-center space-y-3 shadow-inner">
                     <div className="space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Official Merchant UPI ID</p>
-                      <div className="flex items-center justify-center gap-2">
-                        <span className="font-mono font-black text-indigo-950 text-sm select-all tracking-wide">{upiId}</span>
+                      <p className="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Official Merchant UPI ID / यूपीआई आईडी</p>
+                      <div className="flex items-center justify-between gap-2 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/30">
+                        <span className="font-mono font-black text-indigo-950 text-sm select-all tracking-wide truncate">{upiId}</span>
                         <button
                           type="button"
                           onClick={handleCopyUpi}
-                          className="p-1.5 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-slate-500 active:scale-95 cursor-pointer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-extrabold text-[10px] uppercase active:scale-95 transition-all shadow-md shrink-0 cursor-pointer"
                         >
-                          {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-indigo-600" />}
+                          {copiedUpi ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedUpi ? 'COPIED' : 'COPY'}</span>
                         </button>
                       </div>
                     </div>
@@ -469,38 +471,44 @@ export default function RechargeModal({
 
 
                 {/* Dedicated Payment Button Box */}
-                <div className="p-3.5 bg-gradient-to-r from-indigo-50/40 to-violet-50/40 rounded-2xl border border-indigo-100/40 shadow-sm space-y-3 mt-1 text-center">
-                  <span className="text-[8.5px] font-black uppercase text-indigo-600 tracking-wider flex items-center justify-center gap-1">
-                    🔒 100% SECURE & DIRECT UPI TRANSACTION
-                  </span>
+                <div className="bg-gradient-to-b from-purple-50/70 to-white rounded-2xl border-2 border-purple-100 p-3.5 space-y-2.5 shadow-sm mt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5.5 h-5.5 rounded-lg bg-purple-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">2</span>
+                    <h4 className="text-[11px] font-black text-purple-900 uppercase tracking-wider">Pay Directly / सीधे पेमेंट करें</h4>
+                  </div>
                   
                   <a
                     href={upiPayloadLink}
                     onClick={handleDirectUpiPay}
-                    className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl transition-all shadow-md flex items-center justify-between active:scale-98 cursor-pointer border border-indigo-500/10"
+                    className="w-full py-2.5 px-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-700 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl transition-all shadow-md shadow-indigo-600/10 flex items-center justify-between active:scale-98 cursor-pointer border border-indigo-500/10"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Smartphone className="w-4 h-4 text-indigo-100 animate-bounce shrink-0" />
-                      <div className="text-left">
-                        <p className="font-black text-[10.5px] tracking-wider text-white">PAY VIA ANY UPI APP</p>
-                        <p className="text-[8.5px] text-indigo-100/90 font-medium tracking-normal normal-case">Paytm, PhonePe, GPay, आदि से सीधा भुगतान करें</p>
+                    <div className="flex items-center gap-2 text-left">
+                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                        <Smartphone className="w-4 h-4 text-indigo-100 animate-pulse" />
+                      </div>
+                      <div>
+                        <p className="font-black text-[10px] tracking-wider text-white">PAY VIA ANY UPI APP</p>
+                        <p className="text-[8px] text-indigo-100 font-medium tracking-normal normal-case">Paytm, PhonePe, GPay, आदि से सीधा भुगतान करें</p>
                       </div>
                     </div>
-                    <span className="text-[8px] bg-white/20 px-1.5 py-0.5 rounded font-bold text-white shrink-0">RECOMMENDED</span>
+                    <span className="text-[8px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-md font-black shrink-0 tracking-wider">RECOMMENDED</span>
                   </a>
-
-
                 </div>
 
 
                 {/* Verification block */}
-                <div className="space-y-4 pt-2">
+                <div className="bg-gradient-to-b from-emerald-50/70 to-white rounded-[2rem] border-2 border-emerald-100 p-5 space-y-4 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">3</span>
+                    <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">Submit 12-Digit UTR & Proof / यूटीआर और रसीद जमा करें</h4>
+                  </div>
+
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
                         Enter 12-Digit UPI UTR / Ref ID <span className="text-rose-500">*</span>
                       </label>
-                      <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-wider">Strictly 12 Digits Only</span>
+                      <span className="text-[9px] text-emerald-600 font-extrabold uppercase tracking-wider">Strictly 12 Digits Only</span>
                     </div>
                     <input
                       type="text"
@@ -513,21 +521,21 @@ export default function RechargeModal({
                         setError('');
                       }}
                       placeholder="e.g. 301928475819"
-                      className="w-full px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-mono text-center text-lg font-black text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-500 focus:bg-white transition-all shadow-inner tracking-widest"
+                      className="w-full px-4 py-4 bg-white border-2 border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200/40 rounded-2xl font-mono text-center text-lg font-black text-slate-900 placeholder:text-slate-300 focus:outline-none transition-all shadow-inner tracking-widest"
                     />
                   </div>
 
                   {/* Payment Proof Screenshot Uploader */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
                       Upload Payment Receipt (Screenshot) / रसीद का फोटो
                     </label>
                     
                     {!proofImage ? (
-                      <label className="flex flex-col items-center justify-center p-5 bg-slate-50 border-2 border-dashed border-slate-200 hover:border-indigo-400/50 rounded-2xl cursor-pointer transition-all hover:bg-slate-50/50">
-                        <UploadCloud className="w-8 h-8 text-slate-400 mb-1.5 animate-pulse" />
-                        <span className="text-[10.5px] font-black text-slate-600">Attach screenshot of payment</span>
-                        <span className="text-[9px] text-slate-400 mt-0.5">JPEG, PNG files up to 2MB supported</span>
+                      <label className="flex flex-col items-center justify-center p-5 bg-indigo-50/30 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-2xl cursor-pointer transition-all hover:bg-indigo-50/50">
+                        <UploadCloud className="w-8 h-8 text-indigo-500 mb-1.5 animate-pulse" />
+                        <span className="text-[10.5px] font-black text-slate-700">Attach screenshot of payment</span>
+                        <span className="text-[9px] text-indigo-500 font-bold mt-0.5">JPEG, PNG files up to 2MB supported</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -536,12 +544,12 @@ export default function RechargeModal({
                         />
                       </label>
                     ) : (
-                      <div className="relative rounded-2xl border border-slate-100 overflow-hidden bg-slate-50 p-2.5 flex items-center justify-between">
+                      <div className="relative rounded-2xl border-2 border-emerald-100 overflow-hidden bg-emerald-50/30 p-2.5 flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <img
                             src={proofImage}
                             alt="Payment receipt proof"
-                            className="w-12 h-12 rounded-xl object-cover border border-slate-200"
+                            className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm"
                           />
                           <div className="text-left">
                             <p className="text-[10.5px] font-black text-slate-800">Screenshot Attached</p>
@@ -562,9 +570,9 @@ export default function RechargeModal({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-wait"
+                    className="w-full py-4.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-wait"
                   >
-                    <span>{isSubmitting ? 'Verifying Transaction...' : 'Submit Deposit Request'}</span>
+                    <span>{isSubmitting ? 'Verifying Transaction...' : 'Submit Deposit Request / सबमिट करें'}</span>
                   </button>
 
                   {/* Webhook or status instructions space */}
@@ -572,7 +580,7 @@ export default function RechargeModal({
 
 
                   {/* Easy Step-by-Step Payment Guide */}
-                  <div className="p-4 bg-slate-50 rounded-3xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-2.5 leading-relaxed text-left mt-2">
+                  <div className="p-4 bg-white rounded-3xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-2.5 leading-relaxed text-left mt-2 shadow-inner">
                     <p className="font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 text-[9px]">
                       <Info className="w-4 h-4 text-indigo-600 shrink-0" />
                       <span>Payment Instructions / भुगतान निर्देश</span>
@@ -580,15 +588,15 @@ export default function RechargeModal({
                     <div className="space-y-2 font-medium">
                       <div className="flex gap-2">
                         <span className="font-black text-indigo-600">1.</span>
-                        <p>QR कोड स्कैन करें या ऊपर दी गई <strong className="text-slate-900">UPI ID</strong> पर पेमेंट पूरा करें।</p>
+                        <p>QR कोड स्कैन करें या ऊपर दी गई <strong className="text-slate-950 font-bold">UPI ID</strong> पर पेमेंट पूरा करें।</p>
                       </div>
                       <div className="flex gap-2">
                         <span className="font-black text-indigo-600">2.</span>
-                        <p>पेमेंट होने के बाद बैंक रसीद से <strong className="text-slate-900">12 अंकों का UTR Number / Ref No.</strong> कॉपी करें।</p>
+                        <p>पेमेंट होने के बाद बैंक रसीद से <strong className="text-slate-950 font-bold">12 अंकों का UTR Number / Ref No.</strong> कॉपी करें।</p>
                       </div>
                       <div className="flex gap-2">
                         <span className="font-black text-indigo-600">3.</span>
-                        <p>नीचे बॉक्स में UTR नंबर दर्ज करें और <strong className="text-slate-900">Submit Deposit Request</strong> पर क्लिक करें।</p>
+                        <p>नीचे बॉक्स में UTR नंबर दर्ज करें, रसीद का फोटो अपलोड करें और <strong className="text-slate-950 font-bold">Submit Deposit Request</strong> पर क्लिक करें।</p>
                       </div>
                     </div>
                   </div>
