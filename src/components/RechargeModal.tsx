@@ -164,21 +164,11 @@ export default function RechargeModal({
   // Use public QR Server to render the dynamic QR scanner
   const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPayloadLink)}`;
 
-  const getGeneralUpiLink = () => {
-    const isAndroid = /android/i.test(navigator.userAgent);
-    const query = `pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
-    if (isAndroid) {
-      // General UPI intent scheme that prompts Android system UPI App Chooser/dialog automatically
-      return `intent://pay?${query}#Intent;scheme=upi;end`;
-    }
-    return `upi://pay?${query}`;
-  };
-
   const handleDirectUpiPay = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     setIsRedirecting(true);
-    // Synchronously launch the generalized deep link / intent link in the same user gesture thread
-    window.location.href = getGeneralUpiLink();
+    // Synchronously launch the standard upi:// deep link in the same user gesture thread
+    window.location.href = upiPayloadLink;
     // Keep the overlay visible for 4 seconds for secure transition feel, then hide
     setTimeout(() => {
       setIsRedirecting(false);
@@ -485,7 +475,7 @@ export default function RechargeModal({
                   </span>
                   
                   <a
-                    href={getGeneralUpiLink()}
+                    href={upiPayloadLink}
                     onClick={handleDirectUpiPay}
                     className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl transition-all shadow-md flex items-center justify-between active:scale-98 cursor-pointer border border-indigo-500/10"
                   >
