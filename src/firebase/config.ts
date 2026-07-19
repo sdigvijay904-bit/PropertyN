@@ -218,7 +218,7 @@ export const firebaseService = {
     const allDeposits = await firebaseService.getDeposits();
     const isDuplicateUtr = allDeposits.some(d => d.utr === deposit.utr);
     if (isDuplicateUtr) {
-      throw new Error("Duplicate Transaction Reference! This UTR has already been submitted. (यह UTR नंबर पहले ही इस्तेमाल किया जा चुका है)");
+      throw new Error("Duplicate Transaction Reference! This UTR has already been submitted.");
     }
 
     // Save to Firestore if available

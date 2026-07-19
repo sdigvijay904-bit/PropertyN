@@ -564,7 +564,7 @@ export default function App() {
       clearTimeout(pushTimeoutRef.current);
     }
 
-    const targetUser = user !== undefined ? user : userProfileRef.current;
+    const targetUser = user || userProfileRef.current;
     const targetPlans = currentPlans || plansRef.current;
     const rawPurchases = currentPurchases || purchasesRef.current;
     const targetTransactions = currentTransactions || transactionsRef.current;
@@ -685,16 +685,19 @@ export default function App() {
       localStorage.setItem('adpaint_purchases', JSON.stringify(refinedPurchases));
       setPurchases(refinedPurchases);
     }
+    let finalTx = updatedTx;
     if (updatedTx) {
       // Ensure all transactions have phone and userId fields if matched to some user
+      const activeUser = user || userProfileRef.current;
       const refinedTx = updatedTx.map(t => {
-        if (!t.userId && user) {
-          return { ...t, userId: user.id, userPhone: user.phone };
+        if (!t.userId && activeUser) {
+          return { ...t, userId: activeUser.id, userPhone: activeUser.phone };
         }
         return t;
       });
       localStorage.setItem('adpaint_transactions', JSON.stringify(refinedTx));
       setTransactions(refinedTx);
+      finalTx = refinedTx;
     }
     if (updatedTeam) {
       localStorage.setItem('adpaint_team', JSON.stringify(updatedTeam));
@@ -705,7 +708,7 @@ export default function App() {
     // We only push to the server if we are logged in/registering (user !== null) or if plans, purchases, transactions, or team lists are updated.
     // This avoids pushing stale/corrupted states on user logout.
     if (user !== null || updatedPlans || updatedPurchases || updatedTx || updatedTeam) {
-      pushStateToServer(user, updatedPlans, updatedPurchases, updatedTx, nextUsersList);
+      pushStateToServer(user, updatedPlans, updatedPurchases, finalTx, nextUsersList);
     }
   };
 
@@ -867,24 +870,24 @@ export default function App() {
     setAuthError('');
 
     if (!fullName.trim()) {
-      setAuthError('Please enter your full name (कृपया अपना पूरा नाम दर्ज करें)');
+      setAuthError('Please enter your full name');
       return;
     }
     if (!mobileNumber || mobileNumber.length < 10) {
-      setAuthError('Please enter a valid 10-digit mobile number (कृपया 10-अंकों का वैध मोबाइल नंबर दर्ज करें)');
+      setAuthError('Please enter a valid 10-digit mobile number');
       return;
     }
     if (!captchaInput) {
-      setAuthError('Please enter the verification code (कृपया सत्यापन कोड दर्ज करें)');
+      setAuthError('Please enter the verification code');
       return;
     }
     if (captchaInput !== captchaCode) {
-      setAuthError('Incorrect Verification Code (गलत सत्यापन कोड दर्ज किया गया है)');
+      setAuthError('Incorrect Verification Code');
       generateCaptcha(); // regenerate on failure
       return;
     }
     if (!password || password.length < 6) {
-      setAuthError('Password must be at least 6 characters (पासवर्ड कम से कम 6 अक्षरों का होना चाहिए)');
+      setAuthError('Password must be at least 6 characters');
       return;
     }
 
@@ -893,7 +896,7 @@ export default function App() {
     try {
       const checkData = await firestoreCheckPhone(targetPhone);
       if (checkData.exists) {
-        setAuthError('Mobile number already registered! Please log in. (यह मोबाइल नंबर पहले से ही पंजीकृत है! कृपया लॉगिन करें)');
+        setAuthError('Mobile number already registered! Please log in.');
         return;
       }
     } catch (err) {
@@ -917,6 +920,7 @@ export default function App() {
       setPurchases([]);
       setTransactions(regData.transactions);
       localStorage.setItem('adpaint_user', JSON.stringify(serverUser));
+      localStorage.setItem('adpaint_transactions', JSON.stringify(regData.transactions));
       localStorage.setItem(`adpaint_purchases_${serverUser.id}`, JSON.stringify([]));
       setIsLoggedIn(true);
       setIsWelcomeNoticeOpen(true);
@@ -940,7 +944,7 @@ export default function App() {
       setRegisterOtpInput('');
       setRegisterOtpCode('');
     } catch (err) {
-      setAuthError('Server communication error. Please try again. (सर्वर त्रुटि। पुनः प्रयास करें।)');
+      setAuthError('Server communication error. Please try again.');
     }
   };
 
@@ -970,6 +974,7 @@ export default function App() {
       setPurchases(serverPurchases);
       setTransactions(loginData.transactions);
       localStorage.setItem('adpaint_user', JSON.stringify(serverUser));
+      localStorage.setItem('adpaint_transactions', JSON.stringify(loginData.transactions));
       localStorage.setItem(`adpaint_purchases_${serverUser.id}`, JSON.stringify(serverPurchases));
 
       setIsLoggedIn(true);
@@ -986,7 +991,7 @@ export default function App() {
       setMobileNumber('');
       setPassword('');
     } catch (err: any) {
-      setAuthError(err.message || 'Server communication error. Please try again. (सर्वर त्रुटि। पुनः प्रयास करें।)');
+      setAuthError(err.message || 'Server communication error. Please try again.');
     }
   };
 
@@ -996,7 +1001,7 @@ export default function App() {
     setAuthError('');
 
     if (!forgotPhone || forgotPhone.length < 10) {
-      setAuthError('Please enter a valid 10-digit mobile number. (कृपया 10-अंकों का वैध मोबाइल नंबर दर्ज करें।)');
+      setAuthError('Please enter a valid 10-digit mobile number.');
       return;
     }
 
@@ -1005,7 +1010,7 @@ export default function App() {
     try {
       const checkData = await firestoreCheckPhone(targetPhone);
       if (!checkData.exists) {
-        setAuthError('This mobile number is not registered! (यह मोबाइल नंबर पंजीकृत नहीं है!)');
+        setAuthError('This mobile number is not registered!');
         return;
       }
     } catch (err) {
@@ -1026,7 +1031,7 @@ export default function App() {
     setAuthError('');
 
     if (forgotOtpInput !== forgotOtpCode) {
-      setAuthError('Incorrect OTP Code! Please try again. (गलत ओटीपी कोड! कृपया पुनः प्रयास करें।)');
+      setAuthError('Incorrect OTP Code! Please try again.');
       return;
     }
 
@@ -1039,7 +1044,7 @@ export default function App() {
     setAuthError('');
 
     if (!forgotNewPassword || forgotNewPassword.length < 6) {
-      setAuthError('Password must be at least 6 characters. (पासवर्ड कम से कम 6 अक्षरों का होना चाहिए।)');
+      setAuthError('Password must be at least 6 characters.');
       return;
     }
 
@@ -1079,7 +1084,7 @@ export default function App() {
       // Trigger sync
       syncWithServer(activeUser);
     } catch (err) {
-      setAuthError('Server communication error. Please try again. (सर्वर त्रुटि। पुनः प्रयास करें।)');
+      setAuthError('Server communication error. Please try again.');
     }
   };
 
@@ -1909,7 +1914,7 @@ export default function App() {
                       }}
                       className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
                     >
-                      Forgot Password? (पासवर्ड भूल गए?)
+                      Forgot Password?
                     </button>
                   </div>
                 )}

@@ -341,18 +341,18 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
-      throw new Error("Mobile number not registered! Please sign up first. (यह मोबाइल नंबर पंजीकृत नहीं है! कृपया साइन अप करें।)");
+      throw new Error("Mobile number not registered! Please sign up first.");
     }
     
     const userDoc = querySnapshot.docs[0];
     const user = userDoc.data() as UserProfile;
     
     if (user.status === 'blocked') {
-      throw new Error("Your account has been suspended by Admin. (आपका खाता एडमिन द्वारा निलंबित कर दिया गया है।)");
+      throw new Error("Your account has been suspended by Admin.");
     }
     
     if (user.password && user.password !== password_entered) {
-      throw new Error("Incorrect password! (गलत पासवर्ड दर्ज किया गया है)");
+      throw new Error("Incorrect password!");
     }
 
     // Load active purchases
@@ -399,7 +399,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     const querySnapshot = await getDocs(q);
     
     if (!querySnapshot.empty) {
-      throw new Error("Mobile number already registered! Please log in. (यह मोबाइल नंबर पहले से ही पंजीकृत है! कृपया लॉगिन करें)");
+      throw new Error("Mobile number already registered! Please log in.");
     }
 
     const newUserId = `usr_${Date.now()}`;
@@ -439,10 +439,10 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     };
 
     // Save user
-    await setDoc(doc(db, "users", newUser.id), newUser);
+    await setDoc(doc(db, "users", newUser.id), cleanUndefined(newUser));
 
     // Save transaction
-    await setDoc(doc(db, "transactions", signupTx.id), signupTx);
+    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
 
     // Reload transactions
     const txSnap = await getDocs(collection(db, "transactions"));
@@ -467,6 +467,27 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   }
 }
 
+// Helper to recursively strip any properties with 'undefined' values before writing to Firestore
+export function cleanUndefined<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanUndefined(item)) as any;
+  }
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        const val = (obj as any)[key];
+        if (val !== undefined) {
+          cleaned[key] = cleanUndefined(val);
+        }
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 // Reset password
 export async function firestoreResetPassword(payload: { phone: string; password_entered: string }): Promise<any> {
   await seedDatabaseIfEmpty();
@@ -477,7 +498,7 @@ export async function firestoreResetPassword(payload: { phone: string; password_
     const querySnapshot = await getDocs(q);
     
     if (querySnapshot.empty) {
-      throw new Error("This mobile number is not registered! (यह मोबाइल नंबर पंजीकृत नहीं है!)");
+      throw new Error("This mobile number is not registered!");
     }
 
     const userDoc = querySnapshot.docs[0];
@@ -594,7 +615,7 @@ export async function firestoreSaveState(payload: {
           }
         }
         
-        userBatch.set(docRef, finalUser, { merge: true });
+        userBatch.set(docRef, cleanUndefined(finalUser), { merge: true });
       }
       await userBatch.commit();
     }
@@ -602,17 +623,17 @@ export async function firestoreSaveState(payload: {
     // 2. Update global configuration
     if (isAdmin) {
       const configDocRef = doc(db, "global", "config");
-      await setDoc(configDocRef, {
+      await setDoc(configDocRef, cleanUndefined({
         config,
         customTicker
-      }, { merge: true });
+      }), { merge: true });
     }
 
     // 3. Update plans
     if (isAdmin && Array.isArray(plans) && plans.length > 0) {
       const plansBatch = writeBatch(db);
       for (const plan of plans) {
-        plansBatch.set(doc(db, "plans", plan.id), plan, { merge: true });
+        plansBatch.set(doc(db, "plans", plan.id), cleanUndefined(plan), { merge: true });
       }
       await plansBatch.commit();
     }
@@ -625,7 +646,7 @@ export async function firestoreSaveState(payload: {
         if (!isAdmin && tx.userId !== userId) {
           continue;
         }
-        txBatch.set(doc(db, "transactions", tx.id), tx, { merge: true });
+        txBatch.set(doc(db, "transactions", tx.id), cleanUndefined(tx), { merge: true });
       }
       await txBatch.commit();
     }
@@ -640,7 +661,7 @@ export async function firestoreSaveState(payload: {
         if (!isAdmin && (purchase as any).userId !== userId) {
           continue;
         }
-        purchasesBatch.set(doc(db, "purchases", purchase.id), purchase, { merge: true });
+        purchasesBatch.set(doc(db, "purchases", purchase.id), cleanUndefined(purchase), { merge: true });
       }
       await purchasesBatch.commit();
     }

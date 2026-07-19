@@ -196,7 +196,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
     const cleanUtr = utr.trim();
     const utrRegex = /^\d{12}$/;
     if (!utrRegex.test(cleanUtr)) {
-      triggerToast("UTR Number must be exactly 12 numeric digits! (UTR नंबर 12 अंकों का होना चाहिए)", 'error');
+      triggerToast("UTR Number must be exactly 12 numeric digits!", 'error');
       return;
     }
 
@@ -322,7 +322,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                   className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold text-sm shadow-md hover:shadow-violet-200 hover:shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                 >
                   <Sparkles className="w-4 h-4 animate-pulse" />
-                  <span>Proceed to Pay / आगे बढ़ें</span>
+                  <span>Proceed to Pay</span>
                 </button>
               </div>
 
@@ -330,7 +330,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
               <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-3 flex gap-2.5">
                 <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="text-left text-[11px] leading-relaxed text-amber-800 font-bold">
-                  <p className="font-extrabold uppercase text-amber-900 tracking-wide">Security Guarantee (सुरक्षा गारंटी):</p>
+                  <p className="font-extrabold uppercase text-amber-900 tracking-wide">Security Guarantee:</p>
                   <p>All deposits are protected by secure Firebase Auth and monitored directly by our executive admin team. Please do not submit false UTRs as it can lead to account suspension.</p>
                 </div>
               </div>
@@ -359,7 +359,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">DEPOSIT AMOUNT (भुगतान राशि)</span>
+                  <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest block">DEPOSIT AMOUNT</span>
                   <span className="text-4xl font-black text-violet-950 font-sans block">₹{amtValue.toLocaleString()}</span>
                 </div>
 
@@ -438,7 +438,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
 
               {/* QR Code Fallback and Manual Copy Card */}
               <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
-                <span className="text-xs font-black text-slate-700 uppercase tracking-wide block text-left">OR TRANSFER MANUALLY (मैन्युअल ट्रांसफर)</span>
+                <span className="text-xs font-black text-slate-700 uppercase tracking-wide block text-left">OR TRANSFER MANUALLY</span>
 
                 {/* QR Code Display & Fallback */}
                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center space-y-3">
@@ -461,7 +461,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
 
                 {/* Merchant UPI copy box */}
                 <div className="space-y-1.5 text-left">
-                  <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Merchant UPI ID (यूपीआई आईडी)</span>
+                  <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Merchant UPI ID</span>
                   <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <span className="text-xs font-black font-mono text-violet-950 truncate select-all">{settings.upiId}</span>
                     <button
@@ -521,7 +521,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Submit UTR (यूटीआर जमा करें)</span>
+                        <span>Submit UTR</span>
                       </>
                     )}
                   </button>
@@ -561,7 +561,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                 }}
                 className="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-extrabold text-xs shadow-md"
               >
-                Done / वापिस जाएँ
+                Done
               </button>
             </motion.div>
           )}

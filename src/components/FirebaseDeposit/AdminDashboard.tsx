@@ -327,7 +327,7 @@ export default function AdminDashboard({
                             className="flex-1 py-2 px-3 border border-rose-200 text-rose-600 hover:bg-rose-50 active:scale-95 transition-all text-xs font-black rounded-lg uppercase tracking-wide flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <X className="w-3.5 h-3.5" />
-                            <span>Reject / अस्वीकार</span>
+                            <span>Reject</span>
                           </button>
                           
                           <button
@@ -336,7 +336,7 @@ export default function AdminDashboard({
                             className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition-all text-white text-xs font-black rounded-lg uppercase tracking-wide flex items-center justify-center gap-1 cursor-pointer"
                           >
                             <Check className="w-3.5 h-3.5" />
-                            <span>Approve / क्रेडिट करें</span>
+                            <span>Approve</span>
                           </button>
                         </div>
                       )}
@@ -365,7 +365,7 @@ export default function AdminDashboard({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* UPI ID */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Company UPI ID (यूपीआई आईडी)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Company UPI ID</label>
                   <input
                     type="text"
                     value={settings.upiId}
@@ -377,7 +377,7 @@ export default function AdminDashboard({
 
                 {/* Merchant Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Merchant Name (व्यापारी का नाम)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Merchant Name</label>
                   <input
                     type="text"
                     value={settings.merchantName}

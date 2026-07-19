@@ -131,7 +131,7 @@ export default function WithdrawModal({
                   Withdrawal Locked 🔒
                 </span>
                 <p className="text-xs font-black leading-snug">
-                  आप केवल तभी पैसे निकाल सकते हैं जब आपने कोई रियल एस्टेट फंड (Plan) खरीदा हो।
+                  You can only withdraw funds if you have purchased an investment plan.
                 </p>
                 <p className="text-[11.5px] text-rose-700 font-medium">
                   Withdrawals are locked because you do not have an active Real Estate investment. Please purchase at least one plan on the Home screen to unlock withdrawals.

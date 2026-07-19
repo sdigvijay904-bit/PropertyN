@@ -567,7 +567,7 @@ export default function ProfileSection({
                 className="w-full py-3 rounded-[1.25rem] bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs font-black flex items-center justify-center gap-1.5 transition-colors"
               >
                 <CheckCircle2 className="w-4 h-4 text-violet-600" />
-                <span>View Full-Screen Certificate (सर्टिफिकेट देखें)</span>
+                <span>View Full-Screen Certificate</span>
               </button>
             </div>
 

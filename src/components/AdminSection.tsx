@@ -1054,8 +1054,8 @@ export default function AdminSection({
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium mt-1 col-span-2">
                           {editingUser.status === 'blocked' 
-                            ? 'यह उपयोगकर्ता निलंबित है और लॉगिन नहीं कर सकता।' 
-                            : 'यह उपयोगकर्ता सक्रिय है और सामान्य रूप से निवेश व निकासी कर सकता है।'}
+                            ? 'This user is suspended and cannot log in.' 
+                            : 'This user is active and can perform normal operations.'}
                         </p>
                       </div>
 
@@ -1637,8 +1637,8 @@ export default function AdminSection({
                   <span>Configure UPI Scanner & Merchant ID</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                  यहाँ से आप रीचार्ज गेटवे (Recharge Gateway) में उपयोग होने वाली UPI ID और मर्चेंट का नाम बदल सकते हैं। 
-                  जब उपयोगकर्ता पैसे जमा करेंगे, तो उन्हें यही UPI और नाम दिखाई देगा।
+                  You can update the UPI ID and merchant name used for the Recharge Gateway here.
+                  When users deposit funds, they will see these details.
                 </p>
 
                 <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
@@ -1708,8 +1708,7 @@ export default function AdminSection({
                   <span>Configure Telegram Channels & Support IDs</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                  यहाँ से आप उपयोगकर्ताओं के लिए Telegram Channel और Telegram Support (Customer Service) का लिंक बदल सकते हैं। 
-                  जब वे "Channel" या "Service" बटन पर क्लिक करेंगे, तो वे इसी लिंक पर रीडायरेक्ट होंगे।
+                  You can configure the redirect links for your official Telegram Channel and Telegram Support chat here.
                 </p>
 
                 <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
@@ -1781,8 +1780,8 @@ export default function AdminSection({
                   <span>Configure Android App APK Download URL</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                  यहाँ से आप उपयोगकर्ताओं के लिए आधिकारिक एंड्रॉइड एप्लिकेशन (.apk) का डाउनलोड लिंक बदल सकते हैं। 
-                  जब उपयोगकर्ता प्रोफाइल सेक्शन में "App Download" बटन पर क्लिक करेंगे, तो वे इसी लिंक से रियल APK फ़ाइल डाउनलोड कर पाएंगे।
+                  You can configure the download link for the official Android APK here. 
+                  When users click on the "App Download" button, they will be redirected to this URL.
                 </p>
 
                 <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
@@ -1838,7 +1837,7 @@ export default function AdminSection({
                   <span>Configure Thresholds, Presets & Bonuses</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
-                  यहाँ से आप न्यूनतम निकासी (Min Withdraw), न्यूनतम रीचार्ज (Min Recharge), रीचार्ज के विकल्प (Preset Prices), दैनिक चेक-इन बोनस (Daily Bonus) और प्लेटफार्म का नाम बदल सकते हैं।
+                  Configure the minimum withdrawal amount, minimum deposit limits, deposit preset options, daily check-in bonus, and the platform brand name.
                 </p>
 
                 <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
@@ -2079,7 +2078,7 @@ export default function AdminSection({
                             <Users className="w-8 h-8 text-slate-700" />
                             <p className="text-xs font-black text-slate-500 uppercase tracking-wider">No Downline Accounts</p>
                             <p className="text-[10px] text-slate-600 max-w-[200px] mx-auto text-center font-medium font-sans">
-                              This user has not referred any accounts yet. (इस उपयोगकर्ता ने अभी तक कोई अकाउंट रेफर नहीं किया है।)
+                              This user has not referred any accounts yet.
                             </p>
                           </div>
                         ) : (

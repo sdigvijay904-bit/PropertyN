@@ -204,7 +204,7 @@ export default function RechargeModal({
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="text-sm font-black uppercase tracking-widest text-indigo-300">Secure Gateway / सुरक्षित पेमेंट</h4>
+                    <h4 className="text-sm font-black uppercase tracking-widest text-indigo-300">Secure Gateway</h4>
                     <p className="text-xs text-slate-300 font-medium">Connecting to official merchant checkout via <span className="font-extrabold text-white">Razorpay Secure Network</span>...</p>
                   </div>
 
@@ -347,7 +347,7 @@ export default function RechargeModal({
 
                 {/* Grid of quick choices */}
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Select Quick Amount / राशि चुनें</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Select Quick Amount</label>
                   <div className="grid grid-cols-4 gap-2.5">
                     {quickAmounts.map((amt) => {
                       const isSelected = amountInput === amt.toString();
@@ -382,7 +382,7 @@ export default function RechargeModal({
 
                 {/* Secure checkout info list */}
                 <div className="p-4 bg-slate-50 rounded-3xl border border-slate-100 space-y-2.5 text-[10.5px] text-slate-500 font-sans">
-                  <span className="font-black text-slate-700 uppercase tracking-wider block text-[9px]">Important Instructions / महत्वपूर्ण निर्देश</span>
+                  <span className="font-black text-slate-700 uppercase tracking-wider block text-[9px]">Important Instructions</span>
                   <div className="flex gap-2 items-start leading-relaxed text-left">
                     <span className="text-indigo-600 font-bold">•</span>
                     <p>Enter the correct deposit amount. Any discrepancy will delay account balance update.</p>
@@ -401,7 +401,7 @@ export default function RechargeModal({
                 <div className="p-3.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-pink-600 rounded-2xl text-white flex justify-between items-center shadow-md text-left relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-lg pointer-events-none"></div>
                   <div className="relative z-10">
-                    <span className="text-[9px] font-extrabold text-pink-100 uppercase tracking-widest block">PAYABLE AMOUNT / भुगतान राशि</span>
+                    <span className="text-[9px] font-extrabold text-pink-100 uppercase tracking-widest block">PAYABLE AMOUNT</span>
                     <span className="text-2xl font-black font-sans tracking-wide block mt-0.5">₹{parseFloat(amountInput).toLocaleString('en-IN')}.00</span>
                   </div>
                   <button
@@ -441,14 +441,14 @@ export default function RechargeModal({
                       className="flex items-center gap-1.5 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100/80 text-indigo-700 border border-indigo-200/60 rounded-xl font-extrabold text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
                     >
                       <Download className="w-3.5 h-3.5 text-indigo-600 animate-bounce" />
-                      <span>{downloadingQr ? 'Downloading...' : 'Save QR to Gallery / गैलरी में सेव करें'}</span>
+                      <span>{downloadingQr ? 'Downloading...' : 'Save QR to Gallery'}</span>
                     </button>
                   </div>
 
                   {/* Merchant details & Quick Copy */}
                   <div className="w-full bg-gradient-to-br from-indigo-50/40 via-white to-pink-50/10 p-4 rounded-2.5xl border border-indigo-100/60 text-center space-y-3 shadow-inner">
                     <div className="space-y-1">
-                      <p className="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Official Merchant UPI ID / यूपीआई आईडी</p>
+                      <p className="text-[10px] font-black text-indigo-700 uppercase tracking-wider">Official Merchant UPI ID</p>
                       <div className="flex items-center justify-between gap-2 bg-indigo-50/50 p-3 rounded-2xl border border-indigo-100/30">
                         <span className="font-mono font-black text-indigo-950 text-sm select-all tracking-wide truncate">{upiId}</span>
                         <button
@@ -474,7 +474,7 @@ export default function RechargeModal({
                 <div className="bg-gradient-to-b from-purple-50/70 to-white rounded-2xl border-2 border-purple-100 p-3.5 space-y-2.5 shadow-sm mt-1">
                   <div className="flex items-center gap-2">
                     <span className="w-5.5 h-5.5 rounded-lg bg-purple-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">2</span>
-                    <h4 className="text-[11px] font-black text-purple-900 uppercase tracking-wider">Pay Directly / सीधे पेमेंट करें</h4>
+                    <h4 className="text-[11px] font-black text-purple-900 uppercase tracking-wider">Pay Directly</h4>
                   </div>
                   
                   <a
@@ -488,7 +488,7 @@ export default function RechargeModal({
                       </div>
                       <div>
                         <p className="font-black text-[10px] tracking-wider text-white">PAY VIA ANY UPI APP</p>
-                        <p className="text-[8px] text-indigo-100 font-medium tracking-normal normal-case">Paytm, PhonePe, GPay, आदि से सीधा भुगतान करें</p>
+                        <p className="text-[8px] text-indigo-100 font-medium tracking-normal normal-case">Pay with Paytm, PhonePe, GPay, or any UPI app</p>
                       </div>
                     </div>
                     <span className="text-[8px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-md font-black shrink-0 tracking-wider">RECOMMENDED</span>
@@ -500,7 +500,7 @@ export default function RechargeModal({
                 <div className="bg-gradient-to-b from-emerald-50/70 to-white rounded-[2rem] border-2 border-emerald-100 p-5 space-y-4 shadow-sm">
                   <div className="flex items-center gap-2">
                     <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">3</span>
-                    <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">Submit 12-Digit UTR & Proof / यूटीआर और रसीद जमा करें</h4>
+                    <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">Submit 12-Digit UTR & Proof</h4>
                   </div>
 
                   <div className="space-y-2">
@@ -528,7 +528,7 @@ export default function RechargeModal({
                   {/* Payment Proof Screenshot Uploader */}
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">
-                      Upload Payment Receipt (Screenshot) / रसीद का फोटो
+                      Upload Payment Receipt (Screenshot)
                     </label>
                     
                     {!proofImage ? (
@@ -572,7 +572,7 @@ export default function RechargeModal({
                     disabled={isSubmitting}
                     className="w-full py-4.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-600 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/35 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-75 disabled:cursor-wait"
                   >
-                    <span>{isSubmitting ? 'Verifying Transaction...' : 'Submit Deposit Request / सबमिट करें'}</span>
+                    <span>{isSubmitting ? 'Verifying Transaction...' : 'Submit Deposit Request'}</span>
                   </button>
 
                   {/* Webhook or status instructions space */}
@@ -583,20 +583,20 @@ export default function RechargeModal({
                   <div className="p-4 bg-white rounded-3xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-2.5 leading-relaxed text-left mt-2 shadow-inner">
                     <p className="font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 text-[9px]">
                       <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <span>Payment Instructions / भुगतान निर्देश</span>
+                      <span>Payment Instructions</span>
                     </p>
                     <div className="space-y-2 font-medium">
                       <div className="flex gap-2">
                         <span className="font-black text-indigo-600">1.</span>
-                        <p>QR कोड स्कैन करें या ऊपर दी गई <strong className="text-slate-950 font-bold">UPI ID</strong> पर पेमेंट पूरा करें।</p>
+                        <p>Scan the QR code or pay on the above <strong className="text-slate-950 font-bold">UPI ID</strong> to complete the payment.</p>
                       </div>
                       <div className="flex gap-2">
                         <span className="font-black text-indigo-600">2.</span>
-                        <p>पेमेंट होने के बाद बैंक रसीद से <strong className="text-slate-950 font-bold">12 अंकों का UTR Number / Ref No.</strong> कॉपी करें।</p>
+                        <p>After successful payment, copy the <strong className="text-slate-950 font-bold">12-digit UTR Number / Ref No.</strong> from your bank receipt.</p>
                       </div>
                       <div className="flex gap-2">
                         <span className="font-black text-indigo-600">3.</span>
-                        <p>नीचे बॉक्स में UTR नंबर दर्ज करें, रसीद का फोटो अपलोड करें और <strong className="text-slate-950 font-bold">Submit Deposit Request</strong> पर क्लिक करें।</p>
+                        <p>Enter the copied UTR number, upload the payment screenshot, and click <strong className="text-slate-950 font-bold">Submit Deposit Request</strong>.</p>
                       </div>
                     </div>
                   </div>
@@ -621,10 +621,10 @@ export default function RechargeModal({
 
                 <div className="p-4 bg-slate-50 rounded-3xl border border-slate-100 max-w-sm space-y-2.5 text-left text-xs leading-relaxed">
                   <p className="text-slate-600 font-medium">
-                    आपका <span className="font-extrabold text-slate-900">₹{parseFloat(amountInput).toLocaleString()}</span> का रिचार्ज अनुरोध प्राप्त हो गया है।
+                    Your deposit request for <span className="font-extrabold text-slate-900">₹{parseFloat(amountInput).toLocaleString()}</span> has been submitted successfully.
                   </p>
                   <p className="text-slate-600 font-medium">
-                    एडमिन द्वारा UTR और रसीद वेरिफिकेशन के बाद <strong className="text-indigo-600">5-10 मिनट</strong> के भीतर राशि आपके वॉलेट बैलेंस में जोड़ दी जाएगी।
+                    The amount will be added to your wallet balance within <strong className="text-indigo-600">5-10 minutes</strong> after admin verification of the UTR and receipt.
                   </p>
                 </div>
 

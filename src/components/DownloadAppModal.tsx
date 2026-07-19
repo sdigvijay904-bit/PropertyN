@@ -65,9 +65,9 @@ export default function DownloadAppModal({ isOpen, onClose, triggerToast }: Down
               </div>
               
               <div>
-                <h4 className="text-sm font-black text-slate-800">Direct Download / डायरेक्ट डाउनलोड</h4>
+                <h4 className="text-sm font-black text-slate-800">Direct Download</h4>
                 <p className="text-[11px] text-slate-500 mt-1 font-medium leading-relaxed">
-                  यदि आप क्रोम ब्राउज़र में हैं, तो नीचे बटन दबाकर सीधे ऐप डाउनलोड करें।
+                  If you are on Google Chrome or any Android browser, click the button below to download the app directly.
                 </p>
               </div>
 
@@ -86,10 +86,10 @@ export default function DownloadAppModal({ isOpen, onClose, triggerToast }: Down
             {/* Bulletproof Fallback URL Copy Box */}
             <div className="space-y-2">
               <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-                Download Link (If download doesn't start / डाउनलोड न होने पर)
+                Download Link (If download doesn't start)
               </span>
               <p className="text-[10.5px] text-slate-500 font-medium leading-relaxed">
-                यदि ऊपर दिए बटन से डाउनलोड शुरू नहीं होता है, तो इस लिंक को कॉपी करें और अपने <strong className="text-indigo-600">Google Chrome ब्राउज़र</strong> में पेस्ट करके खोलें:
+                If the download doesn't start automatically after clicking, copy this link and open it in your <strong className="text-indigo-600">Google Chrome browser</strong>:
               </p>
               
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between gap-3">
@@ -111,21 +111,21 @@ export default function DownloadAppModal({ isOpen, onClose, triggerToast }: Down
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-600 font-sans space-y-2.5 leading-relaxed">
               <p className="font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5 text-[10px]">
                 <HelpCircle className="w-4 h-4 text-rose-500" />
-                <span>How to Install / कैसे इंस्टॉल करें?</span>
+                <span>How to Install</span>
               </p>
               
               <div className="space-y-2 font-medium">
                 <div className="flex gap-2">
                   <span className="font-black text-rose-500">1.</span>
-                  <p><strong>Download:</strong> APK डाउनलोड पूरा होने तक प्रतीक्षा करें।</p>
+                  <p><strong>Download:</strong> Wait for the APK download to complete.</p>
                 </div>
                 <div className="flex gap-2">
                   <span className="font-black text-rose-500">2.</span>
-                  <p><strong>Unknown Sources:</strong> इंस्टॉल करते समय "Allow installation from Unknown Sources" (अज्ञात स्रोतों से इंस्टॉल) को चालू करें।</p>
+                  <p><strong>Unknown Sources:</strong> Turn on "Allow installation from Unknown Sources" if prompted during installation.</p>
                 </div>
                 <div className="flex gap-2">
                   <span className="font-black text-rose-500">3.</span>
-                  <p><strong>Install:</strong> "Install Anyway" पर क्लिक करें और ऐप शुरू करें!</p>
+                  <p><strong>Install:</strong> Click "Install Anyway" and launch the app once complete!</p>
                 </div>
               </div>
             </div>
