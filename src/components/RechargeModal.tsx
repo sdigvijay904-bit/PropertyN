@@ -580,23 +580,38 @@ export default function RechargeModal({
 
 
                   {/* Easy Step-by-Step Payment Guide */}
-                  <div className="p-4 bg-white rounded-3xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-2.5 leading-relaxed text-left mt-2 shadow-inner">
+                  <div className="p-4 bg-white rounded-3xl border border-slate-100 text-[10.5px] text-slate-600 font-sans space-y-3 leading-relaxed text-left mt-2 shadow-inner">
                     <p className="font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5 text-[9px]">
                       <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-                      <span>Payment Instructions</span>
+                      <span>Payment Instructions / भुगतान निर्देश</span>
                     </p>
-                    <div className="space-y-2 font-medium">
-                      <div className="flex gap-2">
-                        <span className="font-black text-indigo-600">1.</span>
-                        <p>Scan the QR code or pay on the above <strong className="text-slate-950 font-bold">UPI ID</strong> to complete the payment.</p>
+                    <div className="space-y-3 font-medium">
+                      <div className="flex gap-2 border-b border-slate-100 pb-2">
+                        <span className="font-black text-indigo-600 text-sm">1.</span>
+                        <div>
+                          <p className="text-slate-950 font-bold">English:</p>
+                          <p>Scan the QR code or pay on the above <strong className="text-slate-950 font-bold">UPI ID</strong> to complete the payment.</p>
+                          <p className="text-emerald-700 font-bold mt-1">Hindi / हिंदी:</p>
+                          <p className="text-slate-800">भुगतान पूरा करने के लिए ऊपर दिए गए QR कोड को स्कैन करें या ऊपर दी गई <strong className="text-slate-950 font-bold">UPI ID</strong> पर भुगतान करें।</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 border-b border-slate-100 pb-2">
+                        <span className="font-black text-indigo-600 text-sm">2.</span>
+                        <div>
+                          <p className="text-slate-950 font-bold">English:</p>
+                          <p>After successful payment, copy the <strong className="text-slate-950 font-bold">12-digit UTR Number / Ref No.</strong> from your bank receipt.</p>
+                          <p className="text-emerald-700 font-bold mt-1">Hindi / हिंदी:</p>
+                          <p className="text-slate-800">सफल भुगतान के बाद, अपनी बैंक रसीद या ऐप से <strong className="text-slate-950 font-bold">12-अंकों का UTR नंबर / Ref No.</strong> कॉपी करें।</p>
+                        </div>
                       </div>
                       <div className="flex gap-2">
-                        <span className="font-black text-indigo-600">2.</span>
-                        <p>After successful payment, copy the <strong className="text-slate-950 font-bold">12-digit UTR Number / Ref No.</strong> from your bank receipt.</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <span className="font-black text-indigo-600">3.</span>
-                        <p>Enter the copied UTR number, upload the payment screenshot, and click <strong className="text-slate-950 font-bold">Submit Deposit Request</strong>.</p>
+                        <span className="font-black text-indigo-600 text-sm">3.</span>
+                        <div>
+                          <p className="text-slate-950 font-bold">English:</p>
+                          <p>Enter the copied UTR number, upload the payment screenshot, and click <strong className="text-slate-950 font-bold">Submit Deposit Request</strong>.</p>
+                          <p className="text-emerald-700 font-bold mt-1">Hindi / हिंदी:</p>
+                          <p className="text-slate-800">कॉपी किया गया UTR नंबर दर्ज करें, भुगतान का स्क्रीनशॉट (पेमेंट प्रूफ) अपलोड करें, और <strong className="text-slate-950 font-bold">Submit Deposit Request</strong> बटन पर क्लिक करें।</p>
+                        </div>
                       </div>
                     </div>
                   </div>

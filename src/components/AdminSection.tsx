@@ -10,6 +10,10 @@ import {
   ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut
 } from 'lucide-react';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
+import { db } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { cleanUndefined } from '../lib/db';
+import { firebaseService } from '../firebase/config';
 
 
 interface AdminSectionProps {
@@ -142,7 +146,7 @@ export default function AdminSection({
   const pendingWithdrawals = transactions.filter(t => t.type === 'withdraw' && t.status === 'pending');
 
   // Approve Recharge Handler
-  const handleApproveRecharge = (txId: string) => {
+  const handleApproveRecharge = async (txId: string) => {
     const tx = transactions.find(t => t.id === txId);
     if (!tx) return;
 
@@ -216,6 +220,44 @@ export default function AdminSection({
       }
     }
 
+    // Direct immediate write to Firestore for target user and transaction
+    try {
+      const updatedUserObj = finalUsers.find(u => u.id === targetUserId);
+      if (updatedUserObj) {
+        await setDoc(doc(db, "users", targetUserId), cleanUndefined(updatedUserObj));
+      }
+
+      // If there was an inviter, write their updated profile too
+      if (targetUser.inviterCode) {
+        const inviter = finalUsers.find(u => u.inviteCode === targetUser.inviterCode);
+        if (inviter) {
+          await setDoc(doc(db, "users", inviter.id), cleanUndefined(inviter));
+          // Save commission transaction directly
+          const commissionTx = updatedTx.find(t => t.type === 'commission' && t.userId === inviter.id);
+          if (commissionTx) {
+            await setDoc(doc(db, "transactions", commissionTx.id), cleanUndefined(commissionTx));
+          }
+        }
+      }
+
+      // Save approved recharge transaction directly
+      const approvedTxObj = updatedTx.find(t => t.id === txId);
+      if (approvedTxObj) {
+        await setDoc(doc(db, "transactions", txId), cleanUndefined(approvedTxObj));
+      }
+
+      // Try to find a matching record in the deposits collection and approve it there too
+      if (tx.utr) {
+        const allDeposits = await firebaseService.getDeposits();
+        const matchDep = allDeposits.find(d => d.utr === tx.utr && d.status === 'Pending');
+        if (matchDep) {
+          await firebaseService.updateDepositStatus(matchDep.id, 'Approved', currentProfile?.id || 'admin');
+        }
+      }
+    } catch (err) {
+      console.error("Direct Firestore writes in handleApproveRecharge failed:", err);
+    }
+
     setUsersList(finalUsers);
     setTransactions(updatedTx);
     
@@ -226,7 +268,10 @@ export default function AdminSection({
   };
 
   // Reject Recharge Handler
-  const handleRejectRecharge = (txId: string) => {
+  const handleRejectRecharge = async (txId: string) => {
+    const tx = transactions.find(t => t.id === txId);
+    if (!tx) return;
+
     const updatedTx = transactions.map(t => {
       if (t.id === txId) {
         return { ...t, status: 'failed' as const, description: `Recharge rejected by Admin (invalid UTR)` };
@@ -234,13 +279,32 @@ export default function AdminSection({
       return t;
     });
 
+    // Direct immediate write to Firestore
+    try {
+      const rejectedTxObj = updatedTx.find(t => t.id === txId);
+      if (rejectedTxObj) {
+        await setDoc(doc(db, "transactions", txId), cleanUndefined(rejectedTxObj));
+      }
+
+      // Try to find a matching record in the deposits collection and reject it there too
+      if (tx.utr) {
+        const allDeposits = await firebaseService.getDeposits();
+        const matchDep = allDeposits.find(d => d.utr === tx.utr && d.status === 'Pending');
+        if (matchDep) {
+          await firebaseService.updateDepositStatus(matchDep.id, 'Rejected', currentProfile?.id || 'admin');
+        }
+      }
+    } catch (err) {
+      console.error("Direct Firestore writes in handleRejectRecharge failed:", err);
+    }
+
     setTransactions(updatedTx);
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
     triggerToast('Recharge request rejected.', 'info');
   };
 
   // Approve Withdrawal Handler
-  const handleApproveWithdrawal = (txId: string) => {
+  const handleApproveWithdrawal = async (txId: string) => {
     const tx = transactions.find(t => t.id === txId);
     if (!tx) return;
 
@@ -252,13 +316,23 @@ export default function AdminSection({
       return t;
     });
 
+    // Direct immediate write to Firestore
+    try {
+      const approvedTxObj = updatedTx.find(t => t.id === txId);
+      if (approvedTxObj) {
+        await setDoc(doc(db, "transactions", txId), cleanUndefined(approvedTxObj));
+      }
+    } catch (err) {
+      console.error("Direct Firestore write in handleApproveWithdrawal failed:", err);
+    }
+
     setTransactions(updatedTx);
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
     triggerToast(`Withdrawal of ₹${tx.amount} approved and settled!`, 'success');
   };
 
   // Reject Withdrawal Handler (Refunds amount back to user's wallet!)
-  const handleRejectWithdrawal = (txId: string) => {
+  const handleRejectWithdrawal = async (txId: string) => {
     const tx = transactions.find(t => t.id === txId);
     if (!tx) return;
 
@@ -292,6 +366,21 @@ export default function AdminSection({
       }
       return t;
     });
+
+    // Direct immediate write to Firestore
+    try {
+      const updatedUserObj = updatedUsers.find(u => u.id === targetUserId);
+      if (updatedUserObj) {
+        await setDoc(doc(db, "users", targetUserId), cleanUndefined(updatedUserObj));
+      }
+
+      const rejectedTxObj = updatedTx.find(t => t.id === txId);
+      if (rejectedTxObj) {
+        await setDoc(doc(db, "transactions", txId), cleanUndefined(rejectedTxObj));
+      }
+    } catch (err) {
+      console.error("Direct Firestore writes in handleRejectWithdrawal failed:", err);
+    }
 
     setUsersList(updatedUsers);
     setTransactions(updatedTx);

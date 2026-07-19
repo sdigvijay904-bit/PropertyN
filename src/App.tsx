@@ -33,8 +33,12 @@ import {
   firestoreRegister,
   firestoreResetPassword,
   firestoreGetState,
-  firestoreSaveState
+  firestoreSaveState,
+  cleanUndefined
 } from './lib/db';
+import { db } from './lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { firebaseService } from './firebase/config';
 
 export default function App() {
   // Navigation & Authentication states
@@ -1343,7 +1347,7 @@ export default function App() {
   };
 
   // Recharge Submission
-  const handleRechargeSuccess = (amount: number, utr: string, proofImage?: string) => {
+  const handleRechargeSuccess = async (amount: number, utr: string, proofImage?: string) => {
     if (!userProfile) return;
 
     // In a high-fidelity system, a recharge with a UTR is logged as "pending" for Admin review.
@@ -1360,12 +1364,35 @@ export default function App() {
       userPhone: userProfile.phone
     };
 
+    // 1. Direct immediate write to transactions collection in Firestore to prevent any sync failure
+    try {
+      await setDoc(doc(db, "transactions", rechargeTx.id), cleanUndefined(rechargeTx));
+    } catch (err) {
+      console.error("Direct transaction write to Firestore failed:", err);
+    }
+
+    // 2. Direct immediate write to deposits collection in Firestore using firebaseService wrapper
+    try {
+      await firebaseService.saveDepositRequest({
+        userId: userProfile.id,
+        userName: userProfile.name,
+        email: (userProfile as any).email || `${userProfile.phone.replace(/[^0-9]/g, '')}@propertyn.com`,
+        mobileNumber: userProfile.phone,
+        orderId: `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        depositAmount: amount,
+        utr: utr,
+        paymentTime: new Date().toLocaleString()
+      });
+    } catch (err) {
+      console.error("Direct deposit write to Firestore failed:", err);
+    }
+
     saveStateToStorage(userProfile, plans, purchases, [...transactions, rechargeTx], teamMembers);
     triggerToast(`Recharge of ₹${amount.toFixed(2)} submitted! Waiting for Admin verification.`, 'info');
   };
 
   // Withdraw Submission
-  const handleWithdrawRequest = (amount: number, pin: string) => {
+  const handleWithdrawRequest = async (amount: number, pin: string) => {
     if (!userProfile) return;
 
     // Deduct immediately and log as PENDING. Admin manually approves/settles it from the Admin Control Panel.
@@ -1385,6 +1412,14 @@ export default function App() {
       userId: userProfile.id,
       userPhone: userProfile.phone
     };
+
+    // Direct immediate write to transactions and users collections in Firestore to prevent any sync failure
+    try {
+      await setDoc(doc(db, "transactions", withdrawTx.id), cleanUndefined(withdrawTx));
+      await setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser));
+    } catch (err) {
+      console.error("Direct withdrawal write to Firestore failed:", err);
+    }
 
     saveStateToStorage(updatedUser, plans, purchases, [...transactions, withdrawTx], teamMembers);
     triggerToast(`Withdrawal of ₹${amount.toFixed(2)} requested! Waiting for Admin clearance.`, 'info');
