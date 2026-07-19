@@ -164,12 +164,25 @@ export default function RechargeModal({
   // Use public QR Server to render the dynamic QR scanner
   const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPayloadLink)}`;
 
-  const handleDirectUpiPay = () => {
+  const getGeneralUpiLink = () => {
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const query = `pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+    if (isAndroid) {
+      // General UPI intent scheme that prompts Android system UPI App Chooser/dialog automatically
+      return `intent://pay?${query}#Intent;scheme=upi;end`;
+    }
+    return `upi://pay?${query}`;
+  };
+
+  const handleDirectUpiPay = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
     setIsRedirecting(true);
-    // Keep the overlay visible for 3 seconds for secure transition feel, then hide
+    // Synchronously launch the generalized deep link / intent link in the same user gesture thread
+    window.location.href = getGeneralUpiLink();
+    // Keep the overlay visible for 4 seconds for secure transition feel, then hide
     setTimeout(() => {
       setIsRedirecting(false);
-    }, 3000);
+    }, 4000);
   };
 
   return (
@@ -466,14 +479,15 @@ export default function RechargeModal({
 
 
                 {/* Dedicated Payment Button Box */}
-                <div className="p-3 bg-gradient-to-r from-indigo-50/50 to-violet-50/50 rounded-2xl border border-indigo-100/40 shadow-sm space-y-2 mt-1 text-center">
+                <div className="p-3.5 bg-gradient-to-r from-indigo-50/40 to-violet-50/40 rounded-2xl border border-indigo-100/40 shadow-sm space-y-3 mt-1 text-center">
                   <span className="text-[8.5px] font-black uppercase text-indigo-600 tracking-wider flex items-center justify-center gap-1">
                     🔒 100% SECURE & DIRECT UPI TRANSACTION
                   </span>
+                  
                   <a
-                    href={upiPayloadLink}
+                    href={getGeneralUpiLink()}
                     onClick={handleDirectUpiPay}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl transition-all shadow flex items-center justify-between active:scale-98 cursor-pointer border border-indigo-500/10"
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl transition-all shadow-md flex items-center justify-between active:scale-98 cursor-pointer border border-indigo-500/10"
                   >
                     <div className="flex items-center gap-2.5">
                       <Smartphone className="w-4 h-4 text-indigo-100 animate-bounce shrink-0" />
