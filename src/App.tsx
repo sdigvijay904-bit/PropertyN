@@ -1773,7 +1773,7 @@ export default function App() {
             <div className="bg-white text-slate-800 rounded-t-[3rem] px-6 pt-8 pb-6 flex-1 flex flex-col justify-between space-y-6 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
               
               {/* Sleek Switch Toggle (Matches Screenshot 2's pill tabs) */}
-              <div className="p-1.5 bg-emerald-50/50 border border-emerald-100/50 rounded-3xl flex relative shrink-0 shadow-inner">
+              <div className="p-1.5 bg-slate-100 border border-slate-200 rounded-3xl flex relative shrink-0 shadow-inner">
                 <button
                   type="button"
                   onClick={() => {
@@ -1783,7 +1783,7 @@ export default function App() {
                   className={`flex-1 py-3.5 text-xs font-black rounded-2xl transition-all duration-300 relative z-10 ${
                     authTab === 'login'
                       ? 'text-white'
-                      : 'text-slate-600 hover:text-slate-900 font-extrabold'
+                      : 'text-slate-700 hover:text-slate-950 font-black'
                   }`}
                 >
                   {authTab === 'login' && (
@@ -1804,7 +1804,7 @@ export default function App() {
                   className={`flex-1 py-3.5 text-xs font-black rounded-2xl transition-all duration-300 relative z-10 ${
                     authTab === 'register'
                       ? 'text-white'
-                      : 'text-slate-600 hover:text-slate-900 font-extrabold'
+                      : 'text-slate-700 hover:text-slate-950 font-black'
                   }`}
                 >
                   {authTab === 'register' && (
@@ -1839,9 +1839,9 @@ export default function App() {
 
                   {forgotStep === 1 && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">REGISTERED MOBILE NUMBER</label>
-                      <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
-                        <div className="w-12 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100/80 flex items-center justify-center font-black text-xs shrink-0 font-mono">
+                      <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">REGISTERED MOBILE NUMBER</label>
+                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
+                        <div className="w-12 h-10 rounded-2xl bg-slate-200 text-slate-900 border border-slate-300 flex items-center justify-center font-black text-xs shrink-0 font-mono">
                           +91
                         </div>
                         <input
@@ -1851,7 +1851,7 @@ export default function App() {
                           value={forgotPhone}
                           onChange={(e) => setForgotPhone(e.target.value.replace(/\D/g, ''))}
                           placeholder="10-digit number"
-                          className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-xs font-black text-slate-800 placeholder-slate-400 focus:outline-none font-mono tracking-wider"
+                          className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-wider"
                         />
                       </div>
                     </div>
@@ -1859,8 +1859,8 @@ export default function App() {
 
                   {forgotStep === 2 && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">ENTER 4-DIGIT SECURITY OTP</label>
-                      <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                      <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">ENTER 4-DIGIT SECURITY OTP</label>
+                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
                         <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                           <ShieldCheck className="w-4.5 h-4.5" />
                         </div>
@@ -1871,19 +1871,19 @@ export default function App() {
                           value={forgotOtpInput}
                           onChange={(e) => setForgotOtpInput(e.target.value.replace(/\D/g, ''))}
                           placeholder="4-digit OTP"
-                          className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-xs font-black text-slate-800 placeholder-slate-400 focus:outline-none font-mono text-center tracking-[0.25em]"
+                          className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono text-center tracking-[0.25em]"
                         />
                       </div>
-                      <p className="text-[10px] text-slate-500 font-medium text-center mt-1">
-                        We sent a simulated OTP code to your phone. Check the top notifications toast or look at: <strong className="text-teal-600 font-mono text-xs">{forgotOtpCode}</strong>
+                      <p className="text-[10px] text-slate-600 font-extrabold text-center mt-1">
+                        We sent a simulated OTP code to your phone. Check the top notifications toast or look at: <strong className="text-teal-700 font-mono text-xs">{forgotOtpCode}</strong>
                       </p>
                     </div>
                   )}
 
                   {forgotStep === 3 && (
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">SET NEW PASSWORD</label>
-                      <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
+                      <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">SET NEW PASSWORD</label>
+                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
                         <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
                           <Lock className="w-4.5 h-4.5" />
                         </div>
@@ -1893,7 +1893,7 @@ export default function App() {
                           value={forgotNewPassword}
                           onChange={(e) => setForgotNewPassword(e.target.value)}
                           placeholder="Min 6 characters"
-                          className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none font-mono tracking-widest"
+                          className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-widest"
                         />
                         <button
                           type="button"
@@ -1949,9 +1949,9 @@ export default function App() {
                 {/* Full name (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">FULL NAME</label>
-                    <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
+                    <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">FULL NAME</label>
+                    <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
                         <User className="w-4.5 h-4.5" />
                       </div>
                       <input
@@ -1960,7 +1960,7 @@ export default function App() {
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="Enter your full name"
-                        className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none"
+                        className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1968,9 +1968,9 @@ export default function App() {
 
                 {/* Mobile number */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">MOBILE NUMBER</label>
-                  <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
-                    <div className="w-12 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100/80 flex items-center justify-center font-black text-xs shrink-0 font-mono">
+                  <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">MOBILE NUMBER</label>
+                  <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
+                    <div className="w-12 h-10 rounded-2xl bg-slate-200 text-slate-900 border border-slate-300 flex items-center justify-center font-black text-xs shrink-0 font-mono">
                       +91
                     </div>
                     <input
@@ -1980,7 +1980,7 @@ export default function App() {
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="10-digit number"
-                      className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-xs font-black text-slate-800 placeholder-slate-400 focus:outline-none font-mono tracking-wider"
+                      className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-wider"
                     />
                   </div>
                 </div>
@@ -1988,10 +1988,10 @@ export default function App() {
                 {/* Verification Code / Captcha Verification */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">VERIFICATION CODE</label>
+                    <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">VERIFICATION CODE</label>
                     <div className="grid grid-cols-12 gap-2.5 items-center">
-                      <div className="col-span-7 relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
+                      <div className="col-span-7 relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1 focus-within:bg-white transition-all shadow-sm">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
                           <ShieldCheck className="w-4 h-4" />
                         </div>
                         <input
@@ -2001,7 +2001,7 @@ export default function App() {
                           value={captchaInput}
                           onChange={(e) => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
                           placeholder="Enter code"
-                          className="flex-1 pl-1.5 pr-1 py-2 bg-transparent text-xs font-black text-slate-800 placeholder-slate-400 focus:outline-none text-center font-sans focus:font-mono tracking-normal focus:tracking-[0.12em] placeholder:tracking-normal placeholder:font-sans"
+                          className="flex-1 pl-2 pr-1 py-2 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none text-center font-sans focus:font-mono tracking-normal focus:tracking-[0.12em] placeholder:tracking-normal placeholder:font-sans"
                         />
                       </div>
                       <div className="col-span-5">
@@ -2022,11 +2022,11 @@ export default function App() {
 
                 {/* Password Input */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">
+                  <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">
                     {authTab === 'register' ? 'CREATE PASSWORD' : 'PASSWORD'}
                   </label>
-                  <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
+                  <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
                       <Lock className="w-4.5 h-4.5" />
                     </div>
                     <input
@@ -2035,7 +2035,7 @@ export default function App() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Min 6 characters"
-                      className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none font-mono tracking-widest"
+                      className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-widest"
                     />
                     <button
                       type="button"
@@ -2056,7 +2056,7 @@ export default function App() {
                         setAuthError('');
                         setForgotStep(1);
                       }}
-                      className="text-[10px] font-black text-teal-600 hover:text-teal-800 transition-colors cursor-pointer"
+                      className="text-[10.5px] font-black text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
                     >
                       Forgot Password?
                     </button>
@@ -2066,9 +2066,9 @@ export default function App() {
                 {/* Invitation Code (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-teal-950/60 uppercase tracking-widest block px-1">INVITATION CODE (OPTIONAL)</label>
-                    <div className="relative flex items-center bg-emerald-50/30 border border-emerald-100/60 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:bg-white transition-all shadow-inner">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
+                    <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">INVITATION CODE (OPTIONAL)</label>
+                    <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
                         <Gift className="w-4.5 h-4.5" />
                       </div>
                       <input
@@ -2076,7 +2076,7 @@ export default function App() {
                         value={invitationCode}
                         onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, ''))}
                         placeholder="Enter invite code"
-                        className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-xs font-extrabold text-slate-800 placeholder-slate-400 focus:outline-none font-mono"
+                        className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono"
                       />
                     </div>
                   </div>
