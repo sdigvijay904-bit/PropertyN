@@ -113,7 +113,11 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                   <div className="flex items-start justify-between relative z-10">
                     <div>
                       <h4 className="text-sm font-black text-teal-950">{item.planTitle}</h4>
-                      <p className="text-[10px] text-gray-400 font-sans font-bold mt-0.5">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</p>
+                      <div className="flex flex-wrap items-center gap-x-2 mt-1 text-[10px] font-sans font-bold">
+                        <span className="text-gray-400">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</span>
+                        <span className="text-slate-200 font-normal">•</span>
+                        <span className="text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md font-black">Plan Price: ₹{item.price ? item.price.toLocaleString('en-IN') : '0'}</span>
+                      </div>
                     </div>
                     <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 animate-pulse">
                       Active & Running
@@ -167,7 +171,11 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                   <div className="flex items-start justify-between">
                     <div>
                       <h4 className="text-sm font-black text-slate-700">{item.planTitle}</h4>
-                      <p className="text-[10px] text-gray-400 font-sans font-bold mt-0.5">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</p>
+                      <div className="flex flex-wrap items-center gap-x-2 mt-1 text-[10px] font-sans font-bold">
+                        <span className="text-gray-400">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</span>
+                        <span className="text-slate-200 font-normal">•</span>
+                        <span className="text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md font-black">Plan Price: ₹{item.price ? item.price.toLocaleString('en-IN') : '0'}</span>
+                      </div>
                     </div>
                     <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-500">
                       Completed
