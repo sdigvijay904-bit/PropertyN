@@ -539,18 +539,39 @@ export default function App() {
           configMismatch = true;
         }
 
-        // If any local state was missing on the server, push the fully merged states back to restore them!
-        if (plansUpdated || usersUpdated || txUpdated || configMismatch) {
-          pushStateToServer(activeUser, finalPlans, currentPurchases, mergedTx, mergedUsers);
+        // 4. Sync current user's specific purchases list (with merge-back/restore protection)
+        let purchasesUpdated = false;
+        let mergedPurchases = currentPurchases;
+        if (userId && data.purchases) {
+          const serverPurchasesMap = new Map(data.purchases.map((p: any) => [p.id, p]));
+          let hasMissingPurchases = false;
+
+          currentPurchases.forEach((localPurchase: any) => {
+            if (!serverPurchasesMap.has(localPurchase.id)) {
+              serverPurchasesMap.set(localPurchase.id, localPurchase);
+              hasMissingPurchases = true;
+            }
+          });
+
+          mergedPurchases = Array.from(serverPurchasesMap.values());
+
+          const isDifferent = JSON.stringify(mergedPurchases) !== JSON.stringify(currentPurchases);
+          if (isDifferent) {
+            setPurchases(mergedPurchases);
+            localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(mergedPurchases));
+            purchasesRef.current = mergedPurchases;
+          }
+
+          if (hasMissingPurchases) {
+            purchasesUpdated = true;
+          }
+        } else if (currentPurchases && currentPurchases.length > 0) {
+          purchasesUpdated = true;
         }
 
-        // 4. Sync current user's specific purchases list
-        if (userId && data.purchases) {
-          const isDifferent = JSON.stringify(data.purchases) !== JSON.stringify(currentPurchases);
-          if (isDifferent) {
-            setPurchases(data.purchases);
-            localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(data.purchases));
-          }
+        // If any local state was missing on the server, push the fully merged states back to restore them!
+        if (plansUpdated || usersUpdated || txUpdated || configMismatch || purchasesUpdated) {
+          pushStateToServer(activeUser, finalPlans, mergedPurchases, mergedTx, mergedUsers);
         }
 
         // 6. Sync live news banner alert
@@ -1656,7 +1677,7 @@ export default function App() {
               )}
 
               {/* Bottom Navigation rail (Matches screenshot 1 & 4 layout exactly, optimized for custom user request) */}
-              <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around h-13 z-40 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] overflow-visible px-1">
+              <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around h-16 z-40 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] overflow-visible px-2">
                 {[
                   { id: 'home', label: 'Home', icon: Home },
                   { id: 'invite', label: 'Invite', icon: Gift },
@@ -1673,22 +1694,22 @@ export default function App() {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className="flex flex-col items-center justify-center flex-1 relative -top-3.5 group cursor-pointer select-none"
+                        className="flex flex-col items-center justify-center flex-1 relative -top-4 group cursor-pointer select-none"
                       >
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_4px_12px_rgba(16,185,129,0.3)] relative ${
+                        <div className={`w-13 h-13 rounded-full flex items-center justify-center transition-all duration-300 relative ${
                           isSelected
-                            ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-teal-700 text-white scale-110 ring-4 ring-white shadow-[0_6px_16px_rgba(16,185,129,0.4)]'
-                            : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 ring-2 ring-white'
+                            ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-teal-700 text-white scale-110 ring-4 ring-white shadow-[0_8px_20px_rgba(16,185,129,0.35)]'
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-4 ring-white shadow-[0_4px_12px_rgba(16,185,129,0.15)]'
                         }`}>
-                          <Icon className="w-5 h-5 transition-transform group-active:scale-90" />
+                          <Icon className={`w-6 h-6 transition-transform group-active:scale-90 ${isSelected ? 'stroke-[2.5] fill-white/10' : 'stroke-[2.2] fill-emerald-100/30'}`} />
                           {activeOrdersCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center bg-rose-500 text-white text-[8px] font-black rounded-full border border-white shadow-sm">
+                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-rose-500 text-white text-[9px] font-black rounded-full border border-white shadow-md">
                               {activeOrdersCount}
                             </span>
                           )}
                         </div>
-                        <span className={`text-[8px] font-extrabold tracking-wider uppercase absolute -bottom-5 transition-all duration-200 ${
-                          isSelected ? 'text-teal-600 font-black scale-105' : 'text-slate-400 group-hover:text-slate-500'
+                        <span className={`text-[10px] font-black tracking-wider uppercase absolute -bottom-5 transition-all duration-200 ${
+                          isSelected ? 'text-teal-700 scale-105' : 'text-slate-600/90 group-hover:text-slate-800'
                         }`}>
                           {tab.label}
                         </span>
@@ -1702,21 +1723,21 @@ export default function App() {
                       onClick={() => setActiveTab(tab.id as any)}
                       className="flex flex-col items-center justify-center flex-1 py-1 group cursor-pointer select-none"
                     >
-                      <div className={`p-1 rounded-lg transition-all duration-300 relative ${
+                      <div className={`p-1.5 rounded-xl transition-all duration-300 relative ${
                         isSelected
-                          ? 'text-teal-600 scale-105'
-                          : 'text-slate-400 group-hover:text-slate-600'
+                          ? 'bg-teal-50 text-teal-700 scale-105 shadow-[0_2px_8px_rgba(13,148,136,0.1)]'
+                          : 'text-slate-500 group-hover:text-slate-800 group-hover:bg-slate-50'
                       }`}>
-                        <Icon className="w-4 h-4 transition-transform group-active:scale-90" />
+                        <Icon className={`w-5.5 h-5.5 transition-transform duration-300 group-active:scale-90 ${isSelected ? 'stroke-[2.5] fill-teal-100/40' : 'stroke-[2]'}`} />
                         {isSelected && (
-                          <span className="absolute -top-0.5 -right-0.5 flex h-1 w-1">
+                          <span className="absolute top-1 right-1 flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1 w-1 bg-teal-500"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-600"></span>
                           </span>
                         )}
                       </div>
-                      <span className={`text-[8px] font-bold mt-0.5 tracking-wider uppercase transition-all duration-200 ${
-                        isSelected ? 'text-teal-600 font-black scale-105' : 'text-slate-400 group-hover:text-slate-500'
+                      <span className={`text-[9.5px] font-black mt-1 tracking-wider uppercase transition-all duration-200 ${
+                        isSelected ? 'text-teal-700 scale-105' : 'text-slate-600/90 group-hover:text-slate-800'
                       }`}>
                         {tab.label}
                       </span>
@@ -1762,7 +1783,7 @@ export default function App() {
                   className={`flex-1 py-3.5 text-xs font-black rounded-2xl transition-all duration-300 relative z-10 ${
                     authTab === 'login'
                       ? 'text-white'
-                      : 'text-slate-400 hover:text-slate-600'
+                      : 'text-slate-600 hover:text-slate-900 font-extrabold'
                   }`}
                 >
                   {authTab === 'login' && (
@@ -1783,7 +1804,7 @@ export default function App() {
                   className={`flex-1 py-3.5 text-xs font-black rounded-2xl transition-all duration-300 relative z-10 ${
                     authTab === 'register'
                       ? 'text-white'
-                      : 'text-slate-400 hover:text-slate-600'
+                      : 'text-slate-600 hover:text-slate-900 font-extrabold'
                   }`}
                 >
                   {authTab === 'register' && (
