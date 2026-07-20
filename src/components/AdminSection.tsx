@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
 import { db } from '../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { cleanUndefined } from '../lib/db';
 import { firebaseService } from '../firebase/config';
 
@@ -114,6 +114,7 @@ export default function AdminSection({
   const [editPhone, setEditPhone] = useState<string>('');
   const [editPassword, setEditPassword] = useState<string>('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
   // Plans editor states
   const [isCreatingPlan, setIsCreatingPlan] = useState<boolean>(false);
@@ -565,6 +566,38 @@ export default function AdminSection({
 
     triggerToast(`User account status updated to ${nextStatus.toUpperCase()}!`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
+  };
+
+  // Permanently delete user account handler
+  const handleDeleteUser = async (userId: string) => {
+    if (!editingUser) return;
+    if (userId === currentProfile?.id) {
+      triggerToast('You cannot delete your own admin account!', 'error');
+      return;
+    }
+
+    try {
+      // 1. Delete user document from Firestore directly to ensure absolute permanent deletion
+      await deleteDoc(doc(db, "users", userId));
+
+      // 2. Filter them out from the users list
+      const updatedUsers = usersList.filter(u => u.id !== userId);
+      setUsersList(updatedUsers);
+      localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+
+      triggerToast(`User ${editingUser.name} permanently deleted!`, 'success');
+      setEditingUser(null);
+      setShowDeleteConfirm(false);
+    } catch (err: any) {
+      console.error("Firestore deleteDoc failed:", err);
+      // Fallback: still delete locally so admin has feedback
+      const updatedUsers = usersList.filter(u => u.id !== userId);
+      setUsersList(updatedUsers);
+      localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+      triggerToast('User account removed locally. Please verify connection.', 'info');
+      setEditingUser(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
   // Create or Update Ad Plan Handler
@@ -1157,6 +1190,26 @@ export default function AdminSection({
                         }`}
                       >
                         {editingUser.status === 'blocked' ? 'Activate User' : 'Suspend User'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Danger Zone: Account Deletion */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest block">Danger Zone</h5>
+                    <div className="flex items-center justify-between p-3 bg-rose-950/10 rounded-2xl border border-rose-900/30">
+                      <div className="pr-2">
+                        <span className="text-xs font-black text-rose-400 uppercase tracking-wider block">Delete Account</span>
+                        <p className="text-[10px] text-slate-400 font-medium mt-1">
+                          Permanently delete +91 {editingUser.phone.replace('+91 ', '')}'s account. This action is irreversible.
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-[0_4px_12px_rgba(225,29,72,0.2)] transition-all cursor-pointer whitespace-nowrap"
+                      >
+                        Delete Account
                       </button>
                     </div>
                   </div>
@@ -2270,6 +2323,52 @@ export default function AdminSection({
                 </div>
               </motion.div>
             </motion.div>
+          )}
+
+          {/* Custom Delete Confirmation Modal */}
+          {showDeleteConfirm && editingUser && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl relative overflow-hidden"
+              >
+                {/* Background Accent glow */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24 bg-rose-500/10 blur-3xl rounded-full pointer-events-none" />
+
+                <div className="text-center space-y-4">
+                  <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto">
+                    <Trash2 className="w-5 h-5 animate-pulse" />
+                  </div>
+
+                  <div className="space-y-1.5 text-center">
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Delete User Account?</h3>
+                    <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                      Are you sure you want to permanently delete <strong className="text-white font-black">{editingUser.name}</strong> ({editingUser.phone})?
+                    </p>
+                    <p className="text-[10px] text-rose-400 font-bold bg-rose-950/20 py-1.5 px-3 rounded-lg border border-rose-950/50">
+                      ⚠️ This action is permanent and cannot be undone. All balance and profit records for this account will be lost.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2.5 pt-2">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border border-slate-700/60 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(editingUser.id)}
+                      className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-[0_4px_12px_rgba(225,29,72,0.25)] cursor-pointer"
+                    >
+                      Yes, Delete
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
           )}
 
         </AnimatePresence>

@@ -1980,7 +1980,7 @@ export default function App() {
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="10-digit number"
-                      className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-wider"
+                      className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-600/95 placeholder:font-sans placeholder:font-bold placeholder:tracking-normal focus:outline-none font-mono tracking-wider"
                     />
                   </div>
                 </div>
@@ -1990,9 +1990,9 @@ export default function App() {
                   <div className="space-y-1.5">
                     <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">VERIFICATION CODE</label>
                     <div className="grid grid-cols-12 gap-2.5 items-center">
-                      <div className="col-span-7 relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1 focus-within:bg-white transition-all shadow-sm">
+                      <div className="col-span-8 relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1 focus-within:bg-white transition-all shadow-sm">
                         <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                          <ShieldCheck className="w-4 h-4" />
+                          <ShieldCheck className="w-4.5 h-4.5" />
                         </div>
                         <input
                           type="text"
@@ -2001,10 +2001,10 @@ export default function App() {
                           value={captchaInput}
                           onChange={(e) => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
                           placeholder="Enter code"
-                          className="flex-1 pl-2 pr-1 py-2 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none text-center font-sans focus:font-mono tracking-normal focus:tracking-[0.12em] placeholder:tracking-normal placeholder:font-sans"
+                          className="flex-1 pl-3 pr-2 py-2 bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-600/95 placeholder:font-sans placeholder:font-bold placeholder:tracking-normal focus:outline-none text-left font-sans focus:font-mono focus:tracking-[0.12em]"
                         />
                       </div>
-                      <div className="col-span-5">
+                      <div className="col-span-4">
                         <div 
                           onClick={generateCaptcha}
                           title="Click to refresh captcha"
@@ -2035,7 +2035,7 @@ export default function App() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Min 6 characters"
-                      className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-widest"
+                      className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-600/95 placeholder:font-sans placeholder:font-bold placeholder:tracking-normal focus:outline-none font-mono tracking-widest"
                     />
                     <button
                       type="button"

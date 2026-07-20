@@ -301,7 +301,10 @@ export default function HomeSection({
           { label: 'Recharge', icon: Wallet, action: onOpenRecharge, color: 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 text-white shadow-[0_4px_12px_rgba(16,185,129,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' },
           { label: 'Withdraw', icon: Landmark, action: onOpenWithdraw, color: 'bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 text-white shadow-[0_4px_12px_rgba(245,158,11,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' },
           { label: 'Channel', icon: Send, action: () => { window.open(tgChannel, '_blank'); }, color: 'bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 text-white shadow-[0_4px_12px_rgba(14,165,233,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' },
-          { label: 'Service', icon: HelpCircle, action: () => { window.open(tgSupport, '_blank'); }, color: 'bg-gradient-to-br from-pink-500 via-rose-500 to-rose-600 text-white shadow-[0_4px_12px_rgba(225,29,72,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' }
+          { label: 'App', icon: Download, action: onOpenDownloadApp || (() => {
+            const configuredApkUrl = localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk';
+            window.open(configuredApkUrl, '_blank');
+          }), color: 'bg-gradient-to-br from-pink-500 via-rose-500 to-rose-600 text-white shadow-[0_4px_12px_rgba(225,29,72,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' }
         ].map((btn, idx) => {
           const Icon = btn.icon;
           return (

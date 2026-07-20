@@ -801,8 +801,7 @@ export default function ProfileSection({
                   { label: 'Bank Account', desc: 'Bank details & withdrawal settings', icon: Landmark, action: () => setSubView('bank'), verified: !!user.bankAccount, grad: 'from-amber-400 to-orange-500' },
                   { label: 'Password', desc: 'Password & Security', icon: Lock, action: () => setSubView('password'), grad: 'from-sky-400 to-blue-500' },
                   { label: 'Transaction Records', desc: 'Full recharge & withdrawal history', icon: FileText, action: () => setSubView('transactions'), grad: 'from-pink-400 to-rose-500' },
-                  { label: 'About Company', desc: 'Our story, ad sponsors & information', icon: Building, action: () => setSubView('about'), grad: 'from-slate-400 to-slate-600' },
-                  { label: 'Download App', desc: 'Get the latest Android APK build package', icon: Download, action: handleDownloadApp, grad: 'from-rose-400 to-pink-500' }
+                  { label: 'About Company', desc: 'Our story, ad sponsors & information', icon: Building, action: () => setSubView('about'), grad: 'from-slate-400 to-slate-600' }
                 ] as Array<{ label: string; desc: string; icon: any; action: () => void; highlight?: boolean; badge?: any; verified?: boolean; grad: string }>).map((item, idx) => {
                   const Icon = item.icon;
                   return (
