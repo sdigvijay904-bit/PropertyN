@@ -1676,8 +1676,8 @@ export default function App() {
                 </motion.button>
               )}
 
-              {/* Bottom Navigation rail (Matches screenshot but sleeker and compact per user request) */}
-              <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around h-13.5 z-40 shadow-[0_-6px_20px_rgba(15,23,42,0.05)] overflow-visible px-2 pb-0.5">
+              {/* Bottom Navigation rail (Matches screenshot, larger height and icons as requested by user) */}
+              <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 flex items-center justify-around h-[70px] z-40 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] overflow-visible px-2 pb-1">
                 {[
                   { id: 'home', label: 'Home', icon: Home },
                   { id: 'invite', label: 'Invite', icon: Gift },
@@ -1694,21 +1694,21 @@ export default function App() {
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className="flex flex-col items-center justify-center flex-1 relative -top-3 group cursor-pointer select-none"
+                        className="flex flex-col items-center justify-center flex-1 relative -top-4 group cursor-pointer select-none"
                       >
-                        <div className={`w-11.5 h-11.5 rounded-full flex items-center justify-center transition-all duration-300 relative ${
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 relative ${
                           isSelected
-                            ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-teal-700 text-white scale-110 ring-4 ring-white shadow-[0_6px_16px_rgba(16,185,129,0.3)]'
-                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-4 ring-white shadow-[0_3px_10px_rgba(16,185,129,0.12)]'
+                            ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-teal-700 text-white scale-110 ring-4 ring-white shadow-[0_6px_18px_rgba(16,185,129,0.35)]'
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-4 ring-white shadow-[0_3px_12px_rgba(16,185,129,0.15)]'
                         }`}>
-                          <Icon className={`w-5 h-5 transition-transform group-active:scale-90 ${isSelected ? 'stroke-[2.5] fill-white/10' : 'stroke-[2.2] fill-emerald-100/30'}`} />
+                          <Icon className={`w-6.5 h-6.5 transition-transform group-active:scale-90 ${isSelected ? 'stroke-[2.5] fill-white/10' : 'stroke-[2.2] fill-emerald-100/30'}`} />
                           {activeOrdersCount > 0 && (
-                            <span className="absolute -top-0.5 -right-0.5 flex h-4.5 w-4.5 items-center justify-center bg-rose-500 text-white text-[8px] font-black rounded-full border border-white shadow-sm">
+                            <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center bg-rose-500 text-white text-[9px] font-black rounded-full border border-white shadow-sm">
                               {activeOrdersCount}
                             </span>
                           )}
                         </div>
-                        <span className={`text-[9px] font-black tracking-wider uppercase absolute -bottom-4.5 transition-all duration-200 ${
+                        <span className={`text-[10px] font-black tracking-wider uppercase absolute -bottom-5 transition-all duration-200 ${
                           isSelected ? 'text-teal-700 scale-105' : 'text-slate-600/90 group-hover:text-slate-800'
                         }`}>
                           {tab.label}
@@ -1721,22 +1721,22 @@ export default function App() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className="flex flex-col items-center justify-center flex-1 py-0.5 group cursor-pointer select-none"
+                      className="flex flex-col items-center justify-center flex-1 py-1 group cursor-pointer select-none"
                     >
-                      <div className={`p-1 rounded-lg transition-all duration-300 relative ${
+                      <div className={`p-1.5 rounded-xl transition-all duration-300 relative ${
                         isSelected
-                          ? 'bg-teal-50 text-teal-700 scale-105 shadow-[0_2px_6px_rgba(13,148,136,0.08)]'
+                          ? 'bg-teal-50 text-teal-700 scale-105 shadow-[0_2px_8px_rgba(13,148,136,0.1)]'
                           : 'text-slate-500 group-hover:text-slate-800 group-hover:bg-slate-50'
                       }`}>
-                        <Icon className={`w-5 h-5 transition-transform duration-300 group-active:scale-90 ${isSelected ? 'stroke-[2.5] fill-teal-100/40' : 'stroke-[2]'}`} />
+                        <Icon className={`w-5.5 h-5.5 transition-transform duration-300 group-active:scale-90 ${isSelected ? 'stroke-[2.5] fill-teal-100/40' : 'stroke-[2]'}`} />
                         {isSelected && (
-                          <span className="absolute top-0.5 right-0.5 flex h-1.5 w-1.5">
+                          <span className="absolute top-0.5 right-0.5 flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal-600"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-600"></span>
                           </span>
                         )}
                       </div>
-                      <span className={`text-[9px] font-black mt-0.5 tracking-wider uppercase transition-all duration-200 ${
+                      <span className={`text-[10px] font-black mt-1 tracking-wider uppercase transition-all duration-200 ${
                         isSelected ? 'text-teal-700 scale-105' : 'text-slate-600/90 group-hover:text-slate-800'
                       }`}>
                         {tab.label}
