@@ -446,7 +446,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                     <img
                       src={settings.qrCodeUrl || "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?auto=format&fit=crop&q=80&w=600"}
                       alt="Merchant QR"
-                      className="w-36 h-36 object-contain pointer-events-none"
+                      className="w-36 h-36 object-contain touch-auto cursor-pointer"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

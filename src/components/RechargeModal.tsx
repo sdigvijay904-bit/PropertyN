@@ -37,6 +37,7 @@ export default function RechargeModal({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [downloadingQr, setDownloadingQr] = useState<boolean>(false);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
+  const [qrNotice, setQrNotice] = useState<string>('');
 
   // Load configured merchant payment gateways from Admin settings or fallback
   const [upiId, setUpiId] = useState<string>('propertyn@ybl');
@@ -178,19 +179,98 @@ export default function RechargeModal({
   const handleDownloadQr = async () => {
     try {
       setDownloadingQr(true);
-      const response = await fetch(qrImageSrc);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      setQrNotice('');
+      setError('');
+
+      const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
+
+      // Helper to convert QR image into Blob & Base64 Data URL
+      const fetchQrData = async (): Promise<{ blob: Blob; dataUrl: string }> => {
+        try {
+          const response = await fetch(qrImageSrc);
+          const blob = await response.blob();
+          const dataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          return { blob, dataUrl };
+        } catch (fetchErr) {
+          // Fallback via Image object + HTML5 Canvas
+          return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width || 300;
+              canvas.height = img.height || 300;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                const dataUrl = canvas.toDataURL('image/png');
+                const byteString = atob(dataUrl.split(',')[1]);
+                const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                  ia[i] = byteString.charCodeAt(i);
+                }
+                const blob = new Blob([ab], { type: mimeString });
+                resolve({ blob, dataUrl });
+              } else {
+                reject(fetchErr);
+              }
+            };
+            img.onerror = () => reject(fetchErr);
+            img.src = qrImageSrc;
+          });
+        }
+      };
+
+      const { blob, dataUrl } = await fetchQrData();
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // Strategy 1: Mobile Web Share API (Primary for Android/iOS APK & Mobile Browsers)
+      // This directly triggers the native system dialog to "Save Image", "Gallery", or share
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: 'Payment QR Code',
+            text: `Payment QR Code for ₹${amountInput}`,
+            files: [file]
+          });
+          setQrNotice('✅ Save / Share options opened. Choose "Save to Gallery" or "Save Image".');
+          setDownloadingQr(false);
+          return;
+        } catch (shareError: any) {
+          if (shareError.name === 'AbortError') {
+            setDownloadingQr(false);
+            return;
+          }
+          console.warn("Share API error, falling back to download link", shareError);
+        }
+      }
+
+      // Strategy 2: Base64 Data URL programmatic download link
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `payment_qr_${amountInput}.png`;
+      link.href = dataUrl;
+      link.download = fileName;
+      link.setAttribute('target', '_blank');
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+
+      setQrNotice('✅ Download started! If running in mobile APK, long-press the QR image below to save directly to Gallery.');
+
     } catch (err) {
       console.error("Failed to download QR directly", err);
-      window.open(qrImageSrc, '_blank');
+      // Strategy 3: Open image in new window/tab for long press
+      try {
+        window.open(qrImageSrc, '_blank');
+        setQrNotice('ℹ️ QR image opened! Long-press the QR image to save to Gallery.');
+      } catch (e) {
+        setError('Unable to auto-save. Please long-press the QR image below to save to Gallery.');
+      }
     } finally {
       setDownloadingQr(false);
     }
@@ -461,13 +541,13 @@ export default function RechargeModal({
                   </div>
                   
                   {/* QR Image Box */}
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col items-center gap-3 w-full">
                     <div className="p-3 bg-white rounded-3xl border-2 border-teal-100/50 shadow-md relative group">
                       <img
                         src={qrImageSrc}
                         alt="Payment QR Code"
                         referrerPolicy="no-referrer"
-                        className="w-44 h-44 object-contain select-none transition-transform hover:scale-102"
+                        className="w-44 h-44 object-contain transition-transform hover:scale-102 cursor-pointer touch-auto"
                       />
                     </div>
                     
@@ -475,11 +555,21 @@ export default function RechargeModal({
                       type="button"
                       onClick={handleDownloadQr}
                       disabled={downloadingQr}
-                      className="flex items-center gap-1.5 px-4 py-2.5 bg-teal-50 hover:bg-teal-100/80 text-teal-700 border border-teal-200/60 rounded-xl font-extrabold text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
+                      className="flex items-center gap-1.5 px-4.5 py-2.5 bg-teal-50 hover:bg-teal-100/80 text-teal-700 border border-teal-200/60 rounded-xl font-extrabold text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
                     >
                       <Download className="w-3.5 h-3.5 text-teal-600 animate-bounce" />
-                      <span>{downloadingQr ? 'Downloading...' : 'Save QR to Gallery'}</span>
+                      <span>{downloadingQr ? 'Processing...' : 'Save QR to Gallery'}</span>
                     </button>
+
+                    {qrNotice && (
+                      <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-[10px] font-bold text-center leading-normal w-full max-w-xs animate-fadeIn shadow-sm">
+                        {qrNotice}
+                      </div>
+                    )}
+
+                    <p className="text-[9.5px] text-slate-400 font-medium text-center">
+                      💡 Tip: You can also long-press the QR image directly to save to Gallery
+                    </p>
                   </div>
 
                   {/* Merchant details & Quick Copy */}
