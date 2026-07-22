@@ -223,36 +223,29 @@ export default function RechargeModal({
 
       const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
 
-      // 1. Convert base64 data URL or external URL to a Blob
-      let blob: Blob | null = null;
-      if (activeQrImg.startsWith('data:')) {
+      // 1. Try Mobile Web Share API first (Primary method for Android/iOS APK & WebViews)
+      if (typeof navigator !== 'undefined' && navigator.share) {
         try {
-          blob = dataURLToBlob(activeQrImg);
-        } catch (bErr) {
-          console.warn("Failed to convert dataURL to blob", bErr);
-        }
-      } else {
-        try {
-          const res = await fetch(activeQrImg);
-          blob = await res.blob();
-        } catch (fErr) {
-          console.warn("Failed to fetch image blob", fErr);
-        }
-      }
+          let blob: Blob | null = null;
+          if (activeQrImg.startsWith('data:')) {
+            blob = dataURLToBlob(activeQrImg);
+          } else {
+            const res = await fetch(activeQrImg);
+            blob = await res.blob();
+          }
 
-      // 2. Mobile Web Share API (Primary mechanism for Android & iOS native app sheets)
-      if (blob && typeof navigator !== 'undefined' && navigator.share) {
-        try {
-          const file = new File([blob], fileName, { type: 'image/png' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: 'Payment QR Code',
-              text: `PropertyN Payment QR Code for ₹${amountInput}`,
-              files: [file]
-            });
-            setQrNotice('✅ Share options opened! Tap "Save to Gallery" or "Save Image".');
-            setDownloadingQr(false);
-            return;
+          if (blob) {
+            const file = new File([blob], fileName, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                title: 'Payment QR Code',
+                text: `PropertyN Payment QR Code for ₹${amountInput}`,
+                files: [file]
+              });
+              setQrNotice('✅ Share menu opened! Select "Save to Gallery" or "Photos".');
+              setDownloadingQr(false);
+              return;
+            }
           }
         } catch (shareErr: any) {
           if (shareErr.name === 'AbortError') {
@@ -263,25 +256,23 @@ export default function RechargeModal({
         }
       }
 
-      // 3. Fallback: Browser Download Anchor with Base64 Data URI or Blob URL
-      if (blob) {
-        try {
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-        } catch (aErr) {
-          console.warn("Blob URL anchor click failed:", aErr);
-        }
+      // 2. Direct HTTPS URL download for Android DownloadManager
+      try {
+        const link = document.createElement('a');
+        link.href = qrImageSrc;
+        link.download = fileName;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (clickErr) {
+        console.warn("Direct link download error:", clickErr);
       }
 
-      // 4. Always display Fullscreen QR Saver Modal for 100% Android WebView long-press support
+      // 3. Always open full QR Modal with Long-press instructions & APK permission hints
       setShowQrModal(true);
-      setQrNotice('💡 Tap & hold (long-press) the QR card image below to save directly to Gallery!');
+      setQrNotice('💡 Android APK Tip: QR Image par 2 sec ungli dabayein (Long-Press) aur "Download Image" select karein.');
 
     } catch (err) {
       console.error("Failed to process QR image:", err);
@@ -838,27 +829,23 @@ export default function RechargeModal({
                   <div className="space-y-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        if (activeQrImg.startsWith('data:')) {
-                          try {
-                            const blob = dataURLToBlob(activeQrImg);
-                            const blobUrl = URL.createObjectURL(blob);
-                            const w = window.open(blobUrl, '_blank');
-                            if (!w) {
-                              window.location.href = blobUrl;
-                            }
-                          } catch (e) {
-                            window.location.href = activeQrImg;
-                          }
-                        } else {
-                          window.open(activeQrImg, '_blank');
-                        }
-                      }}
+                      onClick={handleDownloadQr}
                       className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>View Raw Image (Long Press)</span>
+                      <Share2 className="w-4 h-4" />
+                      <span>Share / Save to Gallery</span>
                     </button>
+
+                    <a
+                      href={qrImageSrc}
+                      download={`payment_qr_${amountInput || 'recharge'}.png`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <Download className="w-4 h-4 text-teal-600" />
+                      <span>Direct Download (HTTPS Link)</span>
+                    </a>
 
                     <button
                       type="button"
@@ -869,6 +856,10 @@ export default function RechargeModal({
                       <span>{copiedUpi ? 'UPI ID COPIED' : `COPY UPI ID (${upiId})`}</span>
                     </button>
                   </div>
+
+                  <p className="text-[9px] text-slate-400 font-bold leading-tight text-center px-1">
+                    💡 <span className="text-slate-600">APK Permission Note:</span> Mobile app me gallery save ki permission na hone par, QR Code par long-press (2 sec ungli dabayein) karke image save karein.
+                  </p>
 
                   <button
                     type="button"
