@@ -223,61 +223,77 @@ export default function RechargeModal({
 
       const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
 
-      // 1. Try Mobile Web Share API first (Primary method for Android/iOS APK & WebViews)
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        try {
-          let blob: Blob | null = null;
-          if (activeQrImg.startsWith('data:')) {
-            blob = dataURLToBlob(activeQrImg);
-          } else {
-            const res = await fetch(activeQrImg);
-            blob = await res.blob();
-          }
+      // Ensure we have a high-res base64 image
+      let dataUrl = qrBase64;
+      if (!dataUrl) {
+        const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+        dataUrl = await QRCode.toDataURL(upiLink, {
+          width: 600,
+          margin: 1,
+          color: { dark: '#042f2e', light: '#ffffff' }
+        });
+      }
 
-          if (blob) {
-            const file = new File([blob], fileName, { type: 'image/png' });
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                title: 'Payment QR Code',
-                text: `PropertyN Payment QR Code for ₹${amountInput}`,
-                files: [file]
-              });
-              setQrNotice('✅ Share sheet opened! Tap "Save to Gallery" or "Photos".');
-              setDownloadingQr(false);
-              return;
-            }
+      // 1. Try Mobile Web Share API first (Native Android APK System Share Sheet)
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+        try {
+          const blob = dataURLToBlob(dataUrl);
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: 'Payment QR Code',
+              text: `PropertyN Payment QR Code for ₹${amountInput}`,
+              files: [file]
+            });
+            setQrNotice('✅ Mobile options opened! Tap "Save to Gallery" or "Save Image".');
+            setDownloadingQr(false);
+            return;
           }
         } catch (shareErr: any) {
           if (shareErr.name === 'AbortError') {
             setDownloadingQr(false);
             return;
           }
-          console.warn("Share API error or unhandled in WebView:", shareErr);
+          console.warn("Share API error in WebView:", shareErr);
         }
       }
 
-      // 2. Direct HTTPS URL download for Android DownloadManager / Browser
+      // 2. Direct Base64 Data URI Programmatic Download (In-App APK Execution)
       try {
         const link = document.createElement('a');
-        link.href = qrImageSrc;
+        link.href = dataUrl;
         link.download = fileName;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
+        link.style.display = 'none';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } catch (clickErr) {
-        console.warn("Direct link download error:", clickErr);
+      } catch (dErr) {
+        console.warn("Data URI download click failed:", dErr);
       }
 
-      // 3. Open preview modal with direct browser options for APK
+      // 3. Fallback Blob download
+      try {
+        const blob = dataURLToBlob(dataUrl);
+        const blobUrl = URL.createObjectURL(blob);
+        const blobLink = document.createElement('a');
+        blobLink.href = blobUrl;
+        blobLink.download = fileName;
+        blobLink.style.display = 'none';
+        document.body.appendChild(blobLink);
+        blobLink.click();
+        document.body.removeChild(blobLink);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+      } catch (bErr) {
+        console.warn("Blob URL download error:", bErr);
+      }
+
       setShowQrModal(true);
-      setQrNotice('✅ Download request sent! Agar APK me block ho, to neeche "Open in Chrome Browser" button dabayein.');
+      setQrNotice('✅ Image download triggered in App!');
 
     } catch (err) {
       console.error("Failed to process QR image:", err);
       setShowQrModal(true);
-      setQrNotice('💡 Tap & hold (long-press) the QR image or tap "Open in Chrome Browser" to save.');
+      setQrNotice('💡 Tap & hold (long-press) the QR image to save directly to Gallery.');
     } finally {
       setDownloadingQr(false);
     }
@@ -559,15 +575,17 @@ export default function RechargeModal({
                       </div>
                     </div>
                     
-                    <button
-                      type="button"
-                      onClick={handleDownloadQr}
-                      disabled={downloadingQr}
-                      className="flex items-center gap-1.5 px-4.5 py-2.5 bg-teal-50 hover:bg-teal-100/80 text-teal-700 border border-teal-200/60 rounded-xl font-extrabold text-[10px] uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60"
-                    >
-                      <Download className="w-3.5 h-3.5 text-teal-600 animate-bounce" />
-                      <span>{downloadingQr ? 'Processing...' : 'Save QR to Gallery'}</span>
-                    </button>
+                    <div className="flex flex-col items-center gap-2 w-full justify-center">
+                      <button
+                        type="button"
+                        onClick={handleDownloadQr}
+                        disabled={downloadingQr}
+                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-60 w-full sm:w-auto"
+                      >
+                        <Download className="w-4 h-4 text-emerald-100" />
+                        <span>{downloadingQr ? 'Saving QR...' : 'Save QR to Gallery'}</span>
+                      </button>
+                    </div>
 
                     {qrNotice && (
                       <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-[10px] font-bold text-center leading-normal w-full max-w-xs animate-fadeIn shadow-sm">
@@ -830,35 +848,20 @@ export default function RechargeModal({
                     <button
                       type="button"
                       onClick={handleDownloadQr}
-                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      disabled={downloadingQr}
+                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-60"
                     >
-                      <Share2 className="w-4 h-4" />
-                      <span>Save / Share via Mobile Sheet</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const w = window.open(qrImageSrc, '_blank');
-                        if (!w) {
-                          window.location.href = qrImageSrc;
-                        }
-                      }}
-                      className="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Open in Chrome (Direct Save)</span>
+                      <Download className="w-4 h-4 text-white" />
+                      <span>{downloadingQr ? 'Processing...' : 'Save QR to Gallery'}</span>
                     </button>
 
                     <a
-                      href={qrImageSrc}
-                      download={`payment_qr_${amountInput || 'recharge'}.png`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      href={upiPayloadLink}
+                      onClick={handleDirectUpiPay}
+                      className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
-                      <Download className="w-4 h-4 text-teal-600" />
-                      <span>Direct Download Link</span>
+                      <Smartphone className="w-4 h-4 text-emerald-100" />
+                      <span>Pay Directly with UPI App</span>
                     </a>
 
                     <button
@@ -871,9 +874,13 @@ export default function RechargeModal({
                     </button>
                   </div>
 
-                  <div className="p-2.5 bg-sky-50 border border-sky-200 text-sky-950 rounded-xl text-[10px] font-medium leading-relaxed text-center">
-                    💡 <strong className="font-extrabold text-sky-900">Mobile App (APK) Tip:</strong><br />
-                    Agar app me save na ho, to <strong>"Open in Chrome"</strong> button par tap karke Chrome browser se direct 1-tap me Gallery me save karein.
+                  <div className="p-3 bg-teal-50 border border-teal-200/80 text-teal-950 rounded-xl text-[10px] font-medium leading-relaxed text-center space-y-1">
+                    <p className="font-extrabold text-teal-900 flex items-center justify-center gap-1">
+                      <span>📱</span> In-App QR Code Saver
+                    </p>
+                    <p className="text-teal-800 leading-tight">
+                      Agar direct save me problem ho, to QR Code Image par <strong>2 second ungli dabake rakhein (Long-Press)</strong> aur "Download Image" select karein!
+                    </p>
                   </div>
 
                   <button
