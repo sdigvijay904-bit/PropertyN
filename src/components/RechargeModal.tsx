@@ -242,7 +242,7 @@ export default function RechargeModal({
                 text: `PropertyN Payment QR Code for ₹${amountInput}`,
                 files: [file]
               });
-              setQrNotice('✅ Share menu opened! Select "Save to Gallery" or "Photos".');
+              setQrNotice('✅ Share sheet opened! Tap "Save to Gallery" or "Photos".');
               setDownloadingQr(false);
               return;
             }
@@ -256,7 +256,7 @@ export default function RechargeModal({
         }
       }
 
-      // 2. Direct HTTPS URL download for Android DownloadManager
+      // 2. Direct HTTPS URL download for Android DownloadManager / Browser
       try {
         const link = document.createElement('a');
         link.href = qrImageSrc;
@@ -270,14 +270,14 @@ export default function RechargeModal({
         console.warn("Direct link download error:", clickErr);
       }
 
-      // 3. Always open full QR Modal with Long-press instructions & APK permission hints
+      // 3. Open preview modal with direct browser options for APK
       setShowQrModal(true);
-      setQrNotice('💡 Android APK Tip: QR Image par 2 sec ungli dabayein (Long-Press) aur "Download Image" select karein.');
+      setQrNotice('✅ Download request sent! Agar APK me block ho, to neeche "Open in Chrome Browser" button dabayein.');
 
     } catch (err) {
       console.error("Failed to process QR image:", err);
       setShowQrModal(true);
-      setQrNotice('💡 Tap & hold (long-press) the QR image to save to Gallery.');
+      setQrNotice('💡 Tap & hold (long-press) the QR image or tap "Open in Chrome Browser" to save.');
     } finally {
       setDownloadingQr(false);
     }
@@ -833,7 +833,21 @@ export default function RechargeModal({
                       className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
                       <Share2 className="w-4 h-4" />
-                      <span>Share / Save to Gallery</span>
+                      <span>Save / Share via Mobile Sheet</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const w = window.open(qrImageSrc, '_blank');
+                        if (!w) {
+                          window.location.href = qrImageSrc;
+                        }
+                      }}
+                      className="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Open in Chrome (Direct Save)</span>
                     </button>
 
                     <a
@@ -841,25 +855,26 @@ export default function RechargeModal({
                       download={`payment_qr_${amountInput || 'recharge'}.png`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      className="w-full py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
                       <Download className="w-4 h-4 text-teal-600" />
-                      <span>Direct Download (HTTPS Link)</span>
+                      <span>Direct Download Link</span>
                     </a>
 
                     <button
                       type="button"
                       onClick={handleCopyUpi}
-                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
                       {copiedUpi ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-600" />}
                       <span>{copiedUpi ? 'UPI ID COPIED' : `COPY UPI ID (${upiId})`}</span>
                     </button>
                   </div>
 
-                  <p className="text-[9px] text-slate-400 font-bold leading-tight text-center px-1">
-                    💡 <span className="text-slate-600">APK Permission Note:</span> Mobile app me gallery save ki permission na hone par, QR Code par long-press (2 sec ungli dabayein) karke image save karein.
-                  </p>
+                  <div className="p-2.5 bg-sky-50 border border-sky-200 text-sky-950 rounded-xl text-[10px] font-medium leading-relaxed text-center">
+                    💡 <strong className="font-extrabold text-sky-900">Mobile App (APK) Tip:</strong><br />
+                    Agar app me save na ho, to <strong>"Open in Chrome"</strong> button par tap karke Chrome browser se direct 1-tap me Gallery me save karein.
+                  </div>
 
                   <button
                     type="button"
