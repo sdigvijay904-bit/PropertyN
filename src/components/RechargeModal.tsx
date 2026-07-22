@@ -5,12 +5,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import QRCode from 'qrcode';
 import { 
   X, QrCode, Copy, Check, Upload, ArrowRight, ChevronLeft, Info, 
   Lock, UploadCloud, CheckCircle2, ShieldCheck, Landmark, Smartphone, Download,
-  ShieldAlert, Loader2
+  ShieldAlert, Loader2, Share2, ExternalLink
 } from 'lucide-react';
 import { UserProfile } from '../types';
+
+function dataURLToBlob(dataurl: string): Blob {
+  const arr = dataurl.split(',');
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
 
 interface RechargeModalProps {
   user: UserProfile;
@@ -38,6 +51,8 @@ export default function RechargeModal({
   const [downloadingQr, setDownloadingQr] = useState<boolean>(false);
   const [isRedirecting, setIsRedirecting] = useState<boolean>(false);
   const [qrNotice, setQrNotice] = useState<string>('');
+  const [showQrModal, setShowQrModal] = useState<boolean>(false);
+  const [qrBase64, setQrBase64] = useState<string>('');
 
   // Load configured merchant payment gateways from Admin settings or fallback
   const [upiId, setUpiId] = useState<string>('propertyn@ybl');
@@ -71,6 +86,23 @@ export default function RechargeModal({
       setIsSubmitting(false);
     }
   }, [isOpen, prefilledAmount]);
+
+  // Generate pure client-side Base64 QR code for direct display and mobile APK save/download
+  useEffect(() => {
+    if (step === 'payment' && upiId) {
+      const payload = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+      
+      QRCode.toDataURL(payload, {
+        width: 600,
+        margin: 1,
+        color: { dark: '#042f2e', light: '#ffffff' }
+      }).then((dataUrl) => {
+        setQrBase64(dataUrl);
+      }).catch(err => {
+        console.error('Failed to generate base64 QR:', err);
+      });
+    }
+  }, [step, upiId, upiName, amountInput, user.phone]);
 
   if (!isOpen) return null;
 
@@ -176,6 +208,13 @@ export default function RechargeModal({
     }, 1500);
   };
 
+  // Generate UPI payment payload URI
+  const upiPayloadLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+  // High-resolution clean QR image URL fallback
+  const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiPayloadLink)}`;
+  // Active QR image to use (pure clean square QR code)
+  const activeQrImg = qrBase64 || qrImageSrc;
+
   const handleDownloadQr = async () => {
     try {
       setDownloadingQr(true);
@@ -184,26 +223,34 @@ export default function RechargeModal({
 
       const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
 
-      // Fetch the QR image safely as a Blob
+      // 1. Convert base64 data URL or external URL to a Blob
       let blob: Blob | null = null;
-      try {
-        const response = await fetch(qrImageSrc);
-        blob = await response.blob();
-      } catch (fErr) {
-        console.warn("Fetch QR image failed:", fErr);
+      if (activeQrImg.startsWith('data:')) {
+        try {
+          blob = dataURLToBlob(activeQrImg);
+        } catch (bErr) {
+          console.warn("Failed to convert dataURL to blob", bErr);
+        }
+      } else {
+        try {
+          const res = await fetch(activeQrImg);
+          blob = await res.blob();
+        } catch (fErr) {
+          console.warn("Failed to fetch image blob", fErr);
+        }
       }
 
-      // Strategy 1: Native Mobile Web Share API (Works on Android/iOS System Share)
+      // 2. Mobile Web Share API (Primary mechanism for Android & iOS native app sheets)
       if (blob && typeof navigator !== 'undefined' && navigator.share) {
         try {
           const file = new File([blob], fileName, { type: 'image/png' });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
               title: 'Payment QR Code',
-              text: `Payment QR Code for ₹${amountInput}`,
+              text: `PropertyN Payment QR Code for ₹${amountInput}`,
               files: [file]
             });
-            setQrNotice('✅ Share options opened. Tap "Save Image" or "Save to Gallery".');
+            setQrNotice('✅ Share options opened! Tap "Save to Gallery" or "Save Image".');
             setDownloadingQr(false);
             return;
           }
@@ -212,52 +259,38 @@ export default function RechargeModal({
             setDownloadingQr(false);
             return;
           }
-          console.warn("Share API failed or unhandled in WebView:", shareErr);
+          console.warn("Share API error or unhandled in WebView:", shareErr);
         }
       }
 
-      // Strategy 2: Blob Object URL Download (NO Base64 Data URIs, NO target="_blank" which crash Android APK DownloadManager)
+      // 3. Fallback: Browser Download Anchor with Base64 Data URI or Blob URL
       if (blob) {
         try {
           const blobUrl = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = blobUrl;
           link.download = fileName;
-          link.style.display = 'none';
           document.body.appendChild(link);
-
-          try {
-            link.click();
-            setQrNotice('✅ Download request sent! You can also long-press the QR image above to save directly.');
-          } catch (clickErr) {
-            console.warn("Link click error in WebView:", clickErr);
-            setQrNotice('💡 Tap & hold (long-press) the QR image above to save it directly to your Gallery.');
-          }
-
+          link.click();
           document.body.removeChild(link);
           setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-          setDownloadingQr(false);
-          return;
-        } catch (blobErr) {
-          console.warn("Blob URL download failed:", blobErr);
+        } catch (aErr) {
+          console.warn("Blob URL anchor click failed:", aErr);
         }
       }
 
-      // Default safe guidance for APK / WebViews
-      setQrNotice('💡 Tap & hold (long-press) the QR image above to save it directly to your Gallery.');
+      // 4. Always display Fullscreen QR Saver Modal for 100% Android WebView long-press support
+      setShowQrModal(true);
+      setQrNotice('💡 Tap & hold (long-press) the QR card image below to save directly to Gallery!');
 
     } catch (err) {
       console.error("Failed to process QR image:", err);
-      setQrNotice('💡 Tap & hold (long-press) the QR image above to save it directly to your Gallery.');
+      setShowQrModal(true);
+      setQrNotice('💡 Tap & hold (long-press) the QR image to save to Gallery.');
     } finally {
       setDownloadingQr(false);
     }
   };
-
-  // Generate UPI payment payload URI
-  const upiPayloadLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
-  // Use public QR Server to render the dynamic QR scanner
-  const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiPayloadLink)}`;
 
   const handleDirectUpiPay = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -520,13 +553,19 @@ export default function RechargeModal({
                   
                   {/* QR Image Box */}
                   <div className="flex flex-col items-center gap-3 w-full">
-                    <div className="p-3 bg-white rounded-3xl border-2 border-teal-100/50 shadow-md relative group">
+                    <div 
+                      onClick={() => setShowQrModal(true)}
+                      className="p-3 bg-white rounded-3xl border-2 border-teal-100 shadow-md relative group cursor-pointer active:scale-98 transition-transform"
+                    >
                       <img
-                        src={qrImageSrc}
+                        src={activeQrImg}
                         alt="Payment QR Code"
                         referrerPolicy="no-referrer"
-                        className="w-44 h-44 object-contain transition-transform hover:scale-102 cursor-pointer touch-auto"
+                        className="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-xl"
                       />
+                      <div className="absolute inset-0 bg-teal-900/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
+                        <span className="bg-slate-900/80 text-white text-[9px] font-bold px-2 py-1 rounded-full backdrop-blur-xs">Tap to Enlarge</span>
+                      </div>
                     </div>
                     
                     <button
@@ -546,7 +585,7 @@ export default function RechargeModal({
                     )}
 
                     <p className="text-[9.5px] text-slate-400 font-medium text-center">
-                      💡 Tip: You can also long-press the QR image directly to save to Gallery
+                      💡 Tip: Tap QR image or button above to save to Gallery
                     </p>
                   </div>
 
@@ -753,6 +792,95 @@ export default function RechargeModal({
               </motion.div>
             )}
           </div>
+
+          {/* Fullscreen QR Saver Modal Overlay for Android APK & Mobile Browsers */}
+          <AnimatePresence>
+            {showQrModal && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 font-sans"
+              >
+                <div className="bg-white w-full max-w-sm rounded-3xl p-5 border border-teal-100 shadow-2xl text-center space-y-4 relative overflow-hidden animate-fadeIn">
+                  {/* Close button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowQrModal(false)}
+                    className="absolute top-3 right-3 p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  <div className="space-y-1 pt-1">
+                    <span className="text-[9px] font-black uppercase text-teal-700 tracking-widest bg-teal-50 px-3 py-1 rounded-full border border-teal-100 inline-block">
+                      SAVE QR CODE TO GALLERY
+                    </span>
+                    <h3 className="text-base font-black text-slate-900">Payment QR Code</h3>
+                    <p className="text-xs font-black text-teal-600">Amount: ₹{amountInput}</p>
+                  </div>
+
+                  {/* QR Image with long-press hint */}
+                  <div className="p-3 bg-white rounded-2xl border-2 border-teal-200 shadow-inner flex flex-col items-center justify-center space-y-2">
+                    <img
+                      src={activeQrImg}
+                      alt="Payment QR Code Scanner"
+                      referrerPolicy="no-referrer"
+                      className="w-48 h-48 sm:w-52 sm:h-52 object-contain rounded-xl select-all touch-auto cursor-pointer"
+                    />
+                    <div className="bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-xl text-[10px] font-extrabold flex items-center justify-center gap-1.5 w-full text-center leading-tight">
+                      <Info className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Finger se 2 sec DABAKE RAKHE (Long-Press) to Save to Gallery</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activeQrImg.startsWith('data:')) {
+                          try {
+                            const blob = dataURLToBlob(activeQrImg);
+                            const blobUrl = URL.createObjectURL(blob);
+                            const w = window.open(blobUrl, '_blank');
+                            if (!w) {
+                              window.location.href = blobUrl;
+                            }
+                          } catch (e) {
+                            window.location.href = activeQrImg;
+                          }
+                        } else {
+                          window.open(activeQrImg, '_blank');
+                        }
+                      }}
+                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>View Raw Image (Long Press)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCopyUpi}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    >
+                      {copiedUpi ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-600" />}
+                      <span>{copiedUpi ? 'UPI ID COPIED' : `COPY UPI ID (${upiId})`}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowQrModal(false)}
+                    className="text-[11px] font-extrabold text-slate-400 hover:text-slate-600 uppercase tracking-wider pt-1 block mx-auto cursor-pointer"
+                  >
+                    Close Preview
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </AnimatePresence>
