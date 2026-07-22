@@ -184,93 +184,71 @@ export default function RechargeModal({
 
       const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
 
-      // Helper to convert QR image into Blob & Base64 Data URL
-      const fetchQrData = async (): Promise<{ blob: Blob; dataUrl: string }> => {
-        try {
-          const response = await fetch(qrImageSrc);
-          const blob = await response.blob();
-          const dataUrl = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-          return { blob, dataUrl };
-        } catch (fetchErr) {
-          // Fallback via Image object + HTML5 Canvas
-          return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width || 300;
-              canvas.height = img.height || 300;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                ctx.drawImage(img, 0, 0);
-                const dataUrl = canvas.toDataURL('image/png');
-                const byteString = atob(dataUrl.split(',')[1]);
-                const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-                const ab = new ArrayBuffer(byteString.length);
-                const ia = new Uint8Array(ab);
-                for (let i = 0; i < byteString.length; i++) {
-                  ia[i] = byteString.charCodeAt(i);
-                }
-                const blob = new Blob([ab], { type: mimeString });
-                resolve({ blob, dataUrl });
-              } else {
-                reject(fetchErr);
-              }
-            };
-            img.onerror = () => reject(fetchErr);
-            img.src = qrImageSrc;
-          });
-        }
-      };
+      // Fetch the QR image safely as a Blob
+      let blob: Blob | null = null;
+      try {
+        const response = await fetch(qrImageSrc);
+        blob = await response.blob();
+      } catch (fErr) {
+        console.warn("Fetch QR image failed:", fErr);
+      }
 
-      const { blob, dataUrl } = await fetchQrData();
-      const file = new File([blob], fileName, { type: 'image/png' });
-
-      // Strategy 1: Mobile Web Share API (Primary for Android/iOS APK & Mobile Browsers)
-      // This directly triggers the native system dialog to "Save Image", "Gallery", or share
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      // Strategy 1: Native Mobile Web Share API (Works on Android/iOS System Share)
+      if (blob && typeof navigator !== 'undefined' && navigator.share) {
         try {
-          await navigator.share({
-            title: 'Payment QR Code',
-            text: `Payment QR Code for ₹${amountInput}`,
-            files: [file]
-          });
-          setQrNotice('✅ Save / Share options opened. Choose "Save to Gallery" or "Save Image".');
-          setDownloadingQr(false);
-          return;
-        } catch (shareError: any) {
-          if (shareError.name === 'AbortError') {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: 'Payment QR Code',
+              text: `Payment QR Code for ₹${amountInput}`,
+              files: [file]
+            });
+            setQrNotice('✅ Share options opened. Tap "Save Image" or "Save to Gallery".');
             setDownloadingQr(false);
             return;
           }
-          console.warn("Share API error, falling back to download link", shareError);
+        } catch (shareErr: any) {
+          if (shareErr.name === 'AbortError') {
+            setDownloadingQr(false);
+            return;
+          }
+          console.warn("Share API failed or unhandled in WebView:", shareErr);
         }
       }
 
-      // Strategy 2: Base64 Data URL programmatic download link
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = fileName;
-      link.setAttribute('target', '_blank');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Strategy 2: Blob Object URL Download (NO Base64 Data URIs, NO target="_blank" which crash Android APK DownloadManager)
+      if (blob) {
+        try {
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          link.style.display = 'none';
+          document.body.appendChild(link);
 
-      setQrNotice('✅ Download started! If running in mobile APK, long-press the QR image below to save directly to Gallery.');
+          try {
+            link.click();
+            setQrNotice('✅ Download request sent! You can also long-press the QR image above to save directly.');
+          } catch (clickErr) {
+            console.warn("Link click error in WebView:", clickErr);
+            setQrNotice('💡 Tap & hold (long-press) the QR image above to save it directly to your Gallery.');
+          }
+
+          document.body.removeChild(link);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+          setDownloadingQr(false);
+          return;
+        } catch (blobErr) {
+          console.warn("Blob URL download failed:", blobErr);
+        }
+      }
+
+      // Default safe guidance for APK / WebViews
+      setQrNotice('💡 Tap & hold (long-press) the QR image above to save it directly to your Gallery.');
 
     } catch (err) {
-      console.error("Failed to download QR directly", err);
-      // Strategy 3: Open image in new window/tab for long press
-      try {
-        window.open(qrImageSrc, '_blank');
-        setQrNotice('ℹ️ QR image opened! Long-press the QR image to save to Gallery.');
-      } catch (e) {
-        setError('Unable to auto-save. Please long-press the QR image below to save to Gallery.');
-      }
+      console.error("Failed to process QR image:", err);
+      setQrNotice('💡 Tap & hold (long-press) the QR image above to save it directly to your Gallery.');
     } finally {
       setDownloadingQr(false);
     }
