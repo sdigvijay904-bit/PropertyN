@@ -219,6 +219,12 @@ export default function RechargeModal({
   const downloadApiEndpoint = `/api/download-qr?amount=${encodeURIComponent(amountInput || '500')}&phone=${encodeURIComponent(user.phone || '')}&upiId=${encodeURIComponent(upiId)}&upiName=${encodeURIComponent(upiName)}`;
 
   const handleDownloadQr = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (downloadingQr) return;
+
     try {
       setDownloadingQr(true);
       setQrNotice('');
@@ -226,7 +232,7 @@ export default function RechargeModal({
 
       const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
 
-      // 1. Direct Blob Download
+      // 1. Single Direct Download using Blob URL
       let dataUrl = qrBase64;
       if (!dataUrl) {
         const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
@@ -248,19 +254,7 @@ export default function RechargeModal({
       document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
-      // 2. Direct Server Endpoint Attachment Download as fallback
-      try {
-        const sLink = document.createElement('a');
-        sLink.href = downloadApiEndpoint;
-        sLink.download = fileName;
-        document.body.appendChild(sLink);
-        sLink.click();
-        document.body.removeChild(sLink);
-      } catch (sErr) {
-        console.warn("Server link click error:", sErr);
-      }
-
-      setQrNotice('✅ QR Code image direct save ho gayi hai!');
+      setQrNotice('✅ QR Code image saved!');
     } catch (err) {
       console.error("Failed to process QR download:", err);
       try {
@@ -275,7 +269,7 @@ export default function RechargeModal({
       }
       setQrNotice('✅ Downloading QR image...');
     } finally {
-      setTimeout(() => setDownloadingQr(false), 800);
+      setTimeout(() => setDownloadingQr(false), 1000);
     }
   };
 
@@ -556,15 +550,15 @@ export default function RechargeModal({
                     </div>
                     
                     <div className="flex flex-col items-center gap-2 w-full justify-center">
-                      <a
-                        href={downloadApiEndpoint}
-                        download={`payment_qr_${amountInput || 'recharge'}.png`}
+                      <button
+                        type="button"
                         onClick={handleDownloadQr}
-                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer w-full sm:w-auto"
+                        disabled={downloadingQr}
+                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-60 w-full sm:w-auto"
                       >
                         <Download className="w-4 h-4 text-emerald-100" />
                         <span>{downloadingQr ? 'Saving QR...' : 'Save QR to Gallery'}</span>
-                      </a>
+                      </button>
                     </div>
 
                     {qrNotice && (
@@ -825,15 +819,15 @@ export default function RechargeModal({
 
                   {/* Quick Action Buttons */}
                   <div className="space-y-2">
-                    <a
-                      href={downloadApiEndpoint}
-                      download={`payment_qr_${amountInput || 'recharge'}.png`}
+                    <button
+                      type="button"
                       onClick={handleDownloadQr}
-                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      disabled={downloadingQr}
+                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-60"
                     >
                       <Download className="w-4 h-4 text-white" />
                       <span>{downloadingQr ? 'Processing...' : 'Save QR to Gallery'}</span>
-                    </a>
+                    </button>
 
                     <a
                       href={upiPayloadLink}
