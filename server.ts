@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import QRCode from "qrcode";
 import { createServer as createViteServer } from "vite";
 
 const app = express();
@@ -8,6 +9,41 @@ const PORT = Number(process.env.PORT || 3000);
 const DB_FILE = path.join(process.cwd(), "db.json");
 
 app.use(express.json({ limit: '10mb' }));
+
+// API: Direct QR Code Image Attachment Download (For Android APK WebView & Mobile Browsers)
+app.get("/api/download-qr", async (req, res) => {
+  try {
+    const amount = (req.query.amount as string) || "500";
+    const phone = (req.query.phone as string) || "";
+    const upiId = (req.query.upiId as string) || "DIGVIJAY990@NYES";
+    const upiName = (req.query.upiName as string) || "PropertyN Payment";
+
+    const upiString = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amount}&cu=INR&tn=Recharge_${phone}`;
+
+    const pngBuffer = await QRCode.toBuffer(upiString, {
+      width: 1000,
+      margin: 2,
+      color: {
+        dark: '#042f2e',
+        light: '#ffffff'
+      }
+    });
+
+    const filename = `payment_qr_${amount}.png`;
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pngBuffer.length.toString());
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    return res.end(pngBuffer);
+  } catch (err) {
+    console.error("Error generating QR download:", err);
+    res.status(500).send("Error generating QR image");
+  }
+});
 
 interface DbState {
   usersList: any[];

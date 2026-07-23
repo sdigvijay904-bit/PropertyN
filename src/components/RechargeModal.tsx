@@ -215,7 +215,10 @@ export default function RechargeModal({
   // Active QR image to use (pure clean square QR code)
   const activeQrImg = qrBase64 || qrImageSrc;
 
-  const handleDownloadQr = async () => {
+  // Direct Server Attachment Download URL (triggers Android system download manager in APK & browser)
+  const downloadApiEndpoint = `/api/download-qr?amount=${encodeURIComponent(amountInput || '500')}&phone=${encodeURIComponent(user.phone || '')}&upiId=${encodeURIComponent(upiId)}&upiName=${encodeURIComponent(upiName)}`;
+
+  const handleDownloadQr = async (e?: React.MouseEvent) => {
     try {
       setDownloadingQr(true);
       setQrNotice('');
@@ -223,20 +226,18 @@ export default function RechargeModal({
 
       const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
 
-      // Ensure we have a high-res base64 image
-      let dataUrl = qrBase64;
-      if (!dataUrl) {
-        const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
-        dataUrl = await QRCode.toDataURL(upiLink, {
-          width: 600,
-          margin: 1,
-          color: { dark: '#042f2e', light: '#ffffff' }
-        });
-      }
-
-      // 1. Try Mobile Web Share API first (Native Android APK System Share Sheet)
+      // 1. Try Mobile Web Share API first if native share is supported
       if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
         try {
+          let dataUrl = qrBase64;
+          if (!dataUrl) {
+            const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+            dataUrl = await QRCode.toDataURL(upiLink, {
+              width: 800,
+              margin: 2,
+              color: { dark: '#042f2e', light: '#ffffff' }
+            });
+          }
           const blob = dataURLToBlob(dataUrl);
           const file = new File([blob], fileName, { type: 'image/png' });
           if (navigator.canShare({ files: [file] })) {
@@ -245,7 +246,7 @@ export default function RechargeModal({
               text: `PropertyN Payment QR Code for ₹${amountInput}`,
               files: [file]
             });
-            setQrNotice('✅ Mobile options opened! Tap "Save to Gallery" or "Save Image".');
+            setQrNotice('✅ Share menu opened! Select "Save Image" or "Save to Gallery".');
             setDownloadingQr(false);
             return;
           }
@@ -254,48 +255,31 @@ export default function RechargeModal({
             setDownloadingQr(false);
             return;
           }
-          console.warn("Share API error in WebView:", shareErr);
         }
       }
 
-      // 2. Direct Base64 Data URI Programmatic Download (In-App APK Execution)
-      try {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = fileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (dErr) {
-        console.warn("Data URI download click failed:", dErr);
-      }
+      // 2. Direct Server Endpoint Attachment Download
+      // Creates an explicit HTTP download request with Content-Disposition: attachment header
+      const link = document.createElement('a');
+      link.href = downloadApiEndpoint;
+      link.download = fileName;
+      link.target = '_self';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-      // 3. Fallback Blob download
-      try {
-        const blob = dataURLToBlob(dataUrl);
-        const blobUrl = URL.createObjectURL(blob);
-        const blobLink = document.createElement('a');
-        blobLink.href = blobUrl;
-        blobLink.download = fileName;
-        blobLink.style.display = 'none';
-        document.body.appendChild(blobLink);
-        blobLink.click();
-        document.body.removeChild(blobLink);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-      } catch (bErr) {
-        console.warn("Blob URL download error:", bErr);
-      }
+      // Trigger location assignment for WebViews that ignore programmatic clicks
+      setTimeout(() => {
+        window.location.href = downloadApiEndpoint;
+      }, 300);
 
-      setShowQrModal(true);
-      setQrNotice('✅ Image download triggered in App!');
-
+      setQrNotice('✅ QR Code image saved / download started!');
     } catch (err) {
-      console.error("Failed to process QR image:", err);
-      setShowQrModal(true);
-      setQrNotice('💡 Tap & hold (long-press) the QR image to save directly to Gallery.');
+      console.error("Failed to process QR download:", err);
+      window.location.href = downloadApiEndpoint;
+      setQrNotice('✅ Downloading QR image...');
     } finally {
-      setDownloadingQr(false);
+      setTimeout(() => setDownloadingQr(false), 1500);
     }
   };
 
@@ -570,21 +554,21 @@ export default function RechargeModal({
                         referrerPolicy="no-referrer"
                         className="w-44 h-44 sm:w-48 sm:h-48 object-contain rounded-xl"
                       />
-                      <div className="absolute inset-0 bg-teal-900/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center">
+                      <div className="absolute inset-0 bg-teal-900/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center pointer-events-none">
                         <span className="bg-slate-900/80 text-white text-[9px] font-bold px-2 py-1 rounded-full backdrop-blur-xs">Tap to Enlarge</span>
                       </div>
                     </div>
                     
                     <div className="flex flex-col items-center gap-2 w-full justify-center">
-                      <button
-                        type="button"
+                      <a
+                        href={downloadApiEndpoint}
+                        download={`payment_qr_${amountInput || 'recharge'}.png`}
                         onClick={handleDownloadQr}
-                        disabled={downloadingQr}
-                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-60 w-full sm:w-auto"
+                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer w-full sm:w-auto"
                       >
                         <Download className="w-4 h-4 text-emerald-100" />
                         <span>{downloadingQr ? 'Saving QR...' : 'Save QR to Gallery'}</span>
-                      </button>
+                      </a>
                     </div>
 
                     {qrNotice && (
@@ -837,23 +821,23 @@ export default function RechargeModal({
                       referrerPolicy="no-referrer"
                       className="w-48 h-48 sm:w-52 sm:h-52 object-contain rounded-xl select-all touch-auto cursor-pointer"
                     />
-                    <div className="bg-amber-50 border border-amber-200 text-amber-900 p-2.5 rounded-xl text-[10px] font-extrabold flex items-center justify-center gap-1.5 w-full text-center leading-tight">
-                      <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>Finger se 2 sec DABAKE RAKHE (Long-Press) to Save to Gallery</span>
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 p-2.5 rounded-xl text-[10px] font-extrabold flex items-center justify-center gap-1.5 w-full text-center leading-tight">
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>Neeche "Save QR to Gallery" button par click karke direct Gallery me Save karein!</span>
                     </div>
                   </div>
 
                   {/* Quick Action Buttons */}
                   <div className="space-y-2">
-                    <button
-                      type="button"
+                    <a
+                      href={downloadApiEndpoint}
+                      download={`payment_qr_${amountInput || 'recharge'}.png`}
                       onClick={handleDownloadQr}
-                      disabled={downloadingQr}
-                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-60"
+                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
                       <Download className="w-4 h-4 text-white" />
                       <span>{downloadingQr ? 'Processing...' : 'Save QR to Gallery'}</span>
-                    </button>
+                    </a>
 
                     <a
                       href={upiPayloadLink}
@@ -876,10 +860,10 @@ export default function RechargeModal({
 
                   <div className="p-3 bg-teal-50 border border-teal-200/80 text-teal-950 rounded-xl text-[10px] font-medium leading-relaxed text-center space-y-1">
                     <p className="font-extrabold text-teal-900 flex items-center justify-center gap-1">
-                      <span>📱</span> In-App QR Code Saver
+                      <span>📱</span> Instant QR Code Saver
                     </p>
                     <p className="text-teal-800 leading-tight">
-                      Agar direct save me problem ho, to QR Code Image par <strong>2 second ungli dabake rakhein (Long-Press)</strong> aur "Download Image" select karein!
+                      "Save QR to Gallery" par click karte hi QR image direct aapke phone ke Downloads / Gallery me save ho jayegi!
                     </p>
                   </div>
 
