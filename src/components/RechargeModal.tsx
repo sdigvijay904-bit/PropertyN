@@ -219,6 +219,10 @@ export default function RechargeModal({
   const downloadApiEndpoint = `/api/download-qr?amount=${encodeURIComponent(amountInput || '500')}&phone=${encodeURIComponent(user.phone || '')}&upiId=${encodeURIComponent(upiId)}&upiName=${encodeURIComponent(upiName)}`;
 
   const handleDownloadQr = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (downloadingQr) return;
 
     try {
@@ -226,24 +230,62 @@ export default function RechargeModal({
       setQrNotice('');
       setError('');
 
-      const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
+      const fileName = `payment_qr_${amountInput || '500'}.png`;
 
-      // Direct single download request
-      if (!e) {
+      // 1. Generate clean high-res Data URL for the QR image
+      let dataUrl = qrBase64;
+      if (!dataUrl) {
+        const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+        dataUrl = await QRCode.toDataURL(upiLink, {
+          width: 1000,
+          margin: 2,
+          color: { dark: '#042f2e', light: '#ffffff' }
+        });
+      }
+
+      // 2. Try direct Blob URL download (supported across standard mobile browsers)
+      let downloaded = false;
+      try {
+        const blob = dataURLToBlob(dataUrl);
+        const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = downloadApiEndpoint;
+        link.href = blobUrl;
         link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        downloaded = true;
+      } catch (bErr) {
+        console.warn("Blob URL download failed, trying data URL:", bErr);
+      }
+
+      // 3. Direct Data URL anchor download fallback
+      if (!downloaded) {
+        const dLink = document.createElement('a');
+        dLink.href = dataUrl;
+        dLink.download = fileName;
+        document.body.appendChild(dLink);
+        dLink.click();
+        document.body.removeChild(dLink);
       }
 
       setQrNotice('✅ QR Code image saved to Gallery!');
     } catch (err) {
       console.error("Failed to process QR download:", err);
+      try {
+        const sLink = document.createElement('a');
+        sLink.href = downloadApiEndpoint;
+        sLink.download = `payment_qr_${amountInput || '500'}.png`;
+        document.body.appendChild(sLink);
+        sLink.click();
+        document.body.removeChild(sLink);
+      } catch (sErr) {
+        console.error("Server link download fallback failed:", sErr);
+      }
       setQrNotice('✅ QR Code downloaded!');
     } finally {
-      setTimeout(() => setDownloadingQr(false), 1200);
+      setTimeout(() => setDownloadingQr(false), 1000);
     }
   };
 
@@ -524,15 +566,15 @@ export default function RechargeModal({
                     </div>
                     
                     <div className="flex flex-col items-center gap-2 w-full justify-center">
-                      <a
-                        href={downloadApiEndpoint}
-                        download={`payment_qr_${amountInput || 'recharge'}.png`}
+                      <button
+                        type="button"
                         onClick={handleDownloadQr}
-                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer w-full sm:w-auto"
+                        disabled={downloadingQr}
+                        className="flex items-center justify-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-60 w-full sm:w-auto"
                       >
                         <Download className="w-4 h-4 text-emerald-100" />
                         <span>{downloadingQr ? 'Saving QR...' : 'Save QR to Gallery'}</span>
-                      </a>
+                      </button>
                     </div>
 
                     {qrNotice && (
@@ -793,15 +835,15 @@ export default function RechargeModal({
 
                   {/* Quick Action Buttons */}
                   <div className="space-y-2">
-                    <a
-                      href={downloadApiEndpoint}
-                      download={`payment_qr_${amountInput || 'recharge'}.png`}
+                    <button
+                      type="button"
                       onClick={handleDownloadQr}
-                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      disabled={downloadingQr}
+                      className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-60"
                     >
                       <Download className="w-4 h-4 text-white" />
                       <span>{downloadingQr ? 'Processing...' : 'Save QR to Gallery'}</span>
-                    </a>
+                    </button>
 
                     <a
                       href={upiPayloadLink}
