@@ -86,7 +86,10 @@ export default function AdminSection({
     setSavedSupportAvatar(url);
     setSupportAvatarInput(url);
     window.dispatchEvent(new Event('adpaint_avatar_updated'));
-    triggerToast('Support Agent Photo updated successfully!', 'success');
+    if (onSyncConfig) {
+      onSyncConfig();
+    }
+    triggerToast('Support Agent Photo updated successfully and synced to server!', 'success');
   };
 
   const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2067,6 +2070,9 @@ export default function AdminSection({
                       setSavedSupportAvatar(null);
                       setSupportAvatarInput('');
                       window.dispatchEvent(new Event('adpaint_avatar_updated'));
+                      if (onSyncConfig) {
+                        onSyncConfig();
+                      }
                       triggerToast('Reset to default support agent photo!', 'info');
                     }}
                     className="text-[10px] text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl font-bold border border-slate-700 transition-all flex items-center gap-1 shrink-0"

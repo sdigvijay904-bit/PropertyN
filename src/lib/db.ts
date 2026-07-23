@@ -172,7 +172,8 @@ const SEED_CONFIG: Record<string, string> = {
   adpaint_min_withdrawal: "300",
   adpaint_min_recharge: "250",
   adpaint_recharge_presets: "250, 500, 750, 1000, 2200, 4840",
-  adpaint_withdraw_time: "12:30AM - 11:59PM"
+  adpaint_withdraw_time: "12:30AM - 11:59PM",
+  adpaint_support_avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&h=400&q=80"
 };
 
 const SEED_CUSTOM_TICKER = "Kiran***290\n\nRecharged ₹490";

@@ -517,7 +517,7 @@ export default function App() {
           'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
           'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
           'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
-          'adpaint_withdraw_time', 'adpaint_cashier_url'
+          'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
         ];
 
         const serverConfig = data.config || {};
@@ -528,6 +528,9 @@ export default function App() {
           if (serverVal) {
             if (localVal !== serverVal) {
               localStorage.setItem(key, serverVal);
+              if (key === 'adpaint_support_avatar') {
+                window.dispatchEvent(new Event('adpaint_avatar_updated'));
+              }
             }
           } else if (localVal) {
             // Server is missing this configuration, but we have it locally!
@@ -622,7 +625,7 @@ export default function App() {
           'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
           'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
           'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
-          'adpaint_withdraw_time', 'adpaint_cashier_url'
+          'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
         ];
         keysToSync.forEach(key => {
           const val = localStorage.getItem(key);
