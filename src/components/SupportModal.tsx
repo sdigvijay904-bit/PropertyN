@@ -112,9 +112,9 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           className="relative w-full max-w-md bg-slate-50 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[85vh]"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 flex items-center justify-between relative">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border-2 border-white/30 overflow-hidden bg-white/10 shrink-0 shadow-sm flex items-center justify-center">
+              <div className="w-11 h-11 rounded-full border-2 border-white/40 overflow-hidden bg-white/10 shrink-0 shadow-md flex items-center justify-center">
                 <SupportAgentAvatar
                   src={localStorage.getItem('adpaint_support_avatar') || undefined}
                   className="w-full h-full object-cover"
@@ -123,8 +123,8 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
               <div>
                 <h3 className="text-sm font-bold">24/7 Service Desk</h3>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[10px] text-emerald-200 font-medium">Support Agent is Online</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+                  <span className="text-[10px] text-emerald-100 font-medium">Support Agent is Online</span>
                 </div>
               </div>
             </div>

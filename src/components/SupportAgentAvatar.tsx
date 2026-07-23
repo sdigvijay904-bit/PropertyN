@@ -3,27 +3,52 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SupportAgentAvatarProps {
   className?: string;
   src?: string;
 }
 
+// Default high-quality female customer support representative photo with headset
+const DEFAULT_REAL_PHOTO = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&h=400&q=80";
+
 export default function SupportAgentAvatar({ className = "w-full h-full", src }: SupportAgentAvatarProps) {
-  // If a valid HTTP image URL is supplied, render that image
-  if (src && src.startsWith('http') && !src.includes('unsplash.com/photo-1573497019940')) {
+  const [imgError, setImgError] = useState(false);
+  const [customAvatar, setCustomAvatar] = useState<string | null>(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('adpaint_support_avatar') : null;
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      const stored = localStorage.getItem('adpaint_support_avatar');
+      setCustomAvatar(stored);
+      setImgError(false);
+    };
+
+    window.addEventListener('adpaint_avatar_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('adpaint_avatar_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  const imageUrl = src || customAvatar || DEFAULT_REAL_PHOTO;
+
+  if (!imgError && imageUrl) {
     return (
       <img
-        src={src}
+        src={imageUrl}
         alt="Customer Support Agent"
         className={`${className} object-cover`}
         referrerPolicy="no-referrer"
+        onError={() => setImgError(true)}
       />
     );
   }
 
-  // High Quality Vector Graphic of the Girl Customer Support Agent with Headset
+  // Fallback vector graphic if image fails to load
   return (
     <svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       {/* 1. Circular Green Background */}

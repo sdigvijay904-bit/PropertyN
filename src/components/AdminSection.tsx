@@ -7,8 +7,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
-  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut
+  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon
 } from 'lucide-react';
+import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
 import { db } from '../lib/firebase';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -56,7 +57,51 @@ export default function AdminSection({
     return localStorage.getItem('adpaint_cashier_url') || 'https://cashiernew.blue-pay.vip/#/mobile';
   });
 
-  // Telegram Config states
+  // Support Agent Avatar Config State
+  const [supportAvatarInput, setSupportAvatarInput] = useState<string>(() => {
+    return localStorage.getItem('adpaint_support_avatar') || '';
+  });
+  const [savedSupportAvatar, setSavedSupportAvatar] = useState<string | null>(() => {
+    return localStorage.getItem('adpaint_support_avatar');
+  });
+  const avatarFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const PRESET_AGENT_PHOTOS = [
+    {
+      name: 'Female Agent 1 (Default HD)',
+      url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&h=400&q=80'
+    },
+    {
+      name: 'Female Agent 2',
+      url: 'https://images.unsplash.com/photo-1580894732444-80e659381612?auto=format&fit=crop&w=400&h=400&q=80'
+    },
+    {
+      name: 'Female Agent 3',
+      url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=400&h=400&crop=faces&q=80'
+    }
+  ];
+
+  const handleApplyAvatar = (url: string) => {
+    localStorage.setItem('adpaint_support_avatar', url);
+    setSavedSupportAvatar(url);
+    setSupportAvatarInput(url);
+    window.dispatchEvent(new Event('adpaint_avatar_updated'));
+    triggerToast('Support Agent Photo updated successfully!', 'success');
+  };
+
+  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          handleApplyAvatar(result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   const [tgChannelInput, setTgChannelInput] = useState<string>(() => {
     return localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99';
   });
@@ -1970,6 +2015,134 @@ export default function AdminSection({
                     <span>Save APK Download URL</span>
                   </button>
                 </form>
+              </div>
+
+              {/* Support Agent Photo Configuration Card (Admin Only) */}
+              <div className="bg-slate-850 p-5 rounded-[2rem] border border-slate-800 space-y-4">
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={avatarFileInputRef}
+                  onChange={handleAvatarFileUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-black text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-emerald-400" />
+                    <span>Configure Customer Support Agent Photo (सपोर्ट एजेंट की फोटो)</span>
+                  </h3>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Admin Exclusive
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                  Upload or select the photo displayed for the 24/7 Customer Support Agent in the app. 
+                  Users will see this photo when chatting with support.
+                </p>
+
+                {/* Current Avatar Preview */}
+                <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-full border-2 border-emerald-500/50 overflow-hidden bg-slate-950 shrink-0 shadow-lg flex items-center justify-center">
+                      <SupportAgentAvatar
+                        src={savedSupportAvatar || undefined}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-200">Active Support Avatar</p>
+                      <p className="text-[10px] text-emerald-400 font-medium">
+                        {savedSupportAvatar ? 'Custom Photo Applied' : 'Default System HD Photo'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.removeItem('adpaint_support_avatar');
+                      setSavedSupportAvatar(null);
+                      setSupportAvatarInput('');
+                      window.dispatchEvent(new Event('adpaint_avatar_updated'));
+                      triggerToast('Reset to default support agent photo!', 'info');
+                    }}
+                    className="text-[10px] text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl font-bold border border-slate-700 transition-all flex items-center gap-1 shrink-0"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Reset Default</span>
+                  </button>
+                </div>
+
+                {/* Action Buttons: Upload File & URL Input */}
+                <div className="space-y-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Upload Photo from Device (फाइल अपलोड करें)</span>
+                    </button>
+
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!supportAvatarInput.trim()) {
+                          triggerToast('Please enter an Image URL or upload a file', 'error');
+                          return;
+                        }
+                        handleApplyAvatar(supportAvatarInput.trim());
+                      }}
+                      className="flex gap-2"
+                    >
+                      <input
+                        type="url"
+                        value={supportAvatarInput}
+                        onChange={(e) => setSupportAvatarInput(e.target.value)}
+                        placeholder="Or paste image URL (https://...)"
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-sans"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-2 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0"
+                      >
+                        Set URL
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Ready Presets Selection */}
+                  <div className="pt-2">
+                    <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">
+                      Or Choose from Ready High-Resolution Photos:
+                    </label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {PRESET_AGENT_PHOTOS.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleApplyAvatar(preset.url)}
+                          className="group relative rounded-2xl overflow-hidden border-2 border-slate-700 hover:border-emerald-400 aspect-square transition-all bg-slate-900 shadow-md cursor-pointer text-left"
+                        >
+                          <img
+                            src={preset.url}
+                            alt={preset.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                          <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[9px] font-bold text-white truncate block">
+                            {preset.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* System Config & Thresholds Card */}
