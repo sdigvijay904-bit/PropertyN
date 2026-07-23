@@ -6,6 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Send, Bot, User, Check, ShieldCheck, HelpCircle } from 'lucide-react';
+import SupportAgentAvatar from './SupportAgentAvatar';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -113,16 +114,10 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border-2 border-white/30 overflow-hidden bg-white/10 shrink-0 shadow-sm">
-                <img
-                  src={(() => {
-                    const custom = localStorage.getItem('adpaint_support_avatar');
-                    if (custom && custom.startsWith('http') && !custom.includes('1580894732444') && !custom.includes('1573496359142') && !custom.includes('1549923746')) return custom;
-                    return "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=400&h=400&crop=faces";
-                  })()}
-                  alt="Support Representative"
+              <div className="w-10 h-10 rounded-full border-2 border-white/30 overflow-hidden bg-white/10 shrink-0 shadow-sm flex items-center justify-center">
+                <SupportAgentAvatar
+                  src={localStorage.getItem('adpaint_support_avatar') || undefined}
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
                 />
               </div>
               <div>

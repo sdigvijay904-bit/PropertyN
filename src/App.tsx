@@ -27,6 +27,7 @@ import SupportModal from './components/SupportModal';
 import PurchaseModal from './components/PurchaseModal';
 import WelcomeNoticeModal from './components/WelcomeNoticeModal';
 import DownloadAppModal from './components/DownloadAppModal';
+import SupportAgentAvatar from './components/SupportAgentAvatar';
 
 import {
   firestoreCheckPhone,
@@ -1665,15 +1666,9 @@ export default function App() {
                   whileTap={{ scale: 0.9 }}
                   className="absolute bottom-24 right-5 z-40 w-14 h-14 rounded-full border-2 border-white shadow-[0_8px_30px_rgba(16,185,129,0.35)] overflow-hidden cursor-pointer active:scale-95 transition-transform bg-white"
                 >
-                  <img
-                    src={(() => {
-                      const custom = localStorage.getItem('adpaint_support_avatar');
-                      if (custom && custom.startsWith('http') && !custom.includes('1580894732444') && !custom.includes('1573496359142') && !custom.includes('1549923746')) return custom;
-                      return "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=400&h=400&crop=faces";
-                    })()}
-                    alt="Customer Support Agent"
-                    className="w-full h-full object-cover pointer-events-none scale-105"
-                    referrerPolicy="no-referrer"
+                  <SupportAgentAvatar
+                    src={localStorage.getItem('adpaint_support_avatar') || undefined}
+                    className="w-full h-full object-cover pointer-events-none"
                   />
                   {/* Pulsing online badge indicator */}
                   <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
