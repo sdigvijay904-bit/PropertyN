@@ -226,60 +226,56 @@ export default function RechargeModal({
 
       const fileName = `payment_qr_${amountInput || 'recharge'}.png`;
 
-      // 1. Try Mobile Web Share API first if native share is supported
-      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
-        try {
-          let dataUrl = qrBase64;
-          if (!dataUrl) {
-            const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
-            dataUrl = await QRCode.toDataURL(upiLink, {
-              width: 800,
-              margin: 2,
-              color: { dark: '#042f2e', light: '#ffffff' }
-            });
-          }
-          const blob = dataURLToBlob(dataUrl);
-          const file = new File([blob], fileName, { type: 'image/png' });
-          if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: 'Payment QR Code',
-              text: `PropertyN Payment QR Code for ₹${amountInput}`,
-              files: [file]
-            });
-            setQrNotice('✅ Share menu opened! Select "Save Image" or "Save to Gallery".');
-            setDownloadingQr(false);
-            return;
-          }
-        } catch (shareErr: any) {
-          if (shareErr.name === 'AbortError') {
-            setDownloadingQr(false);
-            return;
-          }
-        }
+      // 1. Direct Blob Download
+      let dataUrl = qrBase64;
+      if (!dataUrl) {
+        const upiLink = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+        dataUrl = await QRCode.toDataURL(upiLink, {
+          width: 800,
+          margin: 2,
+          color: { dark: '#042f2e', light: '#ffffff' }
+        });
       }
 
-      // 2. Direct Server Endpoint Attachment Download
-      // Creates an explicit HTTP download request with Content-Disposition: attachment header
+      const blob = dataURLToBlob(dataUrl);
+      const blobUrl = URL.createObjectURL(blob);
+
       const link = document.createElement('a');
-      link.href = downloadApiEndpoint;
+      link.href = blobUrl;
       link.download = fileName;
-      link.target = '_self';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 
-      // Trigger location assignment for WebViews that ignore programmatic clicks
-      setTimeout(() => {
-        window.location.href = downloadApiEndpoint;
-      }, 300);
+      // 2. Direct Server Endpoint Attachment Download as fallback
+      try {
+        const sLink = document.createElement('a');
+        sLink.href = downloadApiEndpoint;
+        sLink.download = fileName;
+        document.body.appendChild(sLink);
+        sLink.click();
+        document.body.removeChild(sLink);
+      } catch (sErr) {
+        console.warn("Server link click error:", sErr);
+      }
 
-      setQrNotice('✅ QR Code image saved / download started!');
+      setQrNotice('✅ QR Code image direct save ho gayi hai!');
     } catch (err) {
       console.error("Failed to process QR download:", err);
-      window.location.href = downloadApiEndpoint;
+      try {
+        const sLink = document.createElement('a');
+        sLink.href = downloadApiEndpoint;
+        sLink.download = `payment_qr_${amountInput || 'recharge'}.png`;
+        document.body.appendChild(sLink);
+        sLink.click();
+        document.body.removeChild(sLink);
+      } catch (e) {
+        console.error("Fallback error:", e);
+      }
       setQrNotice('✅ Downloading QR image...');
     } finally {
-      setTimeout(() => setDownloadingQr(false), 1500);
+      setTimeout(() => setDownloadingQr(false), 800);
     }
   };
 
