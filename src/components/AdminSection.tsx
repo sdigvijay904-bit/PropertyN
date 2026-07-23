@@ -12,7 +12,7 @@ import {
 import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
 import { db } from '../lib/firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { cleanUndefined } from '../lib/db';
 import { firebaseService } from '../firebase/config';
 
@@ -72,24 +72,41 @@ export default function AdminSection({
       url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=400&h=400&q=80'
     },
     {
-      name: 'Female Agent 2',
-      url: 'https://images.unsplash.com/photo-1580894732444-80e659381612?auto=format&fit=crop&w=400&h=400&q=80'
+      name: 'Female Agent 2 (HD Support)',
+      url: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=400&h=400&q=80'
     },
     {
-      name: 'Female Agent 3',
-      url: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=400&h=400&crop=faces&q=80'
+      name: 'Female Agent 3 (Corporate Help)',
+      url: 'https://images.unsplash.com/photo-1573497019236-17f8177b81e8?auto=format&fit=crop&w=400&h=400&q=80'
     }
   ];
 
-  const handleApplyAvatar = (url: string) => {
+  const handleApplyAvatar = async (url: string) => {
     localStorage.setItem('adpaint_support_avatar', url);
     setSavedSupportAvatar(url);
     setSupportAvatarInput(url);
     window.dispatchEvent(new Event('adpaint_avatar_updated'));
+
+    // Instantly write to Firebase Firestore global/config so Mobile APK updates live in real time
+    try {
+      const configDocRef = doc(db, "global", "config");
+      const snap = await getDoc(configDocRef);
+      const existingConfig = snap.exists() && snap.data().config ? snap.data().config : {};
+      existingConfig['adpaint_support_avatar'] = url;
+
+      await setDoc(configDocRef, {
+        config: existingConfig,
+        customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+      }, { merge: true });
+      console.log("Avatar synced directly to Firestore global/config!");
+    } catch (err) {
+      console.error("Direct Firestore config sync error:", err);
+    }
+
     if (onSyncConfig) {
       onSyncConfig();
     }
-    triggerToast('Support Agent Photo updated successfully and synced to server!', 'success');
+    triggerToast('Support Agent Photo updated & synced live to Mobile APK!', 'success');
   };
 
   const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,9 +114,42 @@ export default function AdminSection({
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          handleApplyAvatar(result);
+        const rawResult = event.target?.result as string;
+        if (rawResult) {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 250;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height = Math.round((height * MAX_SIZE) / width);
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width = Math.round((width * MAX_SIZE) / height);
+                height = MAX_SIZE;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
+              handleApplyAvatar(compressedBase64);
+            } else {
+              handleApplyAvatar(rawResult);
+            }
+          };
+          img.onerror = () => {
+            handleApplyAvatar(rawResult);
+          };
+          img.src = rawResult;
         }
       };
       reader.readAsDataURL(file);
@@ -2065,11 +2115,27 @@ export default function AdminSection({
 
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       localStorage.removeItem('adpaint_support_avatar');
                       setSavedSupportAvatar(null);
                       setSupportAvatarInput('');
                       window.dispatchEvent(new Event('adpaint_avatar_updated'));
+
+                      try {
+                        const configDocRef = doc(db, "global", "config");
+                        const snap = await getDoc(configDocRef);
+                        if (snap.exists() && snap.data().config) {
+                          const existingConfig = { ...snap.data().config };
+                          delete existingConfig['adpaint_support_avatar'];
+                          await setDoc(configDocRef, {
+                            config: existingConfig,
+                            customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+                          }, { merge: true });
+                        }
+                      } catch (err) {
+                        console.error("Direct Firestore reset error:", err);
+                      }
+
                       if (onSyncConfig) {
                         onSyncConfig();
                       }

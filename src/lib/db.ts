@@ -708,7 +708,13 @@ export async function firestoreSaveState(payload: {
 }): Promise<any> {
   await seedDatabaseIfEmpty();
   const { userId, usersList, plans, transactions, purchases, config, customTicker } = payload;
-  const isAdmin = userId === 'usr_admin';
+  let isAdmin = userId === 'usr_admin';
+  if (!isAdmin && Array.isArray(usersList)) {
+    const caller = usersList.find(u => u.id === userId);
+    if (caller && caller.role === 'admin') {
+      isAdmin = true;
+    }
+  }
   try {
     // 1. Merge usersList in Firestore
     if (Array.isArray(usersList)) {

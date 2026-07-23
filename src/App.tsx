@@ -39,7 +39,7 @@ import {
   cleanUndefined
 } from './lib/db';
 import { db } from './lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { firebaseService } from './firebase/config';
 
 export default function App() {
@@ -753,14 +753,48 @@ export default function App() {
     }
   };
 
+  // Set up Firestore real-time listener for global configs (Support Avatar, UPI, Links) for instant Mobile APK & Web updates
+  useEffect(() => {
+    const configDocRef = doc(db, "global", "config");
+    const unsub = onSnapshot(configDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const serverConfig = data.config || {};
+        const keysToSync = [
+          'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
+          'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
+          'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
+          'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
+        ];
+        keysToSync.forEach(key => {
+          const serverVal = serverConfig[key];
+          if (serverVal) {
+            const localVal = localStorage.getItem(key);
+            if (localVal !== serverVal) {
+              localStorage.setItem(key, serverVal);
+              if (key === 'adpaint_support_avatar') {
+                window.dispatchEvent(new Event('adpaint_avatar_updated'));
+              }
+            }
+          }
+        });
+        if (data.customTicker) {
+          localStorage.setItem('adpaint_custom_ticker', data.customTicker);
+        }
+      }
+    }, (err) => {
+      console.warn("Real-time config snapshot listener:", err);
+    });
+
+    return () => unsub();
+  }, []);
+
   // Set up periodic real-time background sync loop and foreground listener
   useEffect(() => {
-    if (!isLoggedIn) return;
-
-    // Initial sync upon login/mount
+    // Initial sync upon mount to fetch global configs (avatar, UPI, links) for mobile APK & Web
     syncWithServer();
 
-    // Trigger sync when app is brought to foreground (extremely helpful on mobile!)
+    // Trigger sync when app is brought to foreground (extremely helpful on mobile APK!)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log("App foregrounded. Triggering sync...");
@@ -771,7 +805,7 @@ export default function App() {
 
     const interval = setInterval(() => {
       syncWithServer();
-    }, 8000); // 8 seconds interval provides real-time responsiveness without overloading state or triggering loops
+    }, 6000); // 6 seconds interval provides real-time responsiveness without overloading state or triggering loops
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);

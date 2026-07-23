@@ -115,10 +115,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-4 flex items-center justify-between relative">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-full border-2 border-white/40 overflow-hidden bg-white/10 shrink-0 shadow-md flex items-center justify-center">
-                <SupportAgentAvatar
-                  src={localStorage.getItem('adpaint_support_avatar') || undefined}
-                  className="w-full h-full object-cover"
-                />
+                <SupportAgentAvatar className="w-full h-full object-cover" />
               </div>
               <div>
                 <h3 className="text-sm font-bold">24/7 Service Desk</h3>
