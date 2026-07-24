@@ -797,7 +797,7 @@ export default function ProfileSection({
               <div className="divide-y divide-slate-100/50">
                 {([
                   ...(user.role === 'admin' ? [{ label: 'Admin Panel Control Room', desc: 'Manage users, approvals, plans, & notifications', icon: ShieldCheck, action: onEnterAdminTerminal, highlight: true, grad: 'from-teal-500 to-teal-600' }] : []),
-                  { label: 'Daily Check-in', desc: 'Check in daily to earn free rewards', icon: CheckSquare, action: onDailyCheckIn, highlight: !user.checkedInToday, grad: 'from-teal-400 to-emerald-600' },
+                  { label: 'Daily Check-in', desc: 'Check in daily to earn free rewards', icon: CheckSquare, action: onDailyCheckIn, highlight: !(user.lastCheckInDate === new Date().toDateString() && user.checkedInToday), grad: 'from-teal-400 to-emerald-600' },
                   { label: 'Bank Account', desc: 'Bank details & withdrawal settings', icon: Landmark, action: () => setSubView('bank'), verified: !!user.bankAccount, grad: 'from-amber-400 to-orange-500' },
                   { label: 'Password', desc: 'Password & Security', icon: Lock, action: () => setSubView('password'), grad: 'from-sky-400 to-blue-500' },
                   { label: 'Transaction Records', desc: 'Full recharge & withdrawal history', icon: FileText, action: () => setSubView('transactions'), grad: 'from-pink-400 to-rose-500' },

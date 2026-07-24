@@ -179,6 +179,20 @@ export default function App() {
   const [pendingNewUser, setPendingNewUser] = useState<UserProfile | null>(null);
   const [lastActivity, setLastActivity] = useState<number>(() => Date.now());
 
+  // Helper to ensure check-in status resets if a new calendar day has started
+  const sanitizeUserCheckIn = (user: UserProfile | null): UserProfile | null => {
+    if (!user) return null;
+    const todayStr = new Date().toDateString();
+    const isCheckedIn = user.lastCheckInDate === todayStr && user.checkedInToday === true;
+    if (user.checkedInToday !== isCheckedIn) {
+      return {
+        ...user,
+        checkedInToday: isCheckedIn
+      };
+    }
+    return user;
+  };
+
   // Generate dynamic captcha code
   const generateCaptcha = () => {
     const code = Math.floor(1000 + Math.random() * 9000).toString();
@@ -272,7 +286,8 @@ export default function App() {
     if (storedUser && !skipAutoLogin) {
       const parsedUser = JSON.parse(storedUser);
       const latestFromList = loadedUsersList.find(u => u.id === parsedUser.id);
-      const finalUser = latestFromList || parsedUser;
+      const rawUser = latestFromList || parsedUser;
+      const finalUser = sanitizeUserCheckIn(rawUser)!;
       setUserProfile(finalUser);
       localStorage.setItem('adpaint_user', JSON.stringify(finalUser));
       setIsLoggedIn(true);
@@ -469,9 +484,12 @@ export default function App() {
           
           if (activeUser) {
             const latestMe = mergedUsers.find((u: any) => u.id === activeUser.id);
-            if (latestMe && JSON.stringify(latestMe) !== JSON.stringify(activeUser)) {
-              setUserProfile(latestMe);
-              localStorage.setItem('adpaint_user', JSON.stringify(latestMe));
+            if (latestMe) {
+              const sanitizedMe = sanitizeUserCheckIn(latestMe)!;
+              if (JSON.stringify(sanitizedMe) !== JSON.stringify(activeUser)) {
+                setUserProfile(sanitizedMe);
+                localStorage.setItem('adpaint_user', JSON.stringify(sanitizedMe));
+              }
             }
           }
           
@@ -1078,7 +1096,7 @@ export default function App() {
 
     try {
       const loginData = await firestoreLogin({ phone: targetPhone, password_entered: password });
-      const serverUser = loginData.user;
+      const serverUser = sanitizeUserCheckIn(loginData.user)!;
       const serverPurchases = loginData.purchases;
 
       setUserProfile(serverUser);
@@ -1305,23 +1323,29 @@ export default function App() {
   const handleDailyCheckIn = () => {
     if (!userProfile) return;
 
-    if (userProfile.checkedInToday) {
+    const todayStr = new Date().toDateString();
+    const isAlreadyCheckedIn = userProfile.lastCheckInDate === todayStr && userProfile.checkedInToday === true;
+
+    if (isAlreadyCheckedIn) {
       triggerToast('Already checked in today! Come back tomorrow.', 'error');
       return;
     }
 
     const bonusStr = localStorage.getItem('adpaint_daily_bonus');
-    const reward = bonusStr ? parseFloat(bonusStr) : 8;
-    const updatedUser = {
+    const reward = bonusStr ? parseFloat(bonusStr) : 10;
+    const updatedUser: UserProfile = {
       ...userProfile,
-      balance: userProfile.balance + reward,
-      totalEarnings: userProfile.totalEarnings + reward,
+      balance: (userProfile.balance || 0) + reward,
+      totalEarnings: (userProfile.totalEarnings || 0) + reward,
+      dailyEarned: (userProfile.dailyEarned || 0) + reward,
       checkedInToday: true,
-      lastCheckInDate: new Date().toDateString()
+      lastCheckInDate: todayStr
     };
 
     const checkInTx: TransactionRecord = {
       id: `tx_check_${Date.now()}`,
+      userId: updatedUser.id,
+      userPhone: updatedUser.phone,
       type: 'checkin',
       amount: reward,
       date: new Date().toLocaleString(),
