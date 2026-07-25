@@ -1685,6 +1685,9 @@ export default function App() {
                     onOpenService={() => {
                       setIsServiceOpen(true);
                     }}
+                    onOpenNotice={() => {
+                      setIsWelcomeNoticeOpen(true);
+                    }}
                     onPurchasePlan={(plan) => {
                       setSelectedPurchasePlan(plan);
                       setIsPurchaseOpen(true);

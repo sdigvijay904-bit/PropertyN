@@ -798,6 +798,7 @@ export default function AdminSection({
 
     // We can simulate updating the live ticker in the host component by adding it
     localStorage.setItem('adpaint_custom_ticker', tickerMessage.trim());
+    window.dispatchEvent(new Event('adpaint_notice_updated'));
     onSyncConfig?.();
     triggerToast('Custom alert injected! It will show up on client screens.', 'success');
     setTickerMessage('');

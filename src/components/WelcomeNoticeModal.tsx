@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Check, Info, Award, Landmark, Wallet, Clock, Gift } from 'lucide-react';
+import { Check, Info, Award, Landmark, Wallet, Clock, Gift, Bell, Megaphone } from 'lucide-react';
 
 interface WelcomeNoticeModalProps {
   isOpen: boolean;
@@ -13,13 +13,22 @@ interface WelcomeNoticeModalProps {
 }
 
 export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeModalProps) {
+  useEffect(() => {
+    if (isOpen) {
+      const customTicker = localStorage.getItem('adpaint_custom_ticker') || '';
+      localStorage.setItem('adpaint_notice_last_read', customTicker || 'read_default');
+      window.dispatchEvent(new Event('adpaint_notice_updated'));
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const platformName = localStorage.getItem('adpaint_platform_name') || 'PropertyN';
-  const dailyBonus = localStorage.getItem('adpaint_daily_bonus') || '8';
+  const dailyBonus = localStorage.getItem('adpaint_daily_bonus') || '10';
   const minWithdrawal = localStorage.getItem('adpaint_min_withdrawal') || '120';
   const minRecharge = localStorage.getItem('adpaint_min_recharge') || '250';
   const withdrawTime = localStorage.getItem('adpaint_withdraw_time') || '12:30AM - 11:59PM';
+  const customTicker = localStorage.getItem('adpaint_custom_ticker');
 
   return (
     <AnimatePresence>
@@ -34,14 +43,30 @@ export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeMod
           transition={{ type: 'spring', damping: 25, stiffness: 220 }}
           className="relative w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col z-10"
         >
-          {/* Header with Violet/Indigo Gradient */}
+          {/* Header with Emerald Gradient */}
           <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 text-white text-center py-6 px-5 relative">
-            <h3 className="text-2xl font-black tracking-tight mb-1">Welcome Notice</h3>
-            <p className="text-xs text-emerald-100 font-bold opacity-90">Read carefully before you invest</p>
+            <div className="w-12 h-12 mx-auto mb-2 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
+              <Bell className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="text-2xl font-black tracking-tight mb-1">System Notifications</h3>
+            <p className="text-xs text-emerald-100 font-bold opacity-90">Official updates & platform rules</p>
           </div>
 
           {/* Body Content */}
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+            {/* Custom Admin Announcement Card (if set) */}
+            {customTicker && customTicker.trim().length > 0 && (
+              <div className="p-3.5 bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200/80 rounded-xl space-y-1.5 shadow-sm">
+                <div className="flex items-center gap-1.5 text-teal-800 font-black text-[11px] uppercase tracking-wider">
+                  <Megaphone className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span>Admin Announcement</span>
+                </div>
+                <p className="text-xs font-bold text-slate-800 leading-relaxed font-sans">
+                  {customTicker}
+                </p>
+              </div>
+            )}
+
             {/* List Rows */}
             <div className="space-y-3">
               {/* Row 1: Platform Name */}

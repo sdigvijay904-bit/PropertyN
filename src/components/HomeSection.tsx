@@ -15,6 +15,7 @@ interface HomeSectionProps {
   onOpenRecharge: () => void;
   onOpenWithdraw: () => void;
   onOpenService: () => void;
+  onOpenNotice?: () => void;
   onPurchasePlan: (plan: InvestmentPlan) => void;
   liveNotification: string;
   onOpenDownloadApp?: () => void;
@@ -51,6 +52,7 @@ export default function HomeSection({
   onOpenRecharge,
   onOpenWithdraw,
   onOpenService,
+  onOpenNotice,
   onPurchasePlan,
   liveNotification,
   onOpenDownloadApp
@@ -67,6 +69,47 @@ export default function HomeSection({
       return [];
     }
   });
+
+  const [hasUnreadNotice, setHasUnreadNotice] = useState<boolean>(() => {
+    const customTicker = localStorage.getItem('adpaint_custom_ticker') || '';
+    const lastRead = localStorage.getItem('adpaint_notice_last_read');
+    if (lastRead === customTicker || (lastRead === 'read_default' && !customTicker)) {
+      return false;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    const checkUnread = () => {
+      const customTicker = localStorage.getItem('adpaint_custom_ticker') || '';
+      const lastRead = localStorage.getItem('adpaint_notice_last_read');
+      if (lastRead === customTicker || (lastRead === 'read_default' && !customTicker)) {
+        setHasUnreadNotice(false);
+      } else {
+        setHasUnreadNotice(true);
+      }
+    };
+
+    checkUnread();
+    window.addEventListener('storage', checkUnread);
+    window.addEventListener('adpaint_notice_updated', checkUnread);
+    return () => {
+      window.removeEventListener('storage', checkUnread);
+      window.removeEventListener('adpaint_notice_updated', checkUnread);
+    };
+  }, []);
+
+  const handleBellClick = () => {
+    const customTicker = localStorage.getItem('adpaint_custom_ticker') || '';
+    localStorage.setItem('adpaint_notice_last_read', customTicker || 'read_default');
+    setHasUnreadNotice(false);
+    window.dispatchEvent(new Event('adpaint_notice_updated'));
+    if (onOpenNotice) {
+      onOpenNotice();
+    } else if (onOpenService) {
+      onOpenService();
+    }
+  };
 
   // Sum successful recharge transactions
   const totalRecharged = transactions
@@ -169,11 +212,14 @@ export default function HomeSection({
           {/* Live System Alerts Bell */}
           <div className="relative shrink-0">
             <button
-              onClick={onOpenService}
+              onClick={handleBellClick}
               className="p-2.5 bg-white/10 hover:bg-white/15 rounded-2xl transition-all relative flex items-center justify-center cursor-pointer"
+              title="System Notifications & Notice"
             >
               <Bell className="w-5 h-5 text-white" />
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-teal-700 animate-pulse"></span>
+              {hasUnreadNotice && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-teal-700 animate-pulse"></span>
+              )}
             </button>
           </div>
         </div>
