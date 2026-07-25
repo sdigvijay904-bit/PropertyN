@@ -27,6 +27,7 @@ export interface UserProfile {
   password?: string;
   status?: 'active' | 'blocked';
   totalInvested?: number;
+  createdAt?: string;
   avatar?: string;
   kycStatus?: 'none' | 'pending' | 'verified' | 'rejected';
   kycIdType?: string;

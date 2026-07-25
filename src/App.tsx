@@ -860,17 +860,50 @@ export default function App() {
     const list: TeamMember[] = [];
     
     const getUserInvestedAmount = (u: UserProfile) => {
-      if (typeof u.totalInvested === 'number') {
-        return u.totalInvested;
-      }
+      let base = typeof u.totalInvested === 'number' && u.totalInvested > 0 ? u.totalInvested : 0;
+
+      // Sum successful recharges for this user from global transactions list
+      const cleanPhone = u.phone ? u.phone.replace(/\D/g, '') : '';
+      const rechargeSum = transactions
+        .filter(t => t.type === 'recharge' && (t.status === 'success' || t.status === 'Approved' || t.status === 'approved') && (
+          t.userId === u.id || 
+          (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+        ))
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      // Sum plan purchases for this user
+      const userPurchases = purchases.filter(p => 
+        p.userId === u.id || 
+        (cleanPhone.length >= 10 && (p as any).userPhone && (p as any).userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+      );
+      const purchaseSum = userPurchases.reduce((sum, p) => sum + (p.price || 0), 0);
+
+      let storedPurchaseSum = 0;
       try {
         const stored = localStorage.getItem(`adpaint_purchases_${u.id}`);
         if (stored) {
           const pur = JSON.parse(stored);
-          return pur.reduce((sum: number, p: any) => sum + (p.price || 0), 0);
+          storedPurchaseSum = pur.reduce((sum: number, p: any) => sum + (p.price || 0), 0);
         }
       } catch (e) {}
-      return 0;
+
+      return Math.max(base, rechargeSum, purchaseSum, storedPurchaseSum);
+    };
+
+    const getUserJoinedDate = (u: UserProfile) => {
+      if (u.createdAt) {
+        if (u.createdAt.includes('T')) return u.createdAt.split('T')[0];
+        if (u.createdAt.includes(' ')) return u.createdAt.split(' ')[0];
+        return u.createdAt;
+      }
+      const idParts = u.id ? u.id.split('_') : [];
+      if (idParts.length > 1) {
+        const ts = parseInt(idParts[1]);
+        if (!isNaN(ts) && ts > 1600000000000) {
+          return new Date(ts).toISOString().split('T')[0];
+        }
+      }
+      return new Date().toISOString().split('T')[0];
     };
 
     console.group(`[Team Tree Calculation for: ${user.name} (Code: ${user.inviteCode})]`);
@@ -888,9 +921,9 @@ export default function App() {
       list.push({
         id: u1.id,
         name: u1.name,
-        phone: u1.phone.substring(0, 7) + '***' + u1.phone.substring(u1.phone.length - 4),
+        phone: u1.phone.length > 7 ? u1.phone.substring(0, 7) + '***' + u1.phone.substring(u1.phone.length - 4) : u1.phone,
         level: 1,
-        dateJoined: new Date(parseInt(u1.id.split('_')[1]) || Date.now()).toISOString().split('T')[0],
+        dateJoined: getUserJoinedDate(u1),
         totalInvested: invested,
         commissionEarned: invested * 0.10
       });
@@ -903,9 +936,9 @@ export default function App() {
         list.push({
           id: u2.id,
           name: u2.name,
-          phone: u2.phone.substring(0, 7) + '***' + u2.phone.substring(u2.phone.length - 4),
+          phone: u2.phone.length > 7 ? u2.phone.substring(0, 7) + '***' + u2.phone.substring(u2.phone.length - 4) : u2.phone,
           level: 2,
-          dateJoined: new Date(parseInt(u2.id.split('_')[1]) || Date.now()).toISOString().split('T')[0],
+          dateJoined: getUserJoinedDate(u2),
           totalInvested: invested2,
           commissionEarned: invested2 * 0.05
         });
@@ -918,9 +951,9 @@ export default function App() {
           list.push({
             id: u3.id,
             name: u3.name,
-            phone: u3.phone.substring(0, 7) + '***' + u3.phone.substring(u3.phone.length - 4),
+            phone: u3.phone.length > 7 ? u3.phone.substring(0, 7) + '***' + u3.phone.substring(u3.phone.length - 4) : u3.phone,
             level: 3,
-            dateJoined: new Date(parseInt(u3.id.split('_')[1]) || Date.now()).toISOString().split('T')[0],
+            dateJoined: getUserJoinedDate(u3),
             totalInvested: invested3,
             commissionEarned: invested3 * 0.02
           });
@@ -1372,7 +1405,8 @@ export default function App() {
     // Deduct and add purchase
     const updatedUser = {
       ...userProfile,
-      balance: userProfile.balance - totalCost
+      balance: userProfile.balance - totalCost,
+      totalInvested: (userProfile.totalInvested || 0) + totalCost
     };
 
     const newPurchase: PurchaseRecord = {

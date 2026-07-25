@@ -258,13 +258,14 @@ export default function AdminSection({
       return;
     }
 
-    // 1. Update user balance
+    // 1. Update user balance and totalInvested
     const updatedUsers = usersList.map(u => {
       if (u.id === targetUserId) {
         const updated = {
           ...u,
           balance: u.balance + tx.amount,
-          totalEarnings: u.totalEarnings + tx.amount
+          totalEarnings: u.totalEarnings + tx.amount,
+          totalInvested: (u.totalInvested || 0) + tx.amount
         };
         // If this is the currently logged-in user, update current session as well
         if (currentProfile && u.id === currentProfile.id) {
@@ -813,6 +814,19 @@ export default function AdminSection({
   const getDownlineTree = (targetUser: UserProfile) => {
     const list: { id: string; name: string; phone: string; level: number; totalInvested: number; inviterName: string }[] = [];
     
+    const getUserInvested = (u: UserProfile) => {
+      let base = typeof u.totalInvested === 'number' && u.totalInvested > 0 ? u.totalInvested : 0;
+      const cleanPhone = u.phone ? u.phone.replace(/\D/g, '') : '';
+      const rechargeSum = transactions
+        .filter(t => t.type === 'recharge' && t.status === 'success' && (
+          t.userId === u.id || 
+          (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+        ))
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      return Math.max(base, rechargeSum);
+    };
+
     // Level 1: referred directly by current user
     const level1Users = usersList.filter(u => u.inviterCode === targetUser.inviteCode);
     level1Users.forEach(u1 => {
@@ -821,7 +835,7 @@ export default function AdminSection({
         name: u1.name,
         phone: u1.phone,
         level: 1,
-        totalInvested: u1.totalInvested || 0,
+        totalInvested: getUserInvested(u1),
         inviterName: targetUser.name
       });
 
@@ -833,7 +847,7 @@ export default function AdminSection({
           name: u2.name,
           phone: u2.phone,
           level: 2,
-          totalInvested: u2.totalInvested || 0,
+          totalInvested: getUserInvested(u2),
           inviterName: u1.name
         });
 
@@ -845,7 +859,7 @@ export default function AdminSection({
             name: u3.name,
             phone: u3.phone,
             level: 3,
-            totalInvested: u3.totalInvested || 0,
+            totalInvested: getUserInvested(u3),
             inviterName: u2.name
           });
         });
