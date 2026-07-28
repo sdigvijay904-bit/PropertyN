@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
-  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon
+  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy
 } from 'lucide-react';
 import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
@@ -213,6 +213,17 @@ export default function AdminSection({
   const [editPassword, setEditPassword] = useState<string>('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopyText = (text: string, labelKey: string, successMessage?: string) => {
+    if (!text || text === 'N/A') return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(labelKey);
+    triggerToast(successMessage || `Copied: ${text}`, 'success');
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 2000);
+  };
 
   // Plans editor states
   const [isCreatingPlan, setIsCreatingPlan] = useState<boolean>(false);
@@ -1189,7 +1200,19 @@ export default function AdminSection({
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Account Number</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Account Number</label>
+                          {editAccountNumber && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(editAccountNumber, 'edit_ac', 'Account Number Copied!')}
+                              className="text-[9px] text-teal-400 hover:text-teal-300 font-bold flex items-center gap-0.5 cursor-pointer"
+                            >
+                              {copiedKey === 'edit_ac' ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                              <span>{copiedKey === 'edit_ac' ? 'Copied' : 'Copy'}</span>
+                            </button>
+                          )}
+                        </div>
                         <input
                           type="text"
                           value={editAccountNumber}
@@ -1199,7 +1222,19 @@ export default function AdminSection({
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">IFSC Code</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">IFSC Code</label>
+                          {editIfscCode && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(editIfscCode, 'edit_ifsc', 'IFSC Code Copied!')}
+                              className="text-[9px] text-teal-400 hover:text-teal-300 font-bold flex items-center gap-0.5 cursor-pointer"
+                            >
+                              {copiedKey === 'edit_ifsc' ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                              <span>{copiedKey === 'edit_ifsc' ? 'Copied' : 'Copy'}</span>
+                            </button>
+                          )}
+                        </div>
                         <input
                           type="text"
                           value={editIfscCode}
@@ -1551,23 +1586,116 @@ export default function AdminSection({
                           </div>
 
                           {/* Bank Details Display */}
-                          <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-900/80 space-y-1.5">
+                          <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-900 space-y-2">
                             <div className="flex items-center justify-between text-[10px]">
                               <span className="text-slate-500 font-bold uppercase font-mono">Bank Name</span>
-                              <span className="text-white font-extrabold">{user?.bankAccount?.bankName || 'N/A'}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-white font-extrabold">{user?.bankAccount?.bankName || 'N/A'}</span>
+                                {user?.bankAccount?.bankName && (
+                                  <button
+                                    onClick={() => handleCopyText(user.bankAccount!.bankName, `bank_${tx.id}`, 'Bank Name Copied!')}
+                                    className="p-1 text-slate-400 hover:text-teal-300 transition-colors cursor-pointer"
+                                    title="Copy Bank Name"
+                                  >
+                                    {copiedKey === `bank_${tx.id}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                  </button>
+                                )}
+                              </div>
                             </div>
+
                             <div className="flex items-center justify-between text-[10px]">
                               <span className="text-slate-500 font-bold uppercase font-mono">Holder</span>
-                              <span className="text-white font-extrabold">{user?.bankAccount?.accountHolder || 'N/A'}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-white font-extrabold">{user?.bankAccount?.accountHolder || 'N/A'}</span>
+                                {user?.bankAccount?.accountHolder && (
+                                  <button
+                                    onClick={() => handleCopyText(user.bankAccount!.accountHolder, `holder_${tx.id}`, 'Holder Name Copied!')}
+                                    className="p-1 text-slate-400 hover:text-teal-300 transition-colors cursor-pointer"
+                                    title="Copy Holder Name"
+                                  >
+                                    {copiedKey === `holder_${tx.id}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                  </button>
+                                )}
+                              </div>
                             </div>
+
                             <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-slate-500 font-bold uppercase font-mono">A/C No</span>
-                              <span className="text-teal-300 font-bold font-mono select-all">{user?.bankAccount?.accountNumber || 'N/A'}</span>
+                              <span className="text-slate-500 font-bold uppercase font-mono">A/C NO</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-teal-300 font-bold font-mono select-all bg-teal-950/50 px-2 py-0.5 rounded-md border border-teal-800/40">
+                                  {user?.bankAccount?.accountNumber || 'N/A'}
+                                </span>
+                                {user?.bankAccount?.accountNumber && (
+                                  <button
+                                    onClick={() => handleCopyText(user.bankAccount!.accountNumber, `ac_${tx.id}`, 'Account Number Copied!')}
+                                    className="px-2 py-1 bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 rounded-lg font-black text-[9px] flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                                    title="Copy Account Number"
+                                  >
+                                    {copiedKey === `ac_${tx.id}` ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-emerald-400" />
+                                        <span className="text-emerald-400">COPIED</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3 h-3 text-teal-300" />
+                                        <span>COPY A/C</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
                             </div>
+
                             <div className="flex items-center justify-between text-[10px]">
                               <span className="text-slate-500 font-bold uppercase font-mono">IFSC</span>
-                              <span className="text-teal-300 font-bold font-mono select-all">{user?.bankAccount?.ifscCode || 'N/A'}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-teal-300 font-bold font-mono select-all bg-teal-950/50 px-2 py-0.5 rounded-md border border-teal-800/40">
+                                  {user?.bankAccount?.ifscCode || 'N/A'}
+                                </span>
+                                {user?.bankAccount?.ifscCode && (
+                                  <button
+                                    onClick={() => handleCopyText(user.bankAccount!.ifscCode, `ifsc_${tx.id}`, 'IFSC Code Copied!')}
+                                    className="px-2 py-1 bg-teal-500/15 hover:bg-teal-500/25 text-teal-300 border border-teal-500/30 rounded-lg font-black text-[9px] flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                                    title="Copy IFSC Code"
+                                  >
+                                    {copiedKey === `ifsc_${tx.id}` ? (
+                                      <>
+                                        <Check className="w-3 h-3 text-emerald-400" />
+                                        <span className="text-emerald-400">COPIED</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3 h-3 text-teal-300" />
+                                        <span>COPY IFSC</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
                             </div>
+
+                            {user?.bankAccount?.accountNumber && user?.bankAccount?.ifscCode && (
+                              <button
+                                onClick={() => {
+                                  const fullDetails = `Bank: ${user.bankAccount?.bankName || ''}\nHolder: ${user.bankAccount?.accountHolder || ''}\nA/C No: ${user.bankAccount?.accountNumber || ''}\nIFSC: ${user.bankAccount?.ifscCode || ''}\nAmount: ₹${tx.amount}`;
+                                  handleCopyText(fullDetails, `full_${tx.id}`, 'All Bank Details Copied!');
+                                }}
+                                className="w-full py-1.5 mt-1 bg-slate-900 hover:bg-slate-850 text-slate-400 hover:text-white rounded-lg text-[9px] font-bold uppercase border border-slate-800 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-98"
+                              >
+                                {copiedKey === `full_${tx.id}` ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span className="text-emerald-400 font-bold">ALL DETAILS COPIED TO CLIPBOARD!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Copy All Bank Details</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </div>
 
                           <div className="flex gap-2.5 pt-1">
