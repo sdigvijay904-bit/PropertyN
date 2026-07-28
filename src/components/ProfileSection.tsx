@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Landmark, Wallet, ChevronRight, User, ShoppingBag, CheckSquare, Banknote, Lock, FileText,
-  Building, Download, ArrowLeft, RefreshCw, Eye, EyeOff, Save, CheckCircle2, TrendingUp, AlertTriangle, LogOut, ShieldCheck
+  Building, Download, ArrowLeft, RefreshCw, Eye, EyeOff, Save, CheckCircle2, TrendingUp, AlertTriangle, LogOut, ShieldCheck,
+  Bell, Settings, Gift, CreditCard, Star
 } from 'lucide-react';
 import { UserProfile, PurchaseRecord, TransactionRecord, BankAccount } from '../types';
 
@@ -712,78 +713,63 @@ export default function ProfileSection({
 
       default:
         return (
-          <div className="space-y-6">
-            {/* 3D Glassmorphic Stats Grid floating card (Matches Screenshot exactly!) */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_15px_35px_-4px_rgba(0,0,0,0.05)] overflow-hidden text-center relative">
-              <div className="grid grid-cols-3 divide-x divide-slate-100 py-6 px-1 relative z-10">
-                {/* Balance Column */}
-                <div className="flex flex-col items-center justify-center min-w-0">
-                  <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-teal-500 to-teal-700 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(99,102,241,0.22)] mb-2 shrink-0 group-hover:scale-105 transition-transform">
-                    <Wallet className="w-5 h-5" />
-                  </div>
-                  <span 
-                    className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
-                    title={`₹${user.balance.toFixed(2)}`}
-                  >
-                    ₹{Math.round(user.balance).toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
-                    BALANCE
-                  </span>
+          <div className="space-y-5 text-left">
+            {/* 3 Stat Cards in a Row (BALANCE, RECHARGED, TOTAL INCOME) strictly matching screenshot */}
+            <div className="grid grid-cols-3 gap-2.5">
+              {/* BALANCE */}
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-orange-100/90 text-orange-500 flex items-center justify-center mb-2 shrink-0 shadow-2xs">
+                  <Wallet className="w-6 h-6 stroke-[2.2]" />
                 </div>
-
-                {/* Recharged Column */}
-                <div className="flex flex-col items-center justify-center min-w-0">
-                  <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(245,158,11,0.22)] mb-2 shrink-0">
-                    <Banknote className="w-5 h-5" />
-                  </div>
-                  <span 
-                    className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
-                    title={`₹${totalRecharged.toFixed(2)}`}
-                  >
-                    ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
-                    RECHARGED
-                  </span>
-                </div>
-
-                {/* Total Income Column */}
-                <div className="flex flex-col items-center justify-center min-w-0">
-                  <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(16,185,129,0.22)] mb-2 shrink-0">
-                    <TrendingUp className="w-5 h-5" />
-                  </div>
-                  <span 
-                    className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
-                    title={`₹${totalPlanEarnings.toFixed(2)}`}
-                  >
-                    ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
-                  </span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
-                    TOTAL INCOME
-                  </span>
-                </div>
+                <span className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-wider">BALANCE</span>
+                <span className="text-sm min-[375px]:text-base font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+                  ₹{Math.round(user.balance).toLocaleString('en-IN')}
+                </span>
               </div>
 
-              {/* Action grid (Recharge & Withdraw side by side with border separator) */}
-              <div className="grid grid-cols-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={onOpenRecharge}
-                  className="py-4.5 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-teal-600 border-r border-slate-100 cursor-pointer group"
-                >
-                  <Wallet className="w-4.5 h-4.5 text-teal-500 group-hover:scale-110 transition-transform" />
-                  <span>Recharge</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenWithdraw}
-                  className="py-4.5 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-emerald-600 cursor-pointer group"
-                >
-                  <Landmark className="w-4.5 h-4.5 text-emerald-500 group-hover:scale-110 transition-transform" />
-                  <span>Withdraw</span>
-                </button>
+              {/* RECHARGED */}
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100/90 text-blue-500 flex items-center justify-center mb-2 shrink-0 shadow-2xs">
+                  <Banknote className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <span className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-wider">RECHARGED</span>
+                <span className="text-sm min-[375px]:text-base font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+                  ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
+                </span>
               </div>
+
+              {/* TOTAL INCOME */}
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100/90 text-emerald-500 flex items-center justify-center mb-2 shrink-0 shadow-2xs">
+                  <TrendingUp className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <span className="text-[8.5px] min-[360px]:text-[10px] font-black text-slate-500 uppercase tracking-tighter whitespace-nowrap truncate w-full">
+                  TOTAL INCOME
+                </span>
+                <span className="text-sm min-[375px]:text-base font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+                  ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+
+            {/* Recharge & Withdraw quick buttons card */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-xs grid grid-cols-2 divide-x divide-slate-100 overflow-hidden">
+              <button
+                type="button"
+                onClick={onOpenRecharge}
+                className="py-4 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-teal-600 cursor-pointer group"
+              >
+                <Wallet className="w-4.5 h-4.5 text-teal-500 group-hover:scale-110 transition-transform" />
+                <span>Recharge</span>
+              </button>
+              <button
+                type="button"
+                onClick={onOpenWithdraw}
+                className="py-4 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-emerald-600 cursor-pointer group"
+              >
+                <Landmark className="w-4.5 h-4.5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <span>Withdraw</span>
+              </button>
             </div>
 
             {/* Title with left accent bar */}
@@ -868,9 +854,9 @@ export default function ProfileSection({
           <div className="absolute top-0 right-0 w-36 h-36 bg-white/5 rounded-full blur-xl translate-x-6 -translate-y-6"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-x-6 translate-y-6"></div>
           
-          <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-4 text-left">
-              {/* Premium branded avatar/logo matching PropertyN style exactly */}
+          <div className="flex items-center justify-between relative z-10 text-left">
+            <div className="flex items-center gap-4">
+              {/* Premium branded avatar/logo matching PropertyN style */}
               <div className="w-16 h-16 rounded-[1.25rem] bg-white shadow-[0_8px_20px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center p-2 shrink-0 border border-slate-100/50">
                 <div className="flex items-center gap-0.5">
                   <span className="text-[17px] font-black tracking-tighter bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">P</span>
@@ -883,7 +869,7 @@ export default function ProfileSection({
                 <h2 className="text-lg font-black tracking-tight flex items-center gap-1.5 text-white">
                   ID : {user.phone.substring(0, 6)}**{user.phone.substring(user.phone.length - 2)}
                 </h2>
-                {/* VIP Member pill badge with golden dot */}
+                {/* VIP Member pill badge */}
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-bold text-white/95 border border-white/10 mt-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                   <span>VIP Member</span>

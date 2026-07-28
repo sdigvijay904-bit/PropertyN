@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Bell, Wallet, Landmark, Send, HelpCircle, ShieldCheck, Sparkles, ShoppingBag, Coins, BadgeAlert, ArrowUpRight, TrendingUp, Calendar, Award, Heart, Search, X, Star, Info, ChevronRight, MapPin, Percent, Plus, Minus, Check, Smartphone, Download, Banknote } from 'lucide-react';
+import { Bell, Wallet, Landmark, Send, HelpCircle, ShieldCheck, Sparkles, ShoppingBag, Coins, BadgeAlert, ArrowUpRight, TrendingUp, Calendar, Award, Heart, Search, X, Star, Info, ChevronRight, MapPin, Percent, Plus, Minus, Check, Smartphone, Download, Banknote, Settings, Volume2, Megaphone } from 'lucide-react';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
 
 interface HomeSectionProps {
@@ -225,24 +225,6 @@ export default function HomeSection({
         </div>
       </div>
 
-      {/* Floating live alerts ticker */}
-      <AnimatePresence mode="wait">
-        {liveNotification && (
-          <motion.div
-            key={liveNotification}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            transition={{ duration: 0.3 }}
-            className="mx-4 p-2.5 bg-gradient-to-r from-emerald-900/90 to-teal-900/90 backdrop-blur-md rounded-xl text-[11px] font-bold text-white shadow-lg border border-emerald-500/20 flex items-center gap-2"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block shrink-0" />
-            <span className="truncate flex-1 font-sans">{liveNotification}</span>
-            <span className="text-[9px] text-emerald-300 tracking-wider uppercase font-mono">Live</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Hero Carousel Slideshow */}
       <div className="mx-4 overflow-hidden rounded-2xl relative h-48 shadow-lg border border-teal-50/20 group">
         <div className="absolute inset-0 bg-black/15 z-10" />
@@ -260,7 +242,7 @@ export default function HomeSection({
         </AnimatePresence>
 
         {/* Floating Text on Carousel */}
-        <div className="absolute bottom-4 left-4 z-20 text-white space-y-1 max-w-[85%] drop-shadow-md">
+        <div className="absolute bottom-4 left-4 z-20 text-white space-y-1 max-w-[85%] drop-shadow-md text-left">
           <span className="bg-emerald-600/90 px-2.5 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-widest border border-white/20">
             {SLIDE_METADATA[currentSlide].tag}
           </span>
@@ -278,7 +260,7 @@ export default function HomeSection({
             <button
               key={idx}
               onClick={() => setCurrentSlide(idx)}
-              className={`w-2.5 h-1.5 rounded-full transition-all ${
+              className={`w-2.5 h-1.5 rounded-full transition-all cursor-pointer ${
                 currentSlide === idx ? 'bg-white w-5' : 'bg-white/40'
               }`}
             />
@@ -286,87 +268,115 @@ export default function HomeSection({
         </div>
       </div>
 
-      {/* Overlapping 3D Glassmorphic Stats Grid card (Now naturally follows the carousel) */}
-      <div className="mx-4 relative z-20">
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-[0_15px_35px_-4px_rgba(0,0,0,0.05)] overflow-hidden text-center relative">
-          <div className="grid grid-cols-3 divide-x divide-slate-100 py-6 px-1 relative z-10">
-            {/* Balance Column */}
-            <div className="flex flex-col items-center justify-center min-w-0">
-              <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-teal-500 to-teal-700 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(99,102,241,0.22)] mb-2 shrink-0">
-                <Wallet className="w-5 h-5" />
-              </div>
-              <span 
-                className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
-                title={`₹${user.balance.toFixed(2)}`}
-              >
-                ₹{Math.round(user.balance).toLocaleString('en-IN')}
-              </span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
-                BALANCE
-              </span>
-            </div>
-
-            {/* Recharged Column */}
-            <div className="flex flex-col items-center justify-center min-w-0">
-              <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-amber-400 to-amber-600 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(245,158,11,0.22)] mb-2 shrink-0">
-                <Banknote className="w-5 h-5" />
-              </div>
-              <span 
-                className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
-                title={`₹${totalRecharged.toFixed(2)}`}
-              >
-                ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
-              </span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
-                RECHARGED
-              </span>
-            </div>
-
-            {/* Total Income Column */}
-            <div className="flex flex-col items-center justify-center min-w-0">
-              <div className="w-11 h-11 rounded-[1.1rem] bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center shadow-[0_5px_15px_rgba(16,185,129,0.22)] mb-2 shrink-0">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <span 
-                className="text-sm min-[375px]:text-base sm:text-lg font-black text-slate-900 tracking-tight block truncate w-full px-0.5"
-                title={`₹${totalPlanEarnings.toFixed(2)}`}
-              >
-                ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
-              </span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
-                TOTAL INCOME
-              </span>
-            </div>
+      {/* 3 Stat Cards in a Row (BALANCE, RECHARGED, TOTAL INCOME) */}
+      <div className="mx-4 grid grid-cols-3 gap-2">
+        {/* BALANCE */}
+        <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
+          <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center mb-1.5 shrink-0">
+            <Wallet className="w-5 h-5" />
           </div>
+          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">BALANCE</span>
+          <span className="text-sm font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+            ₹{Math.round(user.balance).toLocaleString('en-IN')}
+          </span>
+        </div>
+
+        {/* RECHARGED */}
+        <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
+          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center mb-1.5 shrink-0">
+            <Banknote className="w-5 h-5" />
+          </div>
+          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">RECHARGED</span>
+          <span className="text-sm font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+            ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
+          </span>
+        </div>
+
+        {/* TOTAL INCOME */}
+        <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-500 flex items-center justify-center mb-1.5 shrink-0">
+            <TrendingUp className="w-5 h-5" />
+          </div>
+          <span className="text-[8.5px] min-[360px]:text-[9.5px] font-bold text-slate-500 uppercase tracking-tighter whitespace-nowrap truncate w-full">
+            TOTAL INCOME
+          </span>
+          <span className="text-sm font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+            ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
+          </span>
         </div>
       </div>
 
-      {/* Quick Action Navigation Grid */}
-      <div className="mx-4 p-4 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.02)] border border-slate-100 flex items-center justify-around">
-        {[
-          { label: 'Recharge', icon: Wallet, action: onOpenRecharge, color: 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 text-white shadow-[0_4px_12px_rgba(16,185,129,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' },
-          { label: 'Withdraw', icon: Landmark, action: onOpenWithdraw, color: 'bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 text-white shadow-[0_4px_12px_rgba(245,158,11,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' },
-          { label: 'Channel', icon: Send, action: () => { window.open(tgChannel, '_blank'); }, color: 'bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 text-white shadow-[0_4px_12px_rgba(14,165,233,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' },
-          { label: 'App', icon: Download, action: onOpenDownloadApp || (() => {
+      {/* Voice / Live Details Ticker Bar */}
+      <div 
+        onClick={handleBellClick}
+        className="mx-4 px-3.5 py-2.5 bg-slate-200/70 hover:bg-slate-200/90 rounded-full flex items-center justify-between text-xs font-medium text-slate-700 cursor-pointer transition-colors shadow-2xs"
+      >
+        <div className="flex items-center gap-2 overflow-hidden">
+          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Megaphone className="w-3.5 h-3.5" />
+          </div>
+          <span className="truncate text-slate-800 font-bold text-[11px] leading-none">
+            {liveNotification ? `Voice details: ${liveNotification}` : 'Voice details can ₹442288 credited to online sponsors'}
+          </span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-slate-500 shrink-0 ml-1" />
+      </div>
+
+      {/* Quick Action Navigation Grid (Strictly matching attached screenshot) */}
+      <div className="mx-4 p-4 bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 grid grid-cols-4 gap-2">
+        {/* RECHARGE */}
+        <button
+          type="button"
+          onClick={onOpenRecharge}
+          className="flex flex-col items-center space-y-1.5 cursor-pointer group"
+        >
+          <div className="w-13 h-13 rounded-full bg-emerald-100/80 text-emerald-600 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
+            <Wallet className="w-6 h-6 stroke-[2.2]" />
+          </div>
+          <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">RECHARGE</span>
+        </button>
+
+        {/* WITHDRAW */}
+        <button
+          type="button"
+          onClick={onOpenWithdraw}
+          className="flex flex-col items-center space-y-1.5 cursor-pointer group"
+        >
+          <div className="w-13 h-13 rounded-full bg-pink-100/80 text-pink-500 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
+            <Banknote className="w-6 h-6 stroke-[2.2]" />
+          </div>
+          <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">WITHDRAW</span>
+        </button>
+
+        {/* CHANNEL */}
+        <button
+          type="button"
+          onClick={() => { window.open(tgChannel, '_blank'); }}
+          className="flex flex-col items-center space-y-1.5 cursor-pointer group"
+        >
+          <div className="w-13 h-13 rounded-full bg-amber-100/80 text-amber-600 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
+            <Megaphone className="w-6 h-6 stroke-[2.2]" />
+          </div>
+          <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">CHANNEL</span>
+        </button>
+
+        {/* APP */}
+        <button
+          type="button"
+          onClick={onOpenDownloadApp || (() => {
             const configuredApkUrl = localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk';
             window.open(configuredApkUrl, '_blank');
-          }), color: 'bg-gradient-to-br from-pink-500 via-rose-500 to-rose-600 text-white shadow-[0_4px_12px_rgba(225,29,72,0.25),inset_0_1px_1px_rgba(255,255,255,0.4)] border-t border-white/20' }
-        ].map((btn, idx) => {
-          const Icon = btn.icon;
-          return (
-            <button
-              key={idx}
-              type="button"
-              onClick={btn.action}
-              className="flex flex-col items-center space-y-2 group cursor-pointer"
-            >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${btn.color} group-active:scale-95 duration-200`}>
-                <Icon className="w-5.5 h-5.5 transition-transform group-hover:scale-110" />
-              </div>
-              <span className="text-[11px] font-black text-slate-700 tracking-wider uppercase font-sans">{btn.label}</span>
-            </button>
-          );
-        })}
+          })}
+          className="flex flex-col items-center space-y-1.5 cursor-pointer group"
+        >
+          <div className="w-13 h-13 rounded-full bg-blue-100/80 text-blue-600 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
+            <Smartphone className="w-6 h-6 stroke-[2.2]" />
+          </div>
+          <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">APP</span>
+        </button>
+      </div>
+
+      <div id="plans-list" className="mx-4 pt-2">
       </div>
 
       {/* Investment plans structure */}
@@ -376,10 +386,6 @@ export default function HomeSection({
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-5 bg-emerald-600 rounded-full"></div>
             <h3 className="text-base font-black text-slate-800">Investment Plans</h3>
-          </div>
-          <div className="flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded-full text-[10px] font-bold text-emerald-700 border border-emerald-100">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-            <span>VIP Rewards Active</span>
           </div>
         </div>
 
