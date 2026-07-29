@@ -1659,6 +1659,7 @@ export default function App() {
               setPlans={handleAdminSetPlans}
               transactions={transactions}
               setTransactions={handleAdminSetTransactions}
+              purchases={purchases}
               onClose={handleLogout}
               triggerToast={triggerToast}
               onUpdateCurrentUserProfile={(profile) => {

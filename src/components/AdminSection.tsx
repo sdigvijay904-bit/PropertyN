@@ -7,10 +7,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
-  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy
+  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag
 } from 'lucide-react';
 import SupportAgentAvatar from './SupportAgentAvatar';
-import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
+import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { cleanUndefined } from '../lib/db';
@@ -25,6 +25,7 @@ interface AdminSectionProps {
   setPlans: React.Dispatch<React.SetStateAction<InvestmentPlan[]>>;
   transactions: TransactionRecord[];
   setTransactions: React.Dispatch<React.SetStateAction<TransactionRecord[]>>;
+  purchases?: PurchaseRecord[];
   onClose: () => void;
   triggerToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   onUpdateCurrentUserProfile: (profile: UserProfile) => void;
@@ -39,6 +40,7 @@ export default function AdminSection({
   setPlans,
   transactions,
   setTransactions,
+  purchases = [],
   onClose,
   triggerToast,
   onUpdateCurrentUserProfile,
@@ -223,6 +225,30 @@ export default function AdminSection({
     setTimeout(() => {
       setCopiedKey(null);
     }, 2000);
+  };
+
+  // Helper to fetch purchased plans for a user
+  const getUserPurchases = (userId: string, userPhone?: string): PurchaseRecord[] => {
+    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
+    
+    const fromProp = (purchases || []).filter(p => 
+      p.userId === userId || 
+      (cleanPhone.length >= 10 && (p as any).userPhone && (p as any).userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+    );
+
+    let fromStorage: PurchaseRecord[] = [];
+    try {
+      const raw = localStorage.getItem(`adpaint_purchases_${userId}`);
+      if (raw) {
+        fromStorage = JSON.parse(raw);
+      }
+    } catch (e) {}
+
+    const map = new Map<string, PurchaseRecord>();
+    fromProp.forEach(p => map.set(p.id, p));
+    fromStorage.forEach(p => map.set(p.id, p));
+
+    return Array.from(map.values());
   };
 
   // Plans editor states
@@ -1010,6 +1036,35 @@ export default function AdminSection({
                     <p className="text-[9px] text-slate-500 font-medium mt-1">Total outstanding liabilities</p>
                   </div>
                 </div>
+
+                {/* Stat 5: Total Purchased Plans */}
+                <div className="col-span-2 bg-slate-850 p-4 rounded-3xl border border-emerald-900/40 flex flex-col justify-between shadow-lg">
+                  {(() => {
+                    let totalPCount = 0;
+                    let totalPVal = 0;
+                    usersList.forEach(u => {
+                      const uP = getUserPurchases(u.id, u.phone);
+                      totalPCount += uP.length;
+                      totalPVal += uP.reduce((sum, p) => sum + (p.price || 0), 0);
+                    });
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-emerald-400 font-black uppercase tracking-wider flex items-center gap-1.5">
+                            <ShoppingBag className="w-4 h-4 text-emerald-400" />
+                            <span>Total Plans Purchased</span>
+                          </span>
+                          <span className="text-[10px] font-mono text-teal-300 font-bold bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg">
+                            Value: ₹{totalPVal.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-baseline justify-between">
+                          <span className="text-2xl font-black font-mono tracking-tight text-white">{totalPCount} <span className="text-xs text-slate-400 font-sans font-bold">Active & Historical Plans</span></span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Server health check logs */}
@@ -1342,6 +1397,76 @@ export default function AdminSection({
                     </div>
                   </div>
 
+                  {/* User Purchased Plans Breakdown */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Purchased Investment Plans</span>
+                      </h5>
+                      {(() => {
+                        const userP = getUserPurchases(editingUser.id, editingUser.phone);
+                        const totalInvest = userP.reduce((sum, p) => sum + (p.price || 0), 0);
+                        return (
+                          <span className="text-[9px] font-mono font-bold text-teal-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md">
+                            Total: {userP.length} Plans (₹{totalInvest.toLocaleString()})
+                          </span>
+                        );
+                      })()}
+                    </div>
+
+                    {(() => {
+                      const userP = getUserPurchases(editingUser.id, editingUser.phone);
+                      if (userP.length === 0) {
+                        return (
+                          <div className="p-3 bg-slate-950/40 rounded-2xl border border-slate-900 text-center">
+                            <p className="text-[10px] text-slate-500 font-bold">This user has not purchased any investment plans yet.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                          {userP.map((pur, idx) => (
+                            <div key={pur.id || idx} className="p-3 bg-slate-950 rounded-2xl border border-slate-800/90 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-white flex items-center gap-1.5">
+                                  <Package className="w-3 h-3 text-emerald-400" />
+                                  <span>{pur.planTitle}</span>
+                                </span>
+                                <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                  pur.completed ? 'bg-slate-800 text-slate-400' : 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                                }`}>
+                                  {pur.completed ? 'Completed' : 'Active'}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-900">
+                                <div>
+                                  <span className="text-slate-500">Plan Price: </span>
+                                  <strong className="text-emerald-400 font-bold">₹{pur.price}</strong>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Daily Return: </span>
+                                  <strong className="text-teal-300 font-bold">₹{pur.dailyIncome}/day</strong>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Purchased On: </span>
+                                  <span className="text-slate-300">
+                                    {pur.datePurchased ? new Date(pur.datePurchased).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Total Claimed: </span>
+                                  <strong className="text-amber-300 font-bold">₹{(pur.totalClaimed || 0).toFixed(2)}</strong>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   {/* Danger Zone: Account Deletion */}
                   <div className="space-y-3 pt-4 border-t border-slate-800">
                     <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest block">Danger Zone</h5>
@@ -1385,18 +1510,19 @@ export default function AdminSection({
                   ) : (
                     filteredUsers.map(user => {
                       const isCurrent = currentProfile?.id === user.id;
+                      const userPurchasesList = getUserPurchases(user.id, user.phone);
                       return (
                         <div
                           key={user.id}
                           className={`p-4 bg-slate-850 rounded-3xl border ${
                             isCurrent ? 'border-emerald-600/60' : 'border-slate-800/80'
-                          } flex items-center justify-between shadow-md`}
+                          } flex items-center justify-between shadow-md gap-2`}
                         >
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-black text-white">{user.name}</span>
                               {isCurrent && (
-                                <span className="bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                                <span className="bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
                                   Current Session
                                 </span>
                               )}
@@ -1442,6 +1568,32 @@ export default function AdminSection({
                                 Earn: <strong className="text-teal-400">₹{user.totalEarnings.toFixed(0)}</strong>
                               </span>
                             </div>
+
+                            {/* User Purchased Plans Badges */}
+                            {userPurchasesList.length === 0 ? (
+                              <div className="mt-2">
+                                <span className="text-[9px] bg-slate-900/60 border border-slate-800 text-slate-500 px-2 py-0.5 rounded-lg font-mono">
+                                  No Plans Purchased
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="mt-2 space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9.5px] bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 px-2 py-0.5 rounded-lg font-mono font-bold flex items-center gap-1">
+                                    <ShoppingBag className="w-3 h-3 text-emerald-400" />
+                                    <span>Purchased: {userPurchasesList.length} Plan{userPurchasesList.length > 1 ? 's' : ''} (₹{userPurchasesList.reduce((s, p) => s + (p.price || 0), 0).toLocaleString()})</span>
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {userPurchasesList.map((p, pIdx) => (
+                                    <span key={p.id || pIdx} className="text-[8.5px] bg-slate-950 border border-slate-700/80 text-teal-300 px-2 py-0.5 rounded-md font-mono flex items-center gap-1">
+                                      <Tag className="w-2.5 h-2.5 text-teal-400" />
+                                      <span>{p.planTitle} (₹{p.price})</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex flex-col gap-1.5 shrink-0">
