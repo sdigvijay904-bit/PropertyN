@@ -2046,18 +2046,15 @@ export default function App() {
                 {/* Full name (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">FULL NAME</label>
-                    <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                        <User className="w-4.5 h-4.5" />
-                      </div>
+                    <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">FULL NAME</label>
+                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
                       <input
                         type="text"
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Enter your full name"
-                        className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none"
+                        placeholder="FULL Name"
+                        className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2065,19 +2062,16 @@ export default function App() {
 
                 {/* Mobile number */}
                 <div className="space-y-1.5">
-                  <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">MOBILE NUMBER</label>
-                  <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
-                    <div className="w-12 h-10 rounded-2xl bg-slate-200 text-slate-900 border border-slate-300 flex items-center justify-center font-black text-xs shrink-0 font-mono">
-                      +91
-                    </div>
+                  <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">MOBILE NUMBER</label>
+                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
                     <input
                       type="tel"
                       required
                       maxLength={10}
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                      placeholder="10-digit number"
-                      className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-600/95 placeholder:font-sans placeholder:font-bold placeholder:tracking-normal focus:outline-none font-mono tracking-wider"
+                      placeholder="Enter your number"
+                      className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -2085,33 +2079,28 @@ export default function App() {
                 {/* Verification Code / Captcha Verification */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">VERIFICATION CODE</label>
+                    <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">VERIFICATION CODE</label>
                     <div className="grid grid-cols-12 gap-2.5 items-center">
-                      <div className="col-span-8 relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1 focus-within:bg-white transition-all shadow-sm">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                          <ShieldCheck className="w-4.5 h-4.5" />
+                      <div className="col-span-4 sm:col-span-4">
+                        <div 
+                          onClick={generateCaptcha}
+                          title="Click to refresh verification code"
+                          className="h-12 bg-emerald-50/80 border border-emerald-200/80 rounded-xl sm:rounded-2xl flex items-center justify-center font-mono font-black text-emerald-800 text-lg tracking-[0.25em] relative overflow-hidden select-none cursor-pointer hover:bg-emerald-100/80 active:scale-95 transition-all shadow-2xs group px-2"
+                        >
+                          <div className="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(45deg,#047857,#047857_8px,#ecfdf5_8px,#ecfdf5_16px)] pointer-events-none"></div>
+                          <span className="relative drop-shadow-2xs">{captchaCode}</span>
                         </div>
+                      </div>
+                      <div className="col-span-8 sm:col-span-8 relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
                         <input
                           type="text"
                           required
                           maxLength={4}
                           value={captchaInput}
                           onChange={(e) => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
-                          placeholder="Enter code"
-                          className="flex-1 pl-3 pr-2 py-2 bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-600/95 placeholder:font-sans placeholder:font-bold placeholder:tracking-normal focus:outline-none text-left font-sans focus:font-mono focus:tracking-[0.12em]"
+                          placeholder="••••"
+                          className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-widest"
                         />
-                      </div>
-                      <div className="col-span-4">
-                        <div 
-                          onClick={generateCaptcha}
-                          title="Click to refresh captcha"
-                          className="h-13 bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 text-white rounded-[1.25rem] flex items-center justify-center gap-1.5 font-mono font-black text-base tracking-widest relative overflow-hidden select-none cursor-pointer hover:shadow-lg hover:shadow-teal-200 active:scale-95 transition-all shadow-md border border-teal-500/20 px-2 group"
-                        >
-                          {/* Captcha Background Pattern Effect */}
-                          <div className="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(45deg,#000,#000_10px,#fff_10px,#fff_20px)] pointer-events-none"></div>
-                          <span className="relative drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] animate-pulse">{captchaCode}</span>
-                          <RefreshCw className="w-3.5 h-3.5 text-teal-200 group-hover:rotate-180 transition-transform duration-500 shrink-0" />
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -2119,27 +2108,24 @@ export default function App() {
 
                 {/* Password Input */}
                 <div className="space-y-1.5">
-                  <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">
+                  <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">
                     {authTab === 'register' ? 'CREATE PASSWORD' : 'PASSWORD'}
                   </label>
-                  <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                      <Lock className="w-4.5 h-4.5" />
-                    </div>
+                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min 6 characters"
-                      className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder:text-slate-600/95 placeholder:font-sans placeholder:font-bold placeholder:tracking-normal focus:outline-none font-mono tracking-widest"
+                      placeholder={authTab === 'register' ? "CREATE PASSWORD" : "PASSWORD"}
+                      className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-emerald-400 hover:text-emerald-600 transition-colors"
+                      className="absolute right-3.5 text-slate-500 hover:text-slate-800 transition-colors"
                     >
-                      {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                      {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
@@ -2153,7 +2139,7 @@ export default function App() {
                         setAuthError('');
                         setForgotStep(1);
                       }}
-                      className="text-[10.5px] font-black text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
+                      className="text-[11px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
                     >
                       Forgot Password?
                     </button>
@@ -2163,17 +2149,14 @@ export default function App() {
                 {/* Invitation Code (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">INVITATION CODE (OPTIONAL)</label>
-                    <div className="relative flex items-center bg-slate-50 border border-slate-300 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600 rounded-[1.25rem] p-1.5 focus-within:bg-white transition-all shadow-sm">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
-                        <Gift className="w-4.5 h-4.5" />
-                      </div>
+                    <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">INVITATION CODE (OPTIONAL)</label>
+                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
                       <input
                         type="text"
                         value={invitationCode}
                         onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Enter invite code"
-                        className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono"
+                        placeholder="INVITATION CODE"
+                        className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
                       />
                     </div>
                   </div>
