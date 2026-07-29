@@ -291,9 +291,9 @@ export default function App() {
       setUserProfile(finalUser);
       localStorage.setItem('adpaint_user', JSON.stringify(finalUser));
       setIsLoggedIn(true);
-      if (finalUser.role !== 'admin' && !sessionStorage.getItem('adpaint_welcome_shown')) {
+      if (finalUser.role !== 'admin' && !localStorage.getItem(`adpaint_notice_shown_${finalUser.id}`)) {
         setIsWelcomeNoticeOpen(true);
-        sessionStorage.setItem('adpaint_welcome_shown', 'true');
+        localStorage.setItem(`adpaint_notice_shown_${finalUser.id}`, 'true');
       }
 
       // Load user-specific purchases on startup
@@ -1086,7 +1086,7 @@ export default function App() {
       localStorage.setItem(`adpaint_purchases_${serverUser.id}`, JSON.stringify([]));
       setIsLoggedIn(true);
       setIsWelcomeNoticeOpen(true);
-      sessionStorage.setItem('adpaint_welcome_shown', 'true');
+      localStorage.setItem(`adpaint_notice_shown_${serverUser.id}`, 'true');
       triggerToast('Account Registered Successfully! Enjoy ₹100 Welcome Bonus.', 'success');
       localStorage.removeItem('adpaint_pending_invite_code');
 
@@ -1140,10 +1140,10 @@ export default function App() {
       localStorage.setItem(`adpaint_purchases_${serverUser.id}`, JSON.stringify(serverPurchases));
 
       setIsLoggedIn(true);
-      if (serverUser.role !== 'admin') {
+      if (serverUser.role !== 'admin' && !localStorage.getItem(`adpaint_notice_shown_${serverUser.id}`)) {
         setIsWelcomeNoticeOpen(true);
+        localStorage.setItem(`adpaint_notice_shown_${serverUser.id}`, 'true');
       }
-      sessionStorage.setItem('adpaint_welcome_shown', 'true');
       triggerToast('Welcome back! Logs active.', 'success');
 
       // Deep sync
