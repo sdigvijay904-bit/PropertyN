@@ -861,8 +861,6 @@ export default function App() {
     const list: TeamMember[] = [];
     
     const getUserInvestedAmount = (u: UserProfile) => {
-      let base = typeof u.totalInvested === 'number' && u.totalInvested > 0 ? u.totalInvested : 0;
-
       // Sum successful recharges for this user from global transactions list
       const cleanPhone = u.phone ? u.phone.replace(/\D/g, '') : '';
       const rechargeSum = transactions
@@ -872,23 +870,8 @@ export default function App() {
         ))
         .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-      // Sum plan purchases for this user
-      const userPurchases = purchases.filter(p => 
-        p.userId === u.id || 
-        (cleanPhone.length >= 10 && (p as any).userPhone && (p as any).userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
-      );
-      const purchaseSum = userPurchases.reduce((sum, p) => sum + (p.price || 0), 0);
-
-      let storedPurchaseSum = 0;
-      try {
-        const stored = localStorage.getItem(`adpaint_purchases_${u.id}`);
-        if (stored) {
-          const pur = JSON.parse(stored);
-          storedPurchaseSum = pur.reduce((sum: number, p: any) => sum + (p.price || 0), 0);
-        }
-      } catch (e) {}
-
-      return Math.max(base, rechargeSum, purchaseSum, storedPurchaseSum);
+      // Referral commission is awarded strictly when referred user performs a successful recharge
+      return rechargeSum;
     };
 
     const getUserJoinedDate = (u: UserProfile) => {

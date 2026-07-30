@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
-  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag, Power, PauseCircle
+  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag, Power, PauseCircle, Coins
 } from 'lucide-react';
 import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
@@ -254,6 +254,43 @@ export default function AdminSection({
     return Array.from(map.values());
   };
 
+  // Helper to fetch user deposits (recharges)
+  const getUserDeposits = (userId: string, userPhone?: string) => {
+    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
+    const userTx = (transactions || []).filter(t => 
+      t.type === 'recharge' && (
+        (t.userId && t.userId === userId) || 
+        (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+      )
+    );
+    const approvedDeposit = userTx.filter(t => t.status === 'success').reduce((sum, t) => sum + (t.amount || 0), 0);
+    const pendingDeposit = userTx.filter(t => t.status === 'pending').reduce((sum, t) => sum + (t.amount || 0), 0);
+    return { approvedDeposit, pendingDeposit, totalCount: userTx.length, transactions: userTx };
+  };
+
+  // Helper to fetch user withdrawals
+  const getUserWithdrawals = (userId: string, userPhone?: string) => {
+    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
+    const userTx = (transactions || []).filter(t => 
+      t.type === 'withdraw' && (
+        (t.userId && t.userId === userId) || 
+        (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+      )
+    );
+    const approvedWithdraw = userTx.filter(t => t.status === 'success').reduce((sum, t) => sum + (t.amount || 0), 0);
+    const pendingWithdraw = userTx.filter(t => t.status === 'pending').reduce((sum, t) => sum + (t.amount || 0), 0);
+    return { approvedWithdraw, pendingWithdraw, totalCount: userTx.length, transactions: userTx };
+  };
+
+  // Helper to fetch ALL transactions for a user
+  const getUserTransactions = (userId: string, userPhone?: string) => {
+    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
+    return (transactions || []).filter(t => 
+      (t.userId && t.userId === userId) || 
+      (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+    );
+  };
+
   // Helper to toggle plan deactivation (complete / active state)
   const handleToggleDeactivatePurchase = (purchaseId: string, userId: string) => {
     let newStatus = false;
@@ -409,18 +446,23 @@ export default function AdminSection({
       return t;
     });
 
-    // Handle affiliate commission (10% standard Lvl 1 commission) if the user was invited
+    // Handle 3-level referral commissions (L1 10%, L2 5%, L3 2%) when a user's recharge is approved
     let finalUsers = updatedUsers;
-    if (targetUser.inviterCode) {
-      const inviter = usersList.find(u => u.inviteCode === targetUser.inviterCode);
-      if (inviter) {
-        const comm = tx.amount * 0.10;
-        finalUsers = updatedUsers.map(u => {
-          if (u.id === inviter.id) {
+    const rechargeAmt = tx.amount || 0;
+    const creditSponsorList: string[] = [];
+
+    if (targetUser.inviterCode && rechargeAmt > 0) {
+      // Level 1 Sponsor
+      const inviter1 = usersList.find(u => u.inviteCode === targetUser.inviterCode);
+      if (inviter1) {
+        creditSponsorList.push(inviter1.id);
+        const comm1 = rechargeAmt * 0.10;
+        finalUsers = finalUsers.map(u => {
+          if (u.id === inviter1.id) {
             const updatedInviter = {
               ...u,
-              balance: u.balance + comm,
-              totalEarnings: u.totalEarnings + comm
+              balance: u.balance + comm1,
+              totalEarnings: u.totalEarnings + comm1
             };
             if (currentProfile && u.id === currentProfile.id) {
               onUpdateCurrentUserProfile(updatedInviter);
@@ -430,18 +472,87 @@ export default function AdminSection({
           return u;
         });
 
-        // Add a commission transaction
-        const commissionTx: TransactionRecord = {
-          id: `tx_comm_${Date.now()}`,
+        const commissionTx1: TransactionRecord = {
+          id: `tx_comm1_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
           type: 'commission',
-          amount: comm,
+          amount: comm1,
           date: new Date().toLocaleString(),
           status: 'success',
-          description: `Lvl 1 Commission credited from +91 ${targetUser.phone.replace('+91 ', '')} recharge`,
-          userId: inviter.id,
-          userPhone: inviter.phone
+          description: `Lvl 1 Commission (10%) from +91 ${targetUser.phone.replace('+91 ', '')} recharge`,
+          userId: inviter1.id,
+          userPhone: inviter1.phone
         };
-        updatedTx.unshift(commissionTx);
+        updatedTx.unshift(commissionTx1);
+
+        // Level 2 Sponsor
+        if (inviter1.inviterCode) {
+          const inviter2 = usersList.find(u => u.inviteCode === inviter1.inviterCode);
+          if (inviter2) {
+            creditSponsorList.push(inviter2.id);
+            const comm2 = rechargeAmt * 0.05;
+            finalUsers = finalUsers.map(u => {
+              if (u.id === inviter2.id) {
+                const updatedInviter = {
+                  ...u,
+                  balance: u.balance + comm2,
+                  totalEarnings: u.totalEarnings + comm2
+                };
+                if (currentProfile && u.id === currentProfile.id) {
+                  onUpdateCurrentUserProfile(updatedInviter);
+                }
+                return updatedInviter;
+              }
+              return u;
+            });
+
+            const commissionTx2: TransactionRecord = {
+              id: `tx_comm2_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+              type: 'commission',
+              amount: comm2,
+              date: new Date().toLocaleString(),
+              status: 'success',
+              description: `Lvl 2 Commission (5%) from +91 ${targetUser.phone.replace('+91 ', '')} recharge`,
+              userId: inviter2.id,
+              userPhone: inviter2.phone
+            };
+            updatedTx.unshift(commissionTx2);
+
+            // Level 3 Sponsor
+            if (inviter2.inviterCode) {
+              const inviter3 = usersList.find(u => u.inviteCode === inviter2.inviterCode);
+              if (inviter3) {
+                creditSponsorList.push(inviter3.id);
+                const comm3 = rechargeAmt * 0.02;
+                finalUsers = finalUsers.map(u => {
+                  if (u.id === inviter3.id) {
+                    const updatedInviter = {
+                      ...u,
+                      balance: u.balance + comm3,
+                      totalEarnings: u.totalEarnings + comm3
+                    };
+                    if (currentProfile && u.id === currentProfile.id) {
+                      onUpdateCurrentUserProfile(updatedInviter);
+                    }
+                    return updatedInviter;
+                  }
+                  return u;
+                });
+
+                const commissionTx3: TransactionRecord = {
+                  id: `tx_comm3_${Date.now()}_${Math.random().toString(36).substring(2, 5)}`,
+                  type: 'commission',
+                  amount: comm3,
+                  date: new Date().toLocaleString(),
+                  status: 'success',
+                  description: `Lvl 3 Commission (2%) from +91 ${targetUser.phone.replace('+91 ', '')} recharge`,
+                  userId: inviter3.id,
+                  userPhone: inviter3.phone
+                };
+                updatedTx.unshift(commissionTx3);
+              }
+            }
+          }
+        }
       }
     }
 
@@ -452,17 +563,16 @@ export default function AdminSection({
         await setDoc(doc(db, "users", targetUserId), cleanUndefined(updatedUserObj));
       }
 
-      // If there was an inviter, write their updated profile too
-      if (targetUser.inviterCode) {
-        const inviter = finalUsers.find(u => u.inviteCode === targetUser.inviterCode);
-        if (inviter) {
-          await setDoc(doc(db, "users", inviter.id), cleanUndefined(inviter));
-          // Save commission transaction directly
-          const commissionTx = updatedTx.find(t => t.type === 'commission' && t.userId === inviter.id);
-          if (commissionTx) {
-            await setDoc(doc(db, "transactions", commissionTx.id), cleanUndefined(commissionTx));
-          }
+      // Save credited sponsors' updated profiles and commission transactions
+      for (const sponsorId of creditSponsorList) {
+        const sponsorObj = finalUsers.find(u => u.id === sponsorId);
+        if (sponsorObj) {
+          await setDoc(doc(db, "users", sponsorId), cleanUndefined(sponsorObj));
         }
+      }
+      const newCommissionTxs = updatedTx.filter(t => t.type === 'commission' && creditSponsorList.includes(t.userId || ''));
+      for (const commTx of newCommissionTxs) {
+        await setDoc(doc(db, "transactions", commTx.id), cleanUndefined(commTx));
       }
 
       // Save approved recharge transaction directly
@@ -941,16 +1051,15 @@ export default function AdminSection({
     const list: { id: string; name: string; phone: string; level: number; totalInvested: number; inviterName: string }[] = [];
     
     const getUserInvested = (u: UserProfile) => {
-      let base = typeof u.totalInvested === 'number' && u.totalInvested > 0 ? u.totalInvested : 0;
       const cleanPhone = u.phone ? u.phone.replace(/\D/g, '') : '';
       const rechargeSum = transactions
-        .filter(t => t.type === 'recharge' && t.status === 'success' && (
+        .filter(t => t.type === 'recharge' && (t.status === 'success' || t.status === 'Approved' || t.status === 'approved') && (
           t.userId === u.id || 
           (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
         ))
         .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-      return Math.max(base, rechargeSum);
+      return rechargeSum;
     };
 
     // Level 1: referred directly by current user
@@ -993,6 +1102,40 @@ export default function AdminSection({
     });
 
     return list;
+  };
+
+  // Helper to calculate referral earnings & team breakdown for any user
+  const getUserReferralStats = (targetUser: UserProfile) => {
+    const downlines = getDownlineTree(targetUser);
+    const l1 = downlines.filter(x => x.level === 1);
+    const l2 = downlines.filter(x => x.level === 2);
+    const l3 = downlines.filter(x => x.level === 3);
+
+    const l1Earning = l1.reduce((sum, item) => sum + (item.totalInvested * 0.10), 0);
+    const l2Earning = l2.reduce((sum, item) => sum + (item.totalInvested * 0.05), 0);
+    const l3Earning = l3.reduce((sum, item) => sum + (item.totalInvested * 0.02), 0);
+
+    const cleanPhone = targetUser.phone ? targetUser.phone.replace(/\D/g, '') : '';
+    const txCommissionSum = (transactions || [])
+      .filter(t => t.type === 'commission' && (
+        t.userId === targetUser.id || 
+        (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+      ))
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    const calculatedCommission = l1Earning + l2Earning + l3Earning;
+    const totalReferralEarnings = Math.max(calculatedCommission, txCommissionSum);
+
+    return {
+      totalReferralEarnings,
+      l1Count: l1.length,
+      l2Count: l2.length,
+      l3Count: l3.length,
+      l1Earning,
+      l2Earning,
+      l3Earning,
+      totalDownlines: downlines.length
+    };
   };
 
   return (
@@ -1268,6 +1411,150 @@ export default function AdminSection({
                       Back To List
                     </button>
                   </div>
+
+                  {/* Complete User Financial Summary Cards */}
+                  {(() => {
+                    const editUserPurchases = getUserPurchases(editingUser.id, editingUser.phone);
+                    const editUserDep = getUserDeposits(editingUser.id, editingUser.phone);
+                    const editUserWith = getUserWithdrawals(editingUser.id, editingUser.phone);
+                    const editUserRef = getUserReferralStats(editingUser);
+                    const totalPlanInvest = editUserPurchases.reduce((s, p) => s + (p.price || 0), 0);
+                    const activePlansCount = editUserPurchases.filter(p => !p.completed).length;
+
+                    return (
+                      <div className="bg-slate-900 p-4 rounded-3xl border border-slate-800 space-y-3.5 shadow-inner">
+                        <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                          <h5 className="text-[11px] font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
+                            <Wallet className="w-4 h-4 text-emerald-400" />
+                            <span>User Complete Financial Summary</span>
+                          </h5>
+                          <span className="text-[9.5px] font-mono text-slate-400 bg-slate-950 px-2.5 py-0.5 rounded-lg border border-slate-800">
+                            UID: {editingUser.id}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          {/* Total Deposit Card */}
+                          <div className="bg-emerald-950/40 border border-emerald-800/50 p-3 rounded-2xl">
+                            <span className="text-[9px] font-extrabold text-emerald-400 uppercase tracking-wider block flex items-center gap-1">
+                              <ArrowDownLeft className="w-3 h-3 text-emerald-400" />
+                              Total Deposit
+                            </span>
+                            <p className="text-base font-black text-emerald-300 font-mono mt-1">
+                              ₹{editUserDep.approvedDeposit.toLocaleString('en-IN')}
+                            </p>
+                            {editUserDep.pendingDeposit > 0 ? (
+                              <p className="text-[9px] font-extrabold text-amber-400 mt-0.5 font-mono">
+                                ⏳ Pending: ₹{editUserDep.pendingDeposit.toLocaleString('en-IN')}
+                              </p>
+                            ) : (
+                              <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+                                {editUserDep.totalCount} deposit tx
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Plans Purchased Card */}
+                          <div className="bg-teal-950/40 border border-teal-800/50 p-3 rounded-2xl">
+                            <span className="text-[9px] font-extrabold text-teal-400 uppercase tracking-wider block flex items-center gap-1">
+                              <ShoppingBag className="w-3 h-3 text-teal-400" />
+                              Plans Bought
+                            </span>
+                            <p className="text-base font-black text-teal-200 font-mono mt-1">
+                              {editUserPurchases.length} Plan{editUserPurchases.length !== 1 ? 's' : ''}
+                            </p>
+                            <p className="text-[9px] text-teal-400 font-extrabold font-mono mt-0.5">
+                              ₹{totalPlanInvest.toLocaleString('en-IN')} ({activePlansCount} Active)
+                            </p>
+                          </div>
+
+                          {/* Total Withdrawn Card */}
+                          <div className="bg-purple-950/40 border border-purple-800/50 p-3 rounded-2xl">
+                            <span className="text-[9px] font-extrabold text-purple-400 uppercase tracking-wider block flex items-center gap-1">
+                              <ArrowUpRight className="w-3 h-3 text-purple-400" />
+                              Total Withdrawn
+                            </span>
+                            <p className="text-base font-black text-purple-300 font-mono mt-1">
+                              ₹{editUserWith.approvedWithdraw.toLocaleString('en-IN')}
+                            </p>
+                            {editUserWith.pendingWithdraw > 0 ? (
+                              <p className="text-[9px] font-extrabold text-amber-400 mt-0.5 font-mono">
+                                ⏳ Pending: ₹{editUserWith.pendingWithdraw.toLocaleString('en-IN')}
+                              </p>
+                            ) : (
+                              <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+                                {editUserWith.totalCount} withdraw tx
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Wallet Balance & Total Earnings */}
+                          <div className="bg-slate-950 border border-slate-800 p-3 rounded-2xl">
+                            <span className="text-[9px] font-extrabold text-amber-400 uppercase tracking-wider block flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-400" />
+                              Current Wallet
+                            </span>
+                            <p className="text-base font-black text-white font-mono mt-1">
+                              ₹{editingUser.balance % 1 === 0 ? editingUser.balance.toLocaleString('en-IN') : editingUser.balance.toFixed(2)}
+                            </p>
+                            <p className="text-[9px] text-teal-300 font-extrabold font-mono mt-0.5">
+                              Earned: ₹{editingUser.totalEarnings % 1 === 0 ? editingUser.totalEarnings.toLocaleString('en-IN') : editingUser.totalEarnings.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Referral & Team Commission Summary Card */}
+                        <div className="bg-gradient-to-r from-amber-950/50 via-teal-950/40 to-slate-950 p-3 rounded-2xl border border-amber-800/40">
+                          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800/60">
+                            <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <Award className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Referral Commission Earnings (रिफर कमाई)</span>
+                            </span>
+                            <span className="text-xs font-black text-emerald-400 font-mono bg-emerald-950/80 px-2 py-0.5 rounded-lg border border-emerald-800/50">
+                              Total: ₹{editUserRef.totalReferralEarnings.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 mt-2 text-center text-[9px] font-mono">
+                            <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+                              <span className="text-amber-400 block text-[8.5px] font-bold uppercase">Lvl 1 (10% Direct)</span>
+                              <strong className="text-emerald-300 text-[11px] block mt-0.5">₹{editUserRef.l1Earning.toLocaleString('en-IN')}</strong>
+                              <span className="text-slate-500 block text-[8px]">{editUserRef.l1Count} Referrals</span>
+                            </div>
+                            <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+                              <span className="text-teal-400 block text-[8.5px] font-bold uppercase">Lvl 2 (5% Indirect)</span>
+                              <strong className="text-teal-300 text-[11px] block mt-0.5">₹{editUserRef.l2Earning.toLocaleString('en-IN')}</strong>
+                              <span className="text-slate-500 block text-[8px]">{editUserRef.l2Count} Referrals</span>
+                            </div>
+                            <div className="bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+                              <span className="text-sky-400 block text-[8.5px] font-bold uppercase">Lvl 3 (2% Sub)</span>
+                              <strong className="text-sky-300 text-[11px] block mt-0.5">₹{editUserRef.l3Earning.toLocaleString('en-IN')}</strong>
+                              <span className="text-slate-500 block text-[8px]">{editUserRef.l3Count} Referrals</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* User Bank Account Details Quick Info */}
+                        <div className="pt-2.5 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono">
+                          <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-850">
+                            <span className="text-slate-500 block text-[8px] uppercase font-bold">Bank Name</span>
+                            <strong className="text-slate-200 truncate block">{editingUser.bankAccount?.bankName || editBankName || 'Not Bound'}</strong>
+                          </div>
+                          <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-850">
+                            <span className="text-slate-500 block text-[8px] uppercase font-bold">Account Holder</span>
+                            <strong className="text-slate-200 truncate block">{editingUser.bankAccount?.accountHolder || editHolderName || 'N/A'}</strong>
+                          </div>
+                          <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-850">
+                            <span className="text-slate-500 block text-[8px] uppercase font-bold">Account Number</span>
+                            <strong className="text-emerald-400 truncate block select-all">{editingUser.bankAccount?.accountNumber || editAccountNumber || 'N/A'}</strong>
+                          </div>
+                          <div className="bg-slate-950/60 p-2 rounded-xl border border-slate-850">
+                            <span className="text-slate-500 block text-[8px] uppercase font-bold">IFSC Code</span>
+                            <strong className="text-teal-300 truncate block select-all">{editingUser.bankAccount?.ifscCode || editIfscCode || 'N/A'}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Balance Adjustment Form */}
                   <form onSubmit={handleAdjustBalance} className="space-y-3.5">
@@ -1581,6 +1868,62 @@ export default function AdminSection({
                     })()}
                   </div>
 
+                  {/* User Transaction History (Recharges & Withdrawals) */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <h5 className="text-[10px] font-black text-teal-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-teal-400" />
+                      <span>User Deposit & Withdrawal History</span>
+                    </h5>
+
+                    {(() => {
+                      const userTxs = getUserTransactions(editingUser.id, editingUser.phone);
+                      if (userTxs.length === 0) {
+                        return (
+                          <div className="p-3 bg-slate-950/40 rounded-2xl border border-slate-900 text-center">
+                            <p className="text-[10px] text-slate-500 font-bold">No transaction records found for this user.</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                          {userTxs.map((tx, txIdx) => (
+                            <div key={tx.id || txIdx} className="p-3 bg-slate-950 rounded-2xl border border-slate-850 flex items-center justify-between text-[10px] font-mono">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2 py-0.5 rounded-md font-bold uppercase text-[8px] ${
+                                    tx.type === 'recharge' 
+                                      ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' 
+                                      : tx.type === 'withdraw' 
+                                      ? 'bg-purple-950 text-purple-300 border border-purple-800'
+                                      : 'bg-slate-800 text-slate-300'
+                                  }`}>
+                                    {tx.type}
+                                  </span>
+                                  <span className={`font-bold uppercase text-[8.5px] ${
+                                    tx.status === 'success' ? 'text-emerald-400' : tx.status === 'pending' ? 'text-amber-400 animate-pulse' : 'text-rose-400'
+                                  }`}>
+                                    [{tx.status}]
+                                  </span>
+                                </div>
+                                <p className="text-slate-400 text-[9px] font-sans">{tx.description}</p>
+                                {tx.utr && <p className="text-slate-500 text-[8.5px]">UTR: <strong className="text-slate-300 select-all">{tx.utr}</strong></p>}
+                                <p className="text-slate-600 text-[8px]">{tx.date}</p>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-xs font-black ${
+                                  tx.type === 'recharge' ? 'text-emerald-400' : tx.type === 'withdraw' ? 'text-purple-300' : 'text-white'
+                                }`}>
+                                  ₹{tx.amount}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   {/* Danger Zone: Account Deletion */}
                   <div className="space-y-3 pt-4 border-t border-slate-800">
                     <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest block">Danger Zone</h5>
@@ -1625,14 +1968,19 @@ export default function AdminSection({
                     filteredUsers.map(user => {
                       const isCurrent = currentProfile?.id === user.id;
                       const userPurchasesList = getUserPurchases(user.id, user.phone);
+                      const userDep = getUserDeposits(user.id, user.phone);
+                      const userWith = getUserWithdrawals(user.id, user.phone);
+                      const totalPlanPrice = userPurchasesList.reduce((s, p) => s + (p.price || 0), 0);
+                      const activePlansCount = userPurchasesList.filter(p => !p.completed).length;
+
                       return (
                         <div
                           key={user.id}
                           className={`p-4 bg-slate-850 rounded-3xl border ${
                             isCurrent ? 'border-emerald-600/60' : 'border-slate-800/80'
-                          } flex items-center justify-between shadow-md gap-2`}
+                          } flex flex-col md:flex-row md:items-center justify-between shadow-md gap-3`}
                         >
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 space-y-2">
                             <div className="flex items-center gap-2">
                               <span className="text-xs font-black text-white">{user.name}</span>
                               {isCurrent && (
@@ -1641,7 +1989,7 @@ export default function AdminSection({
                                 </span>
                               )}
                             </div>
-                            <p className="text-[10px] font-mono text-slate-400 mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <p className="text-[10px] font-mono text-slate-400 flex flex-wrap items-center gap-1.5">
                               <span>{user.phone}</span>
                               {user.password && (
                                 <span className="bg-slate-900/80 border border-emerald-500/20 text-amber-300 px-2 py-0.5 rounded-lg text-[9px] font-bold tracking-wider flex items-center gap-1">
@@ -1652,7 +2000,7 @@ export default function AdminSection({
                             </p>
 
                             {/* Referral Info */}
-                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            <div className="flex flex-wrap gap-1.5">
                               <span className="text-[9px] bg-slate-900 border border-slate-800 text-teal-300 px-1.5 py-0.5 rounded-lg font-mono">
                                 My Code: <strong className="text-white font-black">{user.inviteCode}</strong>
                               </span>
@@ -1672,32 +2020,62 @@ export default function AdminSection({
                               )}
                             </div>
                             
-                            {/* Short stats badge */}
-                            <div className="flex items-center gap-2.5 mt-2">
-                              <span className="text-[10px] font-mono text-slate-300">
-                                Bal: <strong className="text-white">₹{user.balance.toFixed(0)}</strong>
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-500">|</span>
-                              <span className="text-[10px] font-mono text-slate-400">
-                                Earn: <strong className="text-teal-400">₹{user.totalEarnings.toFixed(0)}</strong>
-                              </span>
-                            </div>
+                            {/* Comprehensive Financial Overview Cards for each User */}
+                            {(() => {
+                              const userRef = getUserReferralStats(user);
+                              return (
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 pt-1">
+                                  {/* Total Deposit */}
+                                  <div className="bg-emerald-950/40 border border-emerald-800/40 p-2 rounded-xl">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Total Deposit</span>
+                                    <span className="text-[11px] font-black text-emerald-400 font-mono">₹{userDep.approvedDeposit.toLocaleString('en-IN')}</span>
+                                    {userDep.pendingDeposit > 0 && (
+                                      <span className="text-[8px] font-bold text-amber-400 block font-mono">Pend: ₹{userDep.pendingDeposit}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Plans Purchased */}
+                                  <div className="bg-teal-950/40 border border-teal-800/40 p-2 rounded-xl">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Plans Bought</span>
+                                    <span className="text-[11px] font-black text-teal-300 font-mono">{userPurchasesList.length} (₹{totalPlanPrice.toLocaleString('en-IN')})</span>
+                                    <span className="text-[8px] font-bold text-teal-400/80 block font-mono">{activePlansCount} Active</span>
+                                  </div>
+
+                                  {/* Total Withdraw */}
+                                  <div className="bg-purple-950/40 border border-purple-800/40 p-2 rounded-xl">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Total Withdraw</span>
+                                    <span className="text-[11px] font-black text-purple-300 font-mono">₹{userWith.approvedWithdraw.toLocaleString('en-IN')}</span>
+                                    {userWith.pendingWithdraw > 0 && (
+                                      <span className="text-[8px] font-bold text-amber-400 block font-mono">Pend: ₹{userWith.pendingWithdraw}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Referral Earnings Card */}
+                                  <div className="bg-amber-950/40 border border-amber-800/40 p-2 rounded-xl">
+                                    <span className="text-[8px] font-bold text-amber-400 uppercase tracking-wider block">Reffer Income</span>
+                                    <span className="text-[11px] font-black text-amber-300 font-mono">₹{userRef.totalReferralEarnings.toLocaleString('en-IN')}</span>
+                                    <span className="text-[8px] font-bold text-teal-300 block font-mono">Team: {userRef.totalDownlines} users</span>
+                                  </div>
+
+                                  {/* Balance & Earnings */}
+                                  <div className="bg-slate-950 border border-slate-800 p-2 rounded-xl">
+                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider block">Wallet / Earned</span>
+                                    <span className="text-[11px] font-black text-white font-mono">₹{user.balance.toFixed(0)}</span>
+                                    <span className="text-[8px] font-bold text-teal-400 block font-mono">Earn: ₹{user.totalEarnings.toFixed(0)}</span>
+                                  </div>
+                                </div>
+                              );
+                            })()}
 
                             {/* User Purchased Plans Badges */}
                             {userPurchasesList.length === 0 ? (
-                              <div className="mt-2">
+                              <div>
                                 <span className="text-[9px] bg-slate-900/60 border border-slate-800 text-slate-500 px-2 py-0.5 rounded-lg font-mono">
                                   No Plans Purchased
                                 </span>
                               </div>
                             ) : (
-                              <div className="mt-2 space-y-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[9.5px] bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 px-2 py-0.5 rounded-lg font-mono font-bold flex items-center gap-1">
-                                    <ShoppingBag className="w-3 h-3 text-emerald-400" />
-                                    <span>Purchased: {userPurchasesList.length} Plan{userPurchasesList.length > 1 ? 's' : ''} (₹{userPurchasesList.reduce((s, p) => s + (p.price || 0), 0).toLocaleString()})</span>
-                                  </span>
-                                </div>
+                              <div className="space-y-1">
                                 <div className="flex flex-wrap gap-1">
                                   {userPurchasesList.map((p, pIdx) => (
                                     <div
@@ -1735,17 +2113,17 @@ export default function AdminSection({
                             )}
                           </div>
 
-                          <div className="flex flex-col gap-1.5 shrink-0">
+                          <div className="flex md:flex-col gap-2 shrink-0">
                             <button
                               onClick={() => handleOpenUserEdit(user)}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-[10px] font-black uppercase text-teal-300 rounded-xl transition-all flex items-center justify-center gap-1 border border-slate-700/50 cursor-pointer w-24 font-sans"
+                              className="flex-1 md:flex-initial px-3 py-2 bg-slate-800 hover:bg-slate-750 text-[10px] font-black uppercase text-teal-300 rounded-xl transition-all flex items-center justify-center gap-1 border border-slate-700/50 cursor-pointer w-24 font-sans"
                             >
                               <Edit2 className="w-2.5 h-2.5" />
                               <span>Manage</span>
                             </button>
                             <button
                               onClick={() => setViewingReferralsUser(user)}
-                              className="px-3 py-1.5 bg-emerald-950/40 hover:bg-emerald-900/40 text-[10px] font-black uppercase text-emerald-400 rounded-xl transition-all flex items-center justify-center gap-1 border border-emerald-900/30 cursor-pointer w-24 font-sans"
+                              className="flex-1 md:flex-initial px-3 py-2 bg-emerald-950/40 hover:bg-emerald-900/40 text-[10px] font-black uppercase text-emerald-400 rounded-xl transition-all flex items-center justify-center gap-1 border border-emerald-900/30 cursor-pointer w-24 font-sans"
                             >
                               <Users className="w-3 h-3" />
                               <span>View Team</span>
@@ -2880,18 +3258,23 @@ export default function AdminSection({
                     const l3 = downlines.filter(u => u.level === 3);
 
                     const totalNetworkInvested = downlines.reduce((sum, u) => sum + u.totalInvested, 0);
+                    const refStats = getUserReferralStats(viewingReferralsUser);
 
                     return (
                       <>
                         {/* Summary stats */}
-                        <div className="grid grid-cols-2 gap-3 text-left">
-                          <div className="bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/60">
-                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Total Network Size</p>
-                            <p className="text-lg font-black text-white mt-1">{downlines.length} Members</p>
+                        <div className="grid grid-cols-3 gap-2 text-left">
+                          <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800/60">
+                            <p className="text-[8px] text-slate-500 font-black uppercase tracking-wider">Network Size</p>
+                            <p className="text-sm font-black text-white mt-0.5">{downlines.length} Members</p>
                           </div>
-                          <div className="bg-slate-950/40 p-3.5 rounded-2xl border border-slate-800/60">
-                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-wider">Network Investment</p>
-                            <p className="text-lg font-black text-emerald-400 mt-1">₹{totalNetworkInvested.toLocaleString('en-IN')}</p>
+                          <div className="bg-slate-950/40 p-3 rounded-2xl border border-slate-800/60">
+                            <p className="text-[8px] text-slate-500 font-black uppercase tracking-wider">Invested</p>
+                            <p className="text-sm font-black text-emerald-400 mt-0.5 font-mono">₹{totalNetworkInvested.toLocaleString('en-IN')}</p>
+                          </div>
+                          <div className="bg-amber-950/30 p-3 rounded-2xl border border-amber-900/40">
+                            <p className="text-[8px] text-amber-400 font-black uppercase tracking-wider">Reffer Income</p>
+                            <p className="text-sm font-black text-amber-300 mt-0.5 font-mono">₹{refStats.totalReferralEarnings.toLocaleString('en-IN')}</p>
                           </div>
                         </div>
 
@@ -2909,24 +3292,28 @@ export default function AdminSection({
                             {/* Level 1 Block */}
                             <div className="space-y-2">
                               <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-3 py-1.5 rounded-xl">
-                                <span>Level 1 (Direct Referred)</span>
-                                <span>{l1.length} Accounts</span>
+                                <span>Level 1 (Direct 10%)</span>
+                                <span>{l1.length} Accounts (₹{refStats.l1Earning.toLocaleString('en-IN')})</span>
                               </div>
                               <div className="space-y-2 pl-2">
                                 {l1.length === 0 ? (
                                   <p className="text-[10px] text-slate-600 italic">None</p>
                                 ) : (
-                                  l1.map(u => (
-                                    <div key={u.id} className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
-                                      <div>
-                                        <p className="text-xs font-black text-slate-200">{u.name}</p>
-                                        <p className="text-[9px] font-mono text-slate-500 mt-0.5">{u.phone}</p>
+                                  l1.map(u => {
+                                    const commission = u.totalInvested * 0.10;
+                                    return (
+                                      <div key={u.id} className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
+                                        <div>
+                                          <p className="text-xs font-black text-slate-200">{u.name}</p>
+                                          <p className="text-[9px] font-mono text-slate-500 mt-0.5">{u.phone}</p>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-[10px] font-bold text-slate-400">Invested: <strong className="text-slate-200 font-mono">₹{u.totalInvested.toLocaleString('en-IN')}</strong></p>
+                                          <p className="text-[9.5px] font-extrabold text-emerald-400 font-mono mt-0.5">Ref Earn (10%): +₹{commission.toLocaleString('en-IN')}</p>
+                                        </div>
                                       </div>
-                                      <div className="text-right">
-                                        <p className="text-[10px] font-bold text-slate-400">Invested: <strong className="text-slate-200 font-mono">₹{u.totalInvested.toLocaleString('en-IN')}</strong></p>
-                                      </div>
-                                    </div>
-                                  ))
+                                    );
+                                  })
                                 )}
                               </div>
                             </div>
@@ -2934,55 +3321,63 @@ export default function AdminSection({
                             {/* Level 2 Block */}
                             <div className="space-y-2">
                               <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-teal-400 bg-teal-950/20 border border-teal-900/30 px-3 py-1.5 rounded-xl">
-                                <span>Level 2 (Indirect)</span>
-                                <span>{l2.length} Accounts</span>
+                                <span>Level 2 (Indirect 5%)</span>
+                                <span>{l2.length} Accounts (₹{refStats.l2Earning.toLocaleString('en-IN')})</span>
                               </div>
                               <div className="space-y-2 pl-2">
                                 {l2.length === 0 ? (
                                   <p className="text-[10px] text-slate-600 italic">None</p>
                                 ) : (
-                                  l2.map(u => (
-                                    <div key={u.id} className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
-                                      <div>
-                                        <div className="flex items-center gap-1.5">
-                                          <p className="text-xs font-black text-slate-200">{u.name}</p>
-                                          <span className="text-[8px] bg-slate-900 px-1 py-0.5 rounded text-slate-400">by {u.inviterName}</span>
+                                  l2.map(u => {
+                                    const commission = u.totalInvested * 0.05;
+                                    return (
+                                      <div key={u.id} className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
+                                        <div>
+                                          <div className="flex items-center gap-1.5">
+                                            <p className="text-xs font-black text-slate-200">{u.name}</p>
+                                            <span className="text-[8px] bg-slate-900 px-1 py-0.5 rounded text-slate-400">by {u.inviterName}</span>
+                                          </div>
+                                          <p className="text-[9px] font-mono text-slate-500 mt-0.5">{u.phone}</p>
                                         </div>
-                                        <p className="text-[9px] font-mono text-slate-500 mt-0.5">{u.phone}</p>
+                                        <div className="text-right">
+                                          <p className="text-[10px] font-bold text-slate-400">Invested: <strong className="text-slate-200 font-mono">₹{u.totalInvested.toLocaleString('en-IN')}</strong></p>
+                                          <p className="text-[9.5px] font-extrabold text-teal-300 font-mono mt-0.5">Ref Earn (5%): +₹{commission.toLocaleString('en-IN')}</p>
+                                        </div>
                                       </div>
-                                      <div className="text-right">
-                                        <p className="text-[10px] font-bold text-slate-400">Invested: <strong className="text-slate-200 font-mono">₹{u.totalInvested.toLocaleString('en-IN')}</strong></p>
-                                      </div>
-                                    </div>
-                                  ))
+                                    );
+                                  })
                                 )}
                               </div>
                             </div>
 
                             {/* Level 3 Block */}
                             <div className="space-y-2">
-                              <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-emerald-400 bg-emerald-950/20 border border-emerald-900/30 px-3 py-1.5 rounded-xl">
-                                <span>Level 3 (Indirect)</span>
-                                <span>{l3.length} Accounts</span>
+                              <div className="flex items-center justify-between text-[10px] uppercase font-black tracking-wider text-sky-400 bg-sky-950/20 border border-sky-900/30 px-3 py-1.5 rounded-xl">
+                                <span>Level 3 (Indirect 2%)</span>
+                                <span>{l3.length} Accounts (₹{refStats.l3Earning.toLocaleString('en-IN')})</span>
                               </div>
                               <div className="space-y-2 pl-2">
                                 {l3.length === 0 ? (
                                   <p className="text-[10px] text-slate-600 italic">None</p>
                                 ) : (
-                                  l3.map(u => (
-                                    <div key={u.id} className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
-                                      <div>
-                                        <div className="flex items-center gap-1.5">
-                                          <p className="text-xs font-black text-slate-200">{u.name}</p>
-                                          <span className="text-[8px] bg-slate-900 px-1 py-0.5 rounded text-slate-400">by {u.inviterName}</span>
+                                  l3.map(u => {
+                                    const commission = u.totalInvested * 0.02;
+                                    return (
+                                      <div key={u.id} className="bg-slate-850 p-3 rounded-2xl border border-slate-800 flex items-center justify-between">
+                                        <div>
+                                          <div className="flex items-center gap-1.5">
+                                            <p className="text-xs font-black text-slate-200">{u.name}</p>
+                                            <span className="text-[8px] bg-slate-900 px-1 py-0.5 rounded text-slate-400">by {u.inviterName}</span>
+                                          </div>
+                                          <p className="text-[9px] font-mono text-slate-500 mt-0.5">{u.phone}</p>
                                         </div>
-                                        <p className="text-[9px] font-mono text-slate-500 mt-0.5">{u.phone}</p>
+                                        <div className="text-right">
+                                          <p className="text-[10px] font-bold text-slate-400">Invested: <strong className="text-slate-200 font-mono">₹{u.totalInvested.toLocaleString('en-IN')}</strong></p>
+                                          <p className="text-[9.5px] font-extrabold text-sky-300 font-mono mt-0.5">Ref Earn (2%): +₹{commission.toLocaleString('en-IN')}</p>
+                                        </div>
                                       </div>
-                                      <div className="text-right">
-                                        <p className="text-[10px] font-bold text-slate-400">Invested: <strong className="text-slate-200 font-mono">₹{u.totalInvested.toLocaleString('en-IN')}</strong></p>
-                                      </div>
-                                    </div>
-                                  ))
+                                    );
+                                  })
                                 )}
                               </div>
                             </div>

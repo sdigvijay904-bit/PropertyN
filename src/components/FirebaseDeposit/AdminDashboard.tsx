@@ -108,7 +108,7 @@ export default function AdminDashboard({
       const updatedDeposit = await firebaseService.updateDepositStatus(deposit.id, 'Approved', adminUser.id);
 
       // Update local wallet state
-      const updatedUsers = [...usersList];
+      let updatedUsers = [...usersList];
       const previousBalance = targetUser.balance;
       const newBalance = previousBalance + deposit.depositAmount;
       
@@ -131,9 +131,66 @@ export default function AdminDashboard({
         userPhone: targetUser.phone
       };
 
+      let newTxs: TransactionRecord[] = [newTx];
+
+      // Credit 3-level referral commission (L1 10%, L2 5%, L3 2%) on approved deposit
+      if (targetUser.inviterCode && deposit.depositAmount > 0) {
+        const inviter1 = usersList.find(u => u.inviteCode === targetUser.inviterCode);
+        if (inviter1) {
+          const comm1 = deposit.depositAmount * 0.10;
+          updatedUsers = updatedUsers.map(u => u.id === inviter1.id ? { ...u, balance: u.balance + comm1, totalEarnings: u.totalEarnings + comm1 } : u);
+          newTxs.push({
+            id: `tx_comm1_${Date.now()}_1`,
+            type: 'commission',
+            amount: comm1,
+            date: new Date().toLocaleString(),
+            status: 'success',
+            description: `Lvl 1 Commission (10%) from ${deposit.userName} recharge`,
+            userId: inviter1.id,
+            userPhone: inviter1.phone
+          });
+
+          if (inviter1.inviterCode) {
+            const inviter2 = usersList.find(u => u.inviteCode === inviter1.inviterCode);
+            if (inviter2) {
+              const comm2 = deposit.depositAmount * 0.05;
+              updatedUsers = updatedUsers.map(u => u.id === inviter2.id ? { ...u, balance: u.balance + comm2, totalEarnings: u.totalEarnings + comm2 } : u);
+              newTxs.push({
+                id: `tx_comm2_${Date.now()}_2`,
+                type: 'commission',
+                amount: comm2,
+                date: new Date().toLocaleString(),
+                status: 'success',
+                description: `Lvl 2 Commission (5%) from ${deposit.userName} recharge`,
+                userId: inviter2.id,
+                userPhone: inviter2.phone
+              });
+
+              if (inviter2.inviterCode) {
+                const inviter3 = usersList.find(u => u.inviteCode === inviter2.inviterCode);
+                if (inviter3) {
+                  const comm3 = deposit.depositAmount * 0.02;
+                  updatedUsers = updatedUsers.map(u => u.id === inviter3.id ? { ...u, balance: u.balance + comm3, totalEarnings: u.totalEarnings + comm3 } : u);
+                  newTxs.push({
+                    id: `tx_comm3_${Date.now()}_3`,
+                    type: 'commission',
+                    amount: comm3,
+                    date: new Date().toLocaleString(),
+                    status: 'success',
+                    description: `Lvl 3 Commission (2%) from ${deposit.userName} recharge`,
+                    userId: inviter3.id,
+                    userPhone: inviter3.phone
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
       // Set new state list and synchronize across the database
       setUsersList(updatedUsers);
-      const updatedTxs = [newTx, ...transactions];
+      const updatedTxs = [...newTxs, ...transactions];
       setTransactions(updatedTxs);
 
       // Trigger server save-state integration
