@@ -1095,7 +1095,7 @@ export default function AdminSection({
                     <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div className="mt-2.5">
-                    <span className="text-xl font-black font-mono tracking-tight text-emerald-400">₹{totalDeposited.toFixed(2)}</span>
+                    <span className="text-xl font-black font-mono tracking-tight text-emerald-400">₹{totalDeposited % 1 === 0 ? totalDeposited.toLocaleString('en-IN') : totalDeposited.toFixed(2)}</span>
                     <p className="text-[9px] text-slate-500 font-medium mt-1">Successful recharges</p>
                   </div>
                 </div>
@@ -1107,7 +1107,7 @@ export default function AdminSection({
                     <ArrowUpRight className="w-4 h-4 text-rose-400" />
                   </div>
                   <div className="mt-2.5">
-                    <span className="text-xl font-black font-mono tracking-tight text-rose-400">₹{totalWithdrawn.toFixed(2)}</span>
+                    <span className="text-xl font-black font-mono tracking-tight text-rose-400">₹{totalWithdrawn % 1 === 0 ? totalWithdrawn.toLocaleString('en-IN') : totalWithdrawn.toFixed(2)}</span>
                     <p className="text-[9px] text-slate-500 font-medium mt-1">Paid settlement claims</p>
                   </div>
                 </div>
@@ -1119,7 +1119,7 @@ export default function AdminSection({
                     <Wallet className="w-4 h-4 text-teal-400" />
                   </div>
                   <div className="mt-2.5">
-                    <span className="text-xl font-black font-mono tracking-tight text-white">₹{systemTotalBalance.toFixed(2)}</span>
+                    <span className="text-xl font-black font-mono tracking-tight text-white">₹{systemTotalBalance % 1 === 0 ? systemTotalBalance.toLocaleString('en-IN') : systemTotalBalance.toFixed(2)}</span>
                     <p className="text-[9px] text-slate-500 font-medium mt-1">Total outstanding liabilities</p>
                   </div>
                 </div>
@@ -1544,7 +1544,7 @@ export default function AdminSection({
                                 </div>
                                 <div>
                                   <span className="text-slate-500">Total Claimed: </span>
-                                  <strong className="text-amber-300 font-bold">₹{(pur.totalClaimed || 0).toFixed(2)}</strong>
+                                  <strong className="text-amber-300 font-bold">₹{(pur.totalClaimed || 0) % 1 === 0 ? (pur.totalClaimed || 0).toLocaleString('en-IN') : (pur.totalClaimed || 0).toFixed(2)}</strong>
                                 </div>
                               </div>
 
@@ -1604,11 +1604,11 @@ export default function AdminSection({
                   <div className="pt-4 border-t border-slate-800 grid grid-cols-2 gap-2 text-center">
                     <div className="bg-slate-950/40 p-2.5 rounded-2xl border border-slate-900">
                       <p className="text-[9px] text-slate-500 font-bold uppercase">Balance</p>
-                      <span className="text-xs font-black text-white font-mono">₹{editingUser.balance.toFixed(2)}</span>
+                      <span className="text-xs font-black text-white font-mono">₹{editingUser.balance % 1 === 0 ? editingUser.balance.toLocaleString('en-IN') : editingUser.balance.toFixed(2)}</span>
                     </div>
                     <div className="bg-slate-950/40 p-2.5 rounded-2xl border border-slate-900">
                       <p className="text-[9px] text-slate-500 font-bold uppercase">Total Earned</p>
-                      <span className="text-xs font-black text-teal-300 font-mono">₹{editingUser.totalEarnings.toFixed(2)}</span>
+                      <span className="text-xs font-black text-teal-300 font-mono">₹{editingUser.totalEarnings % 1 === 0 ? editingUser.totalEarnings.toLocaleString('en-IN') : editingUser.totalEarnings.toFixed(2)}</span>
                     </div>
                   </div>
                 </motion.div>
@@ -1793,7 +1793,7 @@ export default function AdminSection({
                               </span>
                               <p className="text-[9px] font-mono text-slate-500 mt-0.5">{tx.date}</p>
                             </div>
-                            <span className="text-sm font-black text-emerald-400 font-mono">₹{tx.amount.toFixed(2)}</span>
+                            <span className="text-sm font-black text-emerald-400 font-mono">₹{tx.amount % 1 === 0 ? tx.amount.toLocaleString('en-IN') : tx.amount.toFixed(2)}</span>
                           </div>
 
                           {tx.utr && (
@@ -1872,7 +1872,7 @@ export default function AdminSection({
                               </span>
                               <p className="text-[9px] font-mono text-slate-500 mt-0.5">{tx.date}</p>
                             </div>
-                            <span className="text-sm font-black text-rose-400 font-mono">₹{tx.amount.toFixed(2)}</span>
+                            <span className="text-sm font-black text-rose-400 font-mono">₹{tx.amount % 1 === 0 ? tx.amount.toLocaleString('en-IN') : tx.amount.toFixed(2)}</span>
                           </div>
 
                           {/* Bank Details Display */}

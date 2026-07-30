@@ -207,11 +207,11 @@ export default function ProfileSection({
                         </div>
                         <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
                           <span className="text-[9px] font-bold text-gray-400 uppercase block">Total Claimed</span>
-                          <span className="text-xs font-black text-teal-950 font-sans">₹{item.totalClaimed.toFixed(2)}</span>
+                          <span className="text-xs font-black text-teal-950 font-sans">₹{item.totalClaimed % 1 === 0 ? item.totalClaimed.toLocaleString('en-IN') : item.totalClaimed.toFixed(2)}</span>
                         </div>
                         <div className="p-2 bg-emerald-50/40 rounded-xl border border-emerald-100/10">
                           <span className="text-[9px] font-bold text-emerald-600 uppercase block">Accruing Now</span>
-                          <span className="text-xs font-black text-emerald-600 font-sans animate-pulse">₹{accrued.toFixed(4)}</span>
+                          <span className="text-xs font-black text-emerald-600 font-sans animate-pulse">₹{accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(4)}</span>
                         </div>
                       </div>
 
@@ -224,7 +224,7 @@ export default function ProfileSection({
                           className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 disabled:from-gray-100 disabled:to-gray-150 disabled:text-gray-400 disabled:shadow-none text-white text-xs font-black rounded-xl shadow-md shadow-emerald-100 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
                         >
                           <TrendingUp className="w-4 h-4 animate-bounce" />
-                          <span>Claim Accumulated ₹{accrued.toFixed(2)}</span>
+                          <span>Claim Accumulated ₹{accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)}</span>
                         </button>
                       )}
                     </div>
@@ -439,7 +439,7 @@ export default function ProfileSection({
                           ? 'text-emerald-600'
                           : 'text-rose-600'
                       }`}>
-                        {tx.type === 'recharge' || tx.type === 'checkin' || tx.type === 'commission' || tx.type === 'claim' ? '+' : '-'}₹{tx.amount.toFixed(2)}
+                        {tx.type === 'recharge' || tx.type === 'checkin' || tx.type === 'commission' || tx.type === 'claim' ? '+' : '-'}₹{tx.amount % 1 === 0 ? tx.amount.toLocaleString('en-IN') : tx.amount.toFixed(2)}
                       </p>
                       <span className={`inline-block mt-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
                         tx.status === 'success' ? 'bg-emerald-50 text-emerald-600' : tx.status === 'pending' ? 'bg-amber-50 text-amber-600 animate-pulse' : 'bg-red-50 text-red-600'

@@ -202,7 +202,7 @@ export default function TeamSection({ teamMembers }: TeamSectionProps) {
                     {member.commissionEarned > 0 && (
                       <p className="text-[10px] font-black text-emerald-600 mt-0.5 flex items-center justify-end gap-0.5 uppercase tracking-wider">
                         <TrendingUp className="w-3 h-3 text-emerald-500" />
-                        <span>+₹{member.commissionEarned.toFixed(2)}</span>
+                        <span>+₹{member.commissionEarned % 1 === 0 ? member.commissionEarned.toLocaleString('en-IN') : member.commissionEarned.toFixed(2)}</span>
                       </p>
                     )}
                   </div>

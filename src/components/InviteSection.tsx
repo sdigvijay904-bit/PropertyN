@@ -76,7 +76,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-[0_4px_10px_rgba(124,58,237,0.2)] mb-2.5 shrink-0">
             <CreditCard className="w-5 h-5" />
           </div>
-          <p className="text-lg font-black text-slate-900 font-sans tracking-tight">₹{totalEarnedCommission.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <p className="text-lg font-black text-slate-900 font-sans tracking-tight">₹{totalEarnedCommission.toLocaleString('en-IN')}</p>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mt-0.5">Earned</p>
         </div>
 

@@ -258,7 +258,7 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
           </div>
           <div className="text-right">
             <span className="text-[9px] text-teal-200 block uppercase font-bold tracking-wider">Available Wallet</span>
-            <span className="text-sm font-black text-emerald-400">₹{user.balance.toFixed(2)}</span>
+            <span className="text-sm font-black text-emerald-400">₹{user.balance % 1 === 0 ? user.balance.toLocaleString('en-IN') : user.balance.toFixed(2)}</span>
           </div>
         </div>
       </div>

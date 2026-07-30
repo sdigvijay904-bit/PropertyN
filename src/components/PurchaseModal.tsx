@@ -186,12 +186,12 @@ export default function PurchaseModal({
                 <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Total Payable</span>
                 <span className="text-xs font-black text-emerald-600 block flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  Total Profit: ₹{totalProfit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  Total Profit: ₹{totalProfit.toLocaleString('en-IN')}
                 </span>
               </div>
               <div className="text-right">
                 <span className="text-2xl font-black text-emerald-700 font-sans">
-                  ₹{totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ₹{totalPrice.toLocaleString('en-IN')}
                 </span>
               </div>
             </div>

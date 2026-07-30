@@ -65,9 +65,10 @@ export default function WithdrawModal({
 
     if (amount > withdrawableLimit) {
       if (amount > user.balance) {
-        setError(`Insufficient wallet balance. Available: ₹${user.balance.toFixed(2)}`);
+        setError(`Insufficient wallet balance. Available: ₹${user.balance % 1 === 0 ? user.balance.toLocaleString('en-IN') : user.balance.toFixed(2)}`);
       } else {
-        setError(`निकासी सीमा पार: आप केवल अपने प्लान की दैनिक कमाई ही निकाल सकते हैं। आपकी उपलब्ध निकासी योग्य सीमा ₹${maxWithdrawablePlanEarnings.toFixed(2)} है। (Withdrawal limit exceeded: You can only withdraw your daily plan earnings. Your current withdrawable limit is ₹${maxWithdrawablePlanEarnings.toFixed(2)}.)`);
+        const fmtMax = maxWithdrawablePlanEarnings % 1 === 0 ? maxWithdrawablePlanEarnings.toLocaleString('en-IN') : maxWithdrawablePlanEarnings.toFixed(2);
+        setError(`निकासी सीमा पार: आप केवल अपने प्लान की दैनिक कमाई ही निकाल सकते हैं। आपकी उपलब्ध निकासी योग्य सीमा ₹${fmtMax} है। (Withdrawal limit exceeded: You can only withdraw your daily plan earnings. Your current withdrawable limit is ₹${fmtMax}.)`);
       }
       return;
     }
@@ -136,7 +137,7 @@ export default function WithdrawModal({
               <div className="flex justify-between items-center pb-2.5 border-b border-emerald-100/50">
                 <div>
                   <span className="text-[10px] font-black text-emerald-600 block uppercase tracking-widest">Withdrawable Limit / निकासी योग्य दैनिक आय</span>
-                  <span className="text-2xl font-black text-emerald-950 font-sans">₹{withdrawableLimit.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-emerald-950 font-sans">₹{withdrawableLimit % 1 === 0 ? withdrawableLimit.toLocaleString('en-IN') : withdrawableLimit.toFixed(2)}</span>
                 </div>
                 <div className="bg-emerald-100/80 px-3 py-1 rounded-full flex items-center gap-1.5">
                   <Landmark className="w-3.5 h-3.5 text-emerald-700" />
@@ -147,15 +148,15 @@ export default function WithdrawModal({
               <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                 <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Wallet Balance</span>
-                  <span className="text-xs font-extrabold text-slate-800 block mt-0.5">₹{user.balance.toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-slate-800 block mt-0.5">₹{user.balance % 1 === 0 ? user.balance.toLocaleString('en-IN') : user.balance.toFixed(2)}</span>
                 </div>
                 <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Plan Yield</span>
-                  <span className="text-xs font-extrabold text-teal-700 block mt-0.5">₹{totalPlanEarnings.toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-teal-700 block mt-0.5">₹{totalPlanEarnings % 1 === 0 ? totalPlanEarnings.toLocaleString('en-IN') : totalPlanEarnings.toFixed(2)}</span>
                 </div>
                 <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Withdrawn</span>
-                  <span className="text-xs font-extrabold text-rose-600 block mt-0.5">₹{totalWithdrawnAmount.toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-rose-600 block mt-0.5">₹{totalWithdrawnAmount % 1 === 0 ? totalWithdrawnAmount.toLocaleString('en-IN') : totalWithdrawnAmount.toFixed(2)}</span>
                 </div>
               </div>
               <p className="text-[9.5px] text-emerald-700 font-bold text-center mt-1">

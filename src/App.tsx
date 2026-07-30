@@ -1408,7 +1408,7 @@ export default function App() {
     if (userProfile.balance < totalCost) {
       setRechargePrefillAmount(totalCost);
       setIsRechargeOpen(true);
-      triggerToast(`Insufficient balance! Redirected to the deposit/recharge section to add ₹${(totalCost - userProfile.balance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`, 'info');
+      triggerToast(`Insufficient balance! Redirected to the deposit/recharge section to add ₹${Math.round(totalCost - userProfile.balance).toLocaleString('en-IN')}.`, 'info');
       return;
     }
 
@@ -1515,8 +1515,8 @@ export default function App() {
     saveStateToStorage(updatedUser, plans, updatedPurchases, [...transactions, claimTx], teamMembers);
     triggerToast(
       isCompleting 
-        ? `Successfully claimed final ₹${accrued.toFixed(2)} ad revenues! Investment completed.` 
-        : `Successfully claimed ₹${accrued.toFixed(2)} ad revenues!`, 
+        ? `Successfully claimed final ₹${accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)} ad revenues! Investment completed.` 
+        : `Successfully claimed ₹${accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)} ad revenues!`, 
       'success'
     );
   };
@@ -1563,7 +1563,7 @@ export default function App() {
     }
 
     saveStateToStorage(userProfile, plans, purchases, [...transactions, rechargeTx], teamMembers);
-    triggerToast(`Recharge of ₹${amount.toFixed(2)} submitted! Waiting for Admin verification.`, 'info');
+    triggerToast(`Recharge of ₹${amount % 1 === 0 ? amount.toLocaleString('en-IN') : amount.toFixed(2)} submitted! Waiting for Admin verification.`, 'info');
   };
 
   // Withdraw Submission
@@ -1597,7 +1597,7 @@ export default function App() {
     }
 
     saveStateToStorage(updatedUser, plans, purchases, [...transactions, withdrawTx], teamMembers);
-    triggerToast(`Withdrawal of ₹${amount.toFixed(2)} requested! Waiting for Admin clearance.`, 'info');
+    triggerToast(`Withdrawal of ₹${amount % 1 === 0 ? amount.toLocaleString('en-IN') : amount.toFixed(2)} requested! Waiting for Admin clearance.`, 'info');
   };
 
   // Bank update helper
@@ -1879,7 +1879,7 @@ export default function App() {
             </div>
 
             {/* Main Curved White Card Container (rounded-t-[2.5rem] for luxurious compact rhythm) */}
-            <div className="bg-white text-slate-800 rounded-t-[2.5rem] px-5 pt-4 pb-4 flex-1 flex flex-col justify-between space-y-3 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
+            <div className="bg-white text-slate-800 rounded-t-[2.5rem] px-5 pt-5 pb-5 flex-1 flex flex-col justify-start space-y-4 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
               
               {/* Sleek Switch Toggle (Matches Screenshot 2's pill tabs) */}
               <div className="p-1 bg-slate-100 border border-slate-200 rounded-2xl flex relative shrink-0 shadow-inner">
@@ -1938,7 +1938,7 @@ export default function App() {
                       ? handleForgotVerifyOtp 
                       : handleForgotResetPassword
                   } 
-                  className="space-y-2.5 text-left flex-1 flex flex-col justify-center"
+                  className="space-y-3 text-left flex flex-col pt-1"
                 >
                   <div className="text-center pb-0.5">
                     <span className="text-[9.5px] bg-teal-50 text-teal-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
@@ -2053,7 +2053,7 @@ export default function App() {
                   </button>
                 </form>
               ) : (
-                <form onSubmit={authTab === 'login' ? handleLogin : handleRegister} className="space-y-2.5 text-left flex-1 flex flex-col justify-center">
+                <form onSubmit={authTab === 'login' ? handleLogin : handleRegister} className="space-y-3 text-left flex flex-col pt-1">
                 
                 {/* Full name (Register only) */}
                 {authTab === 'register' && (
@@ -2143,7 +2143,7 @@ export default function App() {
                 </div>
 
                 {authTab === 'login' && (
-                  <div className="flex justify-end px-1 -mt-0.5">
+                  <div className="flex items-center justify-between px-1 pt-0.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -2151,9 +2151,19 @@ export default function App() {
                         setAuthError('');
                         setForgotStep(1);
                       }}
-                      className="text-[10px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
+                      className="text-[10.5px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
                     >
                       Forgot Password?
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthTab('register');
+                        setAuthError('');
+                      }}
+                      className="text-[10.5px] font-bold text-emerald-600 hover:text-emerald-800 transition-colors cursor-pointer"
+                    >
+                      Register Account
                     </button>
                   </div>
                 )}
@@ -2193,6 +2203,24 @@ export default function App() {
                 </button>
               </form>
             )}
+
+              {/* Official Telegram Customer Support Icon Button */}
+              <div className="pt-6 pb-2 flex flex-col items-center justify-center gap-2 mt-auto">
+                <a
+                  href={localStorage.getItem('adpaint_tg_support') || 'https://t.me/PropertyN_Support'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-12 h-12 rounded-full bg-[#28a8ea] hover:bg-[#2092cc] text-white flex items-center justify-center shadow-lg shadow-sky-200 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+                  title="Contact Official Telegram Support"
+                >
+                  <svg className="w-6 h-6 fill-current translate-x-[-1px] translate-y-[1px]" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .54-1.43.53-.47-.01-1.37-.26-2.05-.48-.83-.27-1.49-.42-1.43-.88.03-.24.38-.49 1.04-.75 4.08-1.77 6.81-2.94 8.18-3.51 3.9-1.62 4.71-1.9 5.24-1.91.12 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.37z"/>
+                  </svg>
+                </a>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Official Telegram Support
+                </span>
+              </div>
 
             </div>
 

@@ -417,9 +417,9 @@ export default function HomeSection({
         </div>
 
         {/* Render Cards */}
-        <div className="px-4 space-y-5">
+        <div className="px-4 space-y-3.5">
           {filteredPlans.length === 0 ? (
-            <div className="py-12 text-center text-slate-400 text-xs font-bold bg-white rounded-2xl border border-slate-100">
+            <div className="py-8 text-center text-slate-400 text-xs font-bold bg-white rounded-xl border border-slate-100">
               No matching properties found!
             </div>
           ) : (
@@ -429,10 +429,10 @@ export default function HomeSection({
                 onClick={() => {
                   onPurchasePlan(plan);
                 }}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 cursor-pointer transform hover:-translate-y-0.5"
+                className="bg-white rounded-xl overflow-hidden shadow-xs border border-slate-100 hover:shadow-md transition-all duration-300 cursor-pointer transform hover:-translate-y-0.5"
               >
                 {/* Product Cover image */}
-                <div className="h-44 relative overflow-hidden">
+                <div className="h-36 relative overflow-hidden">
                   <img
                     src={plan.image}
                     alt={plan.title}
@@ -441,55 +441,55 @@ export default function HomeSection({
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
 
                   {/* Floating Slot status */}
-                  <div className="absolute top-4 right-4 bg-white/95 text-slate-900 px-3 py-1 rounded-full text-[10px] font-extrabold shadow-sm border border-slate-100 flex items-center gap-1">
+                  <div className="absolute top-2.5 right-2.5 bg-white/95 text-slate-900 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold shadow-xs border border-slate-100 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span>{plan.slotsPurchased}/{plan.slotsMax} Slots Purchased</span>
                   </div>
 
                   {/* Cover Title Overlay */}
-                  <div className="absolute bottom-4 left-4 right-4 text-white">
-                    <h4 className="text-base font-black tracking-tight">{plan.title}</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="bg-emerald-600 px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-widest border border-emerald-400">
+                  <div className="absolute bottom-3 left-3.5 right-3.5 text-white">
+                    <h4 className="text-sm font-black tracking-tight">{plan.title}</h4>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="bg-emerald-600 px-1.5 py-0.5 rounded text-[8.5px] font-extrabold uppercase tracking-widest border border-emerald-400">
                         Approved
                       </span>
-                      <span className="text-[10px] text-emerald-100 font-medium">Verified sponsor earnings</span>
+                      <span className="text-[9.5px] text-emerald-100 font-medium">Verified sponsor earnings</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Grid Specifications */}
-                <div className="p-5 space-y-4">
-                  <div className="grid grid-cols-2 gap-3 text-left">
+                <div className="p-3.5 space-y-3">
+                  <div className="grid grid-cols-2 gap-2.5 text-left">
                     {/* Price */}
-                    <div className="relative p-3 px-4 bg-gradient-to-b from-white to-slate-50 border border-slate-200/80 shadow-[0_5px_12px_-4px_rgba(0,0,0,0.04),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex flex-col justify-center min-h-[68px]">
+                    <div className="relative p-2.5 px-3.5 bg-gradient-to-b from-white to-slate-50 border border-slate-200/80 shadow-2xs rounded-xl flex flex-col justify-center min-h-[52px]">
                       <div className="min-w-0">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Price</span>
-                        <span className="text-[13px] font-black text-slate-900 font-sans mt-2 block whitespace-nowrap">₹{plan.price.toLocaleString('en-IN')}</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block leading-none">Price</span>
+                        <span className="text-[12.5px] font-black text-slate-900 font-sans mt-0.5 block whitespace-nowrap">₹{plan.price.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
 
                     {/* Daily Income */}
-                    <div className="relative p-3 px-4 bg-gradient-to-b from-white to-amber-50/10 border border-amber-100/70 shadow-[0_5px_12px_-4px_rgba(245,158,11,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex flex-col justify-center min-h-[68px]">
+                    <div className="relative p-2.5 px-3.5 bg-gradient-to-b from-white to-amber-50/10 border border-amber-100/70 shadow-2xs rounded-xl flex flex-col justify-center min-h-[52px]">
                       <div className="min-w-0">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Daily Income</span>
-                        <span className="text-[13px] font-black text-amber-600 font-sans mt-2 block whitespace-nowrap">₹{plan.dailyIncome.toLocaleString('en-IN')}</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block leading-none">Daily Income</span>
+                        <span className="text-[12.5px] font-black text-amber-600 font-sans mt-0.5 block whitespace-nowrap">₹{plan.dailyIncome.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
 
                     {/* Duration */}
-                    <div className="relative p-3 px-4 bg-gradient-to-b from-white to-sky-50/10 border border-sky-100/70 shadow-[0_5px_12px_-4px_rgba(14,165,233,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex flex-col justify-center min-h-[68px]">
+                    <div className="relative p-2.5 px-3.5 bg-gradient-to-b from-white to-sky-50/10 border border-sky-100/70 shadow-2xs rounded-xl flex flex-col justify-center min-h-[52px]">
                       <div className="min-w-0">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Duration</span>
-                        <span className="text-[13px] font-black text-slate-900 font-sans mt-2 block whitespace-nowrap">{plan.durationDays} Days</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block leading-none">Duration</span>
+                        <span className="text-[12.5px] font-black text-slate-900 font-sans mt-0.5 block whitespace-nowrap">{plan.durationDays} Days</span>
                       </div>
                     </div>
 
                     {/* Total Profit */}
-                    <div className="relative p-3 px-4 bg-gradient-to-b from-white to-emerald-50/10 border border-emerald-100/70 shadow-[0_5px_12px_-4px_rgba(16,185,129,0.05),_0_2px_0_rgba(255,255,255,0.95)_inset] rounded-2xl flex flex-col justify-center min-h-[68px]">
+                    <div className="relative p-2.5 px-3.5 bg-gradient-to-b from-white to-emerald-50/10 border border-emerald-100/70 shadow-2xs rounded-xl flex flex-col justify-center min-h-[52px]">
                       <div className="min-w-0">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block leading-none">Total Profit</span>
-                        <span className="text-[13px] font-black text-emerald-600 font-sans mt-2 block whitespace-nowrap">₹{plan.totalProfit.toLocaleString('en-IN')}</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block leading-none">Total Profit</span>
+                        <span className="text-[12.5px] font-black text-emerald-600 font-sans mt-0.5 block whitespace-nowrap">₹{plan.totalProfit.toLocaleString('en-IN')}</span>
                       </div>
                     </div>
                   </div>
@@ -501,9 +501,9 @@ export default function HomeSection({
                       e.stopPropagation();
                       onPurchasePlan(plan);
                     }}
-                    className="w-full py-4.5 bg-gradient-to-r from-emerald-500 via-teal-600 to-teal-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-[0_6px_20px_rgba(109,40,217,0.25),_0_2px_0_rgba(255,255,255,0.35)_inset] border-t border-white/20 flex items-center justify-center gap-2 hover:opacity-95 active:scale-95 transition-all cursor-pointer group"
+                    className="w-full py-3 bg-gradient-to-r from-emerald-500 via-teal-600 to-teal-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md shadow-emerald-200/50 border-t border-white/20 flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-95 transition-all cursor-pointer group"
                   >
-                    <ShoppingBag className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
+                    <ShoppingBag className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     <span>Purchase Now</span>
                   </button>
                 </div>

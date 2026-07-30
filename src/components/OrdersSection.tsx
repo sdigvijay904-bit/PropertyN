@@ -77,11 +77,11 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
           </div>
           <div className="border-x border-slate-100 space-y-1">
             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Live Yield</span>
-            <span className="text-base font-black text-emerald-600 font-sans block">₹{currentUnclaimedLive.toFixed(3)}</span>
+            <span className="text-base font-black text-emerald-600 font-sans block">₹{currentUnclaimedLive % 1 === 0 ? currentUnclaimedLive.toLocaleString('en-IN') : currentUnclaimedLive.toFixed(3)}</span>
           </div>
           <div className="space-y-1">
             <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Total Claimed</span>
-            <span className="text-base font-black text-teal-600 font-sans block">₹{totalClaimed.toFixed(2)}</span>
+            <span className="text-base font-black text-teal-600 font-sans block">₹{totalClaimed % 1 === 0 ? totalClaimed.toLocaleString('en-IN') : totalClaimed.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -132,11 +132,11 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                     </div>
                     <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
                       <span className="text-[9px] font-bold text-gray-400 uppercase block">Total Claimed</span>
-                      <span className="text-xs font-black text-teal-950 font-sans">₹{item.totalClaimed.toFixed(2)}</span>
+                      <span className="text-xs font-black text-teal-950 font-sans">₹{item.totalClaimed % 1 === 0 ? item.totalClaimed.toLocaleString('en-IN') : item.totalClaimed.toFixed(2)}</span>
                     </div>
                     <div className="p-2 bg-emerald-50/40 rounded-xl border border-emerald-100/10">
                       <span className="text-[9px] font-bold text-emerald-600 uppercase block">Accruing Now</span>
-                      <span className="text-xs font-black text-emerald-600 font-sans animate-pulse">₹{accrued.toFixed(4)}</span>
+                      <span className="text-xs font-black text-emerald-600 font-sans animate-pulse">₹{accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(4)}</span>
                     </div>
                   </div>
 
@@ -149,7 +149,7 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                       className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 disabled:from-gray-100 disabled:to-gray-150 disabled:text-gray-400 disabled:shadow-none text-white text-xs font-black rounded-xl shadow-md shadow-emerald-100/30 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
                     >
                       <TrendingUp className="w-3.5 h-3.5 animate-bounce" />
-                      <span>Claim Accumulated ₹{accrued.toFixed(2)}</span>
+                      <span>Claim Accumulated ₹{accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)}</span>
                     </button>
                   </div>
                 </div>
@@ -189,7 +189,7 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                     </div>
                     <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
                       <span className="text-[9px] font-bold text-gray-400 uppercase block">Total Claimed</span>
-                      <span className="text-xs font-black text-slate-700 font-sans">₹{item.totalClaimed.toFixed(2)}</span>
+                      <span className="text-xs font-black text-slate-700 font-sans">₹{item.totalClaimed % 1 === 0 ? item.totalClaimed.toLocaleString('en-IN') : item.totalClaimed.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

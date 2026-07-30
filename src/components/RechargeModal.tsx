@@ -527,7 +527,7 @@ export default function RechargeModal({
                   <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-lg pointer-events-none"></div>
                   <div className="relative z-10">
                     <span className="text-[9px] font-extrabold text-pink-100 uppercase tracking-widest block">PAYABLE AMOUNT</span>
-                    <span className="text-2xl font-black font-sans tracking-wide block mt-0.5">₹{parseFloat(amountInput).toLocaleString('en-IN')}.00</span>
+                    <span className="text-2xl font-black font-sans tracking-wide block mt-0.5">₹{parseFloat(amountInput).toLocaleString('en-IN')}</span>
                   </div>
                   <button
                     type="button"
