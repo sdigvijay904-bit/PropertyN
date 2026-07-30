@@ -2204,22 +2204,35 @@ export default function App() {
               </form>
             )}
 
-              {/* Official Telegram Customer Support Icon Button */}
-              <div className="pt-6 pb-2 flex flex-col items-center justify-center gap-2 mt-auto">
+              {/* Official Telegram Channel & Support Links */}
+              <div className="pt-4 pb-2 flex flex-col items-center justify-center gap-2.5 mt-auto">
+                <a
+                  href={localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 rounded-xl bg-[#28a8ea] hover:bg-[#2092cc] text-white flex items-center justify-center gap-2.5 shadow-md shadow-sky-200/70 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
+                  title="Join Official Telegram Channel"
+                >
+                  <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .54-1.43.53-.47-.01-1.37-.26-2.05-.48-.83-.27-1.49-.42-1.43-.88.03-.24.38-.49 1.04-.75 4.08-1.77 6.81-2.94 8.18-3.51 3.9-1.62 4.71-1.9 5.24-1.91.12 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.37z"/>
+                  </svg>
+                  <span className="text-xs font-black uppercase tracking-wider">
+                    Join Telegram Channel
+                  </span>
+                </a>
+
                 <a
                   href={localStorage.getItem('adpaint_tg_support') || 'https://t.me/PropertyN_Support'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-12 h-12 rounded-full bg-[#28a8ea] hover:bg-[#2092cc] text-white flex items-center justify-center shadow-lg shadow-sky-200 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+                  className="text-[11px] font-extrabold text-sky-600 hover:text-sky-800 flex items-center gap-1.5 transition-colors cursor-pointer"
                   title="Contact Official Telegram Support"
                 >
-                  <svg className="w-6 h-6 fill-current translate-x-[-1px] translate-y-[1px]" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 fill-current text-[#28a8ea] shrink-0" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .54-1.43.53-.47-.01-1.37-.26-2.05-.48-.83-.27-1.49-.42-1.43-.88.03-.24.38-.49 1.04-.75 4.08-1.77 6.81-2.94 8.18-3.51 3.9-1.62 4.71-1.9 5.24-1.91.12 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.37z"/>
                   </svg>
+                  <span>Need help? Contact Customer Support</span>
                 </a>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Official Telegram Support
-                </span>
               </div>
 
             </div>
