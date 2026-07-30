@@ -2039,7 +2039,7 @@ export default function App() {
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="FULL Name"
+                        placeholder="FULL NAME"
                         className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>
@@ -2056,7 +2056,7 @@ export default function App() {
                       maxLength={10}
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Enter your number"
+                      placeholder="MOBILE NUMBER"
                       className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                     />
                   </div>
@@ -2074,7 +2074,7 @@ export default function App() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={authTab === 'register' ? "CREATE PASSWORD" : "PASSWORD"}
-                      className="flex-1 pl-3 pr-8 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
+                      className="flex-1 pl-3 pr-8 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                     />
                     <button
                       type="button"
@@ -2122,7 +2122,7 @@ export default function App() {
                         value={invitationCode}
                         onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, ''))}
                         placeholder="INVITATION CODE"
-                        className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
+                        className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>
                   </div>
