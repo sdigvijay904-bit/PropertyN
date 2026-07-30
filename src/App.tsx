@@ -28,6 +28,7 @@ import PurchaseModal from './components/PurchaseModal';
 import WelcomeNoticeModal from './components/WelcomeNoticeModal';
 import DownloadAppModal from './components/DownloadAppModal';
 import SupportAgentAvatar from './components/SupportAgentAvatar';
+import { formatTelegramUrl, openTelegramUrl } from './lib/telegram';
 
 import {
   firestoreCheckPhone,
@@ -1764,8 +1765,7 @@ export default function App() {
                 <motion.button
                   type="button"
                   onClick={() => {
-                    const tgSupport = localStorage.getItem('adpaint_tg_support') || 'https://t.me/PropertyN_Support';
-                    window.open(tgSupport, '_blank');
+                    openTelegramUrl(localStorage.getItem('adpaint_tg_support'), 'https://t.me/PropertyN_Support');
                   }}
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1, y: [0, -6, 0] }}
@@ -2207,7 +2207,11 @@ export default function App() {
               {/* Official Telegram Channel & Support Links */}
               <div className="pt-4 pb-2 flex flex-col items-center justify-center gap-2.5 mt-auto">
                 <a
-                  href={localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99'}
+                  href={formatTelegramUrl(localStorage.getItem('adpaint_tg_channel'), 'https://t.me/PropertyN_99')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openTelegramUrl(localStorage.getItem('adpaint_tg_channel'), 'https://t.me/PropertyN_99');
+                  }}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full py-2.5 px-4 rounded-xl bg-[#28a8ea] hover:bg-[#2092cc] text-white flex items-center justify-center gap-2.5 shadow-md shadow-sky-200/70 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
@@ -2222,7 +2226,11 @@ export default function App() {
                 </a>
 
                 <a
-                  href={localStorage.getItem('adpaint_tg_support') || 'https://t.me/PropertyN_Support'}
+                  href={formatTelegramUrl(localStorage.getItem('adpaint_tg_support'), 'https://t.me/PropertyN_Support')}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openTelegramUrl(localStorage.getItem('adpaint_tg_support'), 'https://t.me/PropertyN_Support');
+                  }}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[11px] font-extrabold text-sky-600 hover:text-sky-800 flex items-center gap-1.5 transition-colors cursor-pointer"

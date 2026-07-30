@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Wallet, Landmark, Send, HelpCircle, ShieldCheck, Sparkles, ShoppingBag, Coins, BadgeAlert, ArrowUpRight, TrendingUp, Calendar, Award, Heart, Search, X, Star, Info, ChevronRight, MapPin, Percent, Plus, Minus, Check, Smartphone, Download, Banknote, Settings, Volume2, Megaphone } from 'lucide-react';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
+import { openTelegramUrl } from '../lib/telegram';
 
 interface HomeSectionProps {
   user: UserProfile;
@@ -351,7 +352,7 @@ export default function HomeSection({
         {/* CHANNEL */}
         <button
           type="button"
-          onClick={() => { window.open(tgChannel, '_blank'); }}
+          onClick={() => { openTelegramUrl(tgChannel, 'https://t.me/PropertyN_99'); }}
           className="flex flex-col items-center space-y-1.5 cursor-pointer group"
         >
           <div className="w-13 h-13 rounded-full bg-amber-100/80 text-amber-600 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">

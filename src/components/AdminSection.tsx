@@ -15,6 +15,7 @@ import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { cleanUndefined } from '../lib/db';
 import { firebaseService } from '../firebase/config';
+import { formatTelegramUrl } from '../lib/telegram';
 
 
 interface AdminSectionProps {
@@ -2405,10 +2406,12 @@ export default function AdminSection({
                     triggerToast('All fields are required', 'error');
                     return;
                   }
-                  localStorage.setItem('adpaint_tg_channel', tgChannelInput.trim());
-                  localStorage.setItem('adpaint_tg_support', tgSupportInput.trim());
-                  setSavedTgChannel(tgChannelInput.trim());
-                  setSavedTgSupport(tgSupportInput.trim());
+                  const cleanChannel = formatTelegramUrl(tgChannelInput.trim(), 'https://t.me/PropertyN_99');
+                  const cleanSupport = formatTelegramUrl(tgSupportInput.trim(), 'https://t.me/PropertyN_Support');
+                  localStorage.setItem('adpaint_tg_channel', cleanChannel);
+                  localStorage.setItem('adpaint_tg_support', cleanSupport);
+                  setSavedTgChannel(cleanChannel);
+                  setSavedTgSupport(cleanSupport);
                   onSyncConfig?.();
                   triggerToast('Telegram settings updated successfully!', 'success');
                 }} className="space-y-4">

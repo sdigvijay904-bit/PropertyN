@@ -6,6 +6,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Info, X, Award, Gift, Landmark, Wallet, Clock, Send } from 'lucide-react';
+import { openTelegramUrl } from '../lib/telegram';
 
 interface WelcomeNoticeModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeMod
   const tgChannel = localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99';
 
   const handleTelegramJoin = () => {
-    window.open(tgChannel, '_blank');
+    openTelegramUrl(tgChannel, 'https://t.me/PropertyN_99');
     onClose();
   };
 
