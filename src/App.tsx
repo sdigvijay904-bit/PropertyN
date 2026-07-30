@@ -1856,14 +1856,14 @@ export default function App() {
             <div className="bg-white text-slate-800 rounded-t-[2.5rem] px-5 pt-5 pb-5 flex-1 flex flex-col justify-start space-y-4 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
               
               {/* Sleek Switch Toggle (Matches Screenshot 2's pill tabs) */}
-              <div className="p-1 bg-slate-100 border border-slate-200 rounded-2xl flex relative shrink-0 shadow-inner">
+              <div className="p-1.5 bg-slate-100 border border-slate-200 rounded-2xl flex relative shrink-0 shadow-inner">
                 <button
                   type="button"
                   onClick={() => {
                     setAuthTab('login');
                     setAuthError('');
                   }}
-                  className={`flex-1 py-2 text-xs font-black rounded-xl transition-all duration-300 relative z-10 ${
+                  className={`flex-1 py-2.5 text-sm font-extrabold rounded-xl transition-all duration-300 relative z-10 tracking-wide ${
                     authTab === 'login'
                       ? 'text-white'
                       : 'text-slate-700 hover:text-slate-950 font-black'
@@ -1884,7 +1884,7 @@ export default function App() {
                     setAuthTab('register');
                     setAuthError('');
                   }}
-                  className={`flex-1 py-2 text-xs font-black rounded-xl transition-all duration-300 relative z-10 ${
+                  className={`flex-1 py-2.5 text-sm font-extrabold rounded-xl transition-all duration-300 relative z-10 tracking-wide ${
                     authTab === 'register'
                       ? 'text-white'
                       : 'text-slate-700 hover:text-slate-950 font-black'
@@ -2032,15 +2032,15 @@ export default function App() {
                 {/* Full name (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">FULL NAME</label>
+                    <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">Full Name</label>
                     <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                       <input
                         type="text"
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="FULL NAME"
-                        className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                        placeholder="Full Name"
+                        className="w-full px-3.5 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2048,7 +2048,7 @@ export default function App() {
 
                 {/* Mobile number */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">MOBILE NUMBER</label>
+                  <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">Mobile Number</label>
                   <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                     <input
                       type="tel"
@@ -2056,16 +2056,16 @@ export default function App() {
                       maxLength={10}
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                      placeholder="MOBILE NUMBER"
-                      className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                      placeholder="Mobile Number"
+                      className="w-full px-3.5 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Password Input */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">
-                    {authTab === 'register' ? 'CREATE PASSWORD' : 'PASSWORD'}
+                  <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">
+                    {authTab === 'register' ? 'Create Password' : 'Password'}
                   </label>
                   <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                     <input
@@ -2073,8 +2073,8 @@ export default function App() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder={authTab === 'register' ? "CREATE PASSWORD" : "PASSWORD"}
-                      className="flex-1 pl-3 pr-8 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                      placeholder={authTab === 'register' ? "Create Password" : "Password"}
+                      className="flex-1 pl-3.5 pr-9 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                     />
                     <button
                       type="button"
@@ -2095,7 +2095,7 @@ export default function App() {
                         setAuthError('');
                         setForgotStep(1);
                       }}
-                      className="text-[10.5px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
+                      className="text-[11px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
                     >
                       Forgot Password?
                     </button>
@@ -2105,7 +2105,7 @@ export default function App() {
                         setAuthTab('register');
                         setAuthError('');
                       }}
-                      className="text-[10.5px] font-bold text-emerald-600 hover:text-emerald-800 transition-colors cursor-pointer"
+                      className="text-[11px] font-bold text-emerald-600 hover:text-emerald-800 transition-colors cursor-pointer"
                     >
                       Register Account
                     </button>
@@ -2115,14 +2115,14 @@ export default function App() {
                 {/* Invitation Code (Register only) */}
                 {authTab === 'register' && (
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">INVITATION CODE (OPTIONAL)</label>
+                    <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">Invitation Code (Optional)</label>
                     <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                       <input
                         type="text"
                         value={invitationCode}
                         onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, ''))}
-                        placeholder="INVITATION CODE"
-                        className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                        placeholder="Invitation Code"
+                        className="w-full px-3.5 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -2140,10 +2140,10 @@ export default function App() {
 
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-[11px] shadow-md shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-2"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none tracking-wide mt-2"
                 >
                   <UserCheck className="w-4 h-4" />
-                  <span>{authTab === 'login' ? 'Login Now' : 'Create Account'}</span>
+                  <span>{authTab === 'login' ? 'Login Now' : 'Register Now'}</span>
                 </button>
               </form>
             )}
