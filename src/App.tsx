@@ -1352,6 +1352,16 @@ export default function App() {
     pushStateToServer(userProfileRef.current, plansRef.current, purchasesRef.current, updated, usersListRef.current);
   };
 
+  const handleAdminSetPurchases = (action: React.SetStateAction<PurchaseRecord[]>) => {
+    const updated = typeof action === 'function' ? (action as Function)(purchasesRef.current) : action;
+    
+    localStorage.setItem('adpaint_purchases', JSON.stringify(updated));
+    purchasesRef.current = updated;
+    setPurchases(updated);
+    
+    pushStateToServer(userProfileRef.current, plansRef.current, updated, transactionsRef.current, usersListRef.current);
+  };
+
   // Daily Check-In Option
   const handleDailyCheckIn = () => {
     if (!userProfile) return;
@@ -1660,6 +1670,7 @@ export default function App() {
               transactions={transactions}
               setTransactions={handleAdminSetTransactions}
               purchases={purchases}
+              setPurchases={handleAdminSetPurchases}
               onClose={handleLogout}
               triggerToast={triggerToast}
               onUpdateCurrentUserProfile={(profile) => {
@@ -1852,33 +1863,33 @@ export default function App() {
             <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none z-0"></div>
             
             {/* Elegant spacing at the top (PropertyN brand logo and name re-added as requested) */}
-            <div className="text-center pt-8 pb-5 z-10 px-6 relative flex flex-col items-center">
+            <div className="text-center pt-4 pb-2 z-10 px-5 relative flex flex-col items-center">
               {/* Premium Logo Ring Icon */}
-              <div className="w-14 h-14 rounded-3xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-lg border border-white/15 mb-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md">
-                  <Home className="w-5.5 h-5.5 stroke-[2.5]" />
+              <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-lg border border-white/15 mb-1.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md">
+                  <Home className="w-4.5 h-4.5 stroke-[2.5]" />
                 </div>
               </div>
-              <h1 className="text-2xl font-black tracking-[0.15em] text-white font-sans uppercase">
+              <h1 className="text-xl font-black tracking-[0.15em] text-white font-sans uppercase">
                 Property<span className="text-emerald-400">N</span>
               </h1>
-              <p className="text-[10px] text-teal-100 font-extrabold tracking-widest mt-1 uppercase opacity-90">
+              <p className="text-[9.5px] text-teal-100 font-extrabold tracking-widest mt-0.5 uppercase opacity-90">
                 {authTab === 'login' ? 'Secure Member Login' : 'Create your account in seconds'}
               </p>
             </div>
 
-            {/* Main Curved White Card Container (rounded-t-[3rem] for luxurious visual rhythm) */}
-            <div className="bg-white text-slate-800 rounded-t-[3rem] px-6 pt-8 pb-6 flex-1 flex flex-col justify-between space-y-6 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
+            {/* Main Curved White Card Container (rounded-t-[2.5rem] for luxurious compact rhythm) */}
+            <div className="bg-white text-slate-800 rounded-t-[2.5rem] px-5 pt-4 pb-4 flex-1 flex flex-col justify-between space-y-3 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
               
               {/* Sleek Switch Toggle (Matches Screenshot 2's pill tabs) */}
-              <div className="p-1.5 bg-slate-100 border border-slate-200 rounded-3xl flex relative shrink-0 shadow-inner">
+              <div className="p-1 bg-slate-100 border border-slate-200 rounded-2xl flex relative shrink-0 shadow-inner">
                 <button
                   type="button"
                   onClick={() => {
                     setAuthTab('login');
                     setAuthError('');
                   }}
-                  className={`flex-1 py-3.5 text-xs font-black rounded-2xl transition-all duration-300 relative z-10 ${
+                  className={`flex-1 py-2 text-xs font-black rounded-xl transition-all duration-300 relative z-10 ${
                     authTab === 'login'
                       ? 'text-white'
                       : 'text-slate-700 hover:text-slate-950 font-black'
@@ -1887,7 +1898,7 @@ export default function App() {
                   {authTab === 'login' && (
                     <motion.div
                       layoutId="authActiveBg"
-                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl shadow-lg shadow-emerald-200 -z-10"
+                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl shadow-md shadow-emerald-200 -z-10"
                       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                     />
                   )}
@@ -1899,7 +1910,7 @@ export default function App() {
                     setAuthTab('register');
                     setAuthError('');
                   }}
-                  className={`flex-1 py-3.5 text-xs font-black rounded-2xl transition-all duration-300 relative z-10 ${
+                  className={`flex-1 py-2 text-xs font-black rounded-xl transition-all duration-300 relative z-10 ${
                     authTab === 'register'
                       ? 'text-white'
                       : 'text-slate-700 hover:text-slate-950 font-black'
@@ -1908,7 +1919,7 @@ export default function App() {
                   {authTab === 'register' && (
                     <motion.div
                       layoutId="authActiveBg"
-                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl shadow-lg shadow-emerald-200 -z-10"
+                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl shadow-md shadow-emerald-200 -z-10"
                       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                     />
                   )}
@@ -1927,19 +1938,19 @@ export default function App() {
                       ? handleForgotVerifyOtp 
                       : handleForgotResetPassword
                   } 
-                  className="space-y-4 text-left flex-1 flex flex-col justify-center"
+                  className="space-y-2.5 text-left flex-1 flex flex-col justify-center"
                 >
-                  <div className="text-center pb-1">
-                    <span className="text-[10px] bg-teal-50 text-teal-700 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                  <div className="text-center pb-0.5">
+                    <span className="text-[9.5px] bg-teal-50 text-teal-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                       Step {forgotStep} of 3: {forgotStep === 1 ? "Verify Number" : forgotStep === 2 ? "Enter OTP" : "Set New Password"}
                     </span>
                   </div>
 
                   {forgotStep === 1 && (
-                    <div className="space-y-1.5">
-                      <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">REGISTERED MOBILE NUMBER</label>
-                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
-                        <div className="w-12 h-10 rounded-2xl bg-slate-200 text-slate-900 border border-slate-300 flex items-center justify-center font-black text-xs shrink-0 font-mono">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest block px-1">REGISTERED MOBILE NUMBER</label>
+                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-xl p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
+                        <div className="w-10 h-8 rounded-lg bg-slate-200 text-slate-900 border border-slate-300 flex items-center justify-center font-black text-[11px] shrink-0 font-mono">
                           +91
                         </div>
                         <input
@@ -1949,18 +1960,18 @@ export default function App() {
                           value={forgotPhone}
                           onChange={(e) => setForgotPhone(e.target.value.replace(/\D/g, ''))}
                           placeholder="10-digit number"
-                          className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-wider"
+                          className="flex-1 pl-3 pr-3 py-1.5 bg-transparent text-xs font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-wider"
                         />
                       </div>
                     </div>
                   )}
 
                   {forgotStep === 2 && (
-                    <div className="space-y-1.5">
-                      <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">ENTER 4-DIGIT SECURITY OTP</label>
-                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
-                          <ShieldCheck className="w-4.5 h-4.5" />
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest block px-1">ENTER 4-DIGIT SECURITY OTP</label>
+                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-xl p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
+                          <ShieldCheck className="w-4 h-4" />
                         </div>
                         <input
                           type="text"
@@ -1969,21 +1980,21 @@ export default function App() {
                           value={forgotOtpInput}
                           onChange={(e) => setForgotOtpInput(e.target.value.replace(/\D/g, ''))}
                           placeholder="4-digit OTP"
-                          className="flex-1 pl-3.5 pr-4 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono text-center tracking-[0.25em]"
+                          className="flex-1 pl-3 pr-3 py-1.5 bg-transparent text-xs font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono text-center tracking-[0.25em]"
                         />
                       </div>
-                      <p className="text-[10px] text-slate-600 font-extrabold text-center mt-1">
-                        We sent a simulated OTP code to your phone. Check the top notifications toast or look at: <strong className="text-teal-700 font-mono text-xs">{forgotOtpCode}</strong>
+                      <p className="text-[9.5px] text-slate-600 font-extrabold text-center mt-0.5">
+                        Simulated OTP code: <strong className="text-teal-700 font-mono text-xs">{forgotOtpCode}</strong>
                       </p>
                     </div>
                   )}
 
                   {forgotStep === 3 && (
-                    <div className="space-y-1.5">
-                      <label className="text-[10.5px] font-black text-slate-800 uppercase tracking-widest block px-1">SET NEW PASSWORD</label>
-                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-[1.25rem] p-1.5 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
-                          <Lock className="w-4.5 h-4.5" />
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest block px-1">SET NEW PASSWORD</label>
+                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-xl p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
+                          <Lock className="w-4 h-4" />
                         </div>
                         <input
                           type={showForgotNewPassword ? 'text' : 'password'}
@@ -1991,14 +2002,14 @@ export default function App() {
                           value={forgotNewPassword}
                           onChange={(e) => setForgotNewPassword(e.target.value)}
                           placeholder="Min 6 characters"
-                          className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-widest"
+                          className="flex-1 pl-3 pr-8 py-1.5 bg-transparent text-xs font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-widest"
                         />
                         <button
                           type="button"
                           onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
-                          className="absolute right-3.5 text-emerald-400 hover:text-emerald-600 transition-colors"
+                          className="absolute right-3 text-emerald-400 hover:text-emerald-600 transition-colors"
                         >
-                          {showForgotNewPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                          {showForgotNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -2008,7 +2019,7 @@ export default function App() {
                     <motion.p
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="text-xs font-black text-rose-500 text-center bg-rose-50 border border-rose-100 py-2.5 px-3 rounded-xl mt-2"
+                      className="text-[11px] font-black text-rose-500 text-center bg-rose-50 border border-rose-100 py-2 px-2.5 rounded-lg mt-1"
                     >
                       ⚠️ {authError}
                     </motion.p>
@@ -2016,9 +2027,9 @@ export default function App() {
 
                   <button
                     type="submit"
-                    className="w-full py-4 rounded-[1.5rem] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-4"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-[11px] shadow-md shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-2"
                   >
-                    <UserCheck className="w-4.5 h-4.5" />
+                    <UserCheck className="w-4 h-4" />
                     <span>
                       {forgotStep === 1 
                         ? 'Request Verification OTP' 
@@ -2036,35 +2047,35 @@ export default function App() {
                       setForgotStep(1);
                       setShowForgotNewPassword(false);
                     }}
-                    className="w-full py-3.5 text-xs font-black text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 rounded-[1.25rem] flex items-center justify-center gap-2 transition-all cursor-pointer mt-1"
+                    className="w-full py-2.5 text-[11px] font-black text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer mt-0.5"
                   >
                     Back to Login
                   </button>
                 </form>
               ) : (
-                <form onSubmit={authTab === 'login' ? handleLogin : handleRegister} className="space-y-4 text-left flex-1 flex flex-col justify-center">
+                <form onSubmit={authTab === 'login' ? handleLogin : handleRegister} className="space-y-2.5 text-left flex-1 flex flex-col justify-center">
                 
                 {/* Full name (Register only) */}
                 {authTab === 'register' && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">FULL NAME</label>
-                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">FULL NAME</label>
+                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                       <input
                         type="text"
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         placeholder="FULL Name"
-                        className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                        className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                       />
                     </div>
                   </div>
                 )}
 
                 {/* Mobile number */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">MOBILE NUMBER</label>
-                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">MOBILE NUMBER</label>
+                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                     <input
                       type="tel"
                       required
@@ -2072,27 +2083,27 @@ export default function App() {
                       value={mobileNumber}
                       onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
                       placeholder="Enter your number"
-                      className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                      className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Verification Code / Captcha Verification */}
                 {authTab === 'register' && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">VERIFICATION CODE</label>
-                    <div className="grid grid-cols-12 gap-2.5 items-center">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">VERIFICATION CODE</label>
+                    <div className="grid grid-cols-12 gap-2 items-center">
                       <div className="col-span-4 sm:col-span-4">
                         <div 
                           onClick={generateCaptcha}
                           title="Click to refresh verification code"
-                          className="h-12 bg-emerald-50/80 border border-emerald-200/80 rounded-xl sm:rounded-2xl flex items-center justify-center font-mono font-black text-emerald-800 text-lg tracking-[0.25em] relative overflow-hidden select-none cursor-pointer hover:bg-emerald-100/80 active:scale-95 transition-all shadow-2xs group px-2"
+                          className="h-9 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-center font-mono font-black text-emerald-800 text-base tracking-[0.2em] relative overflow-hidden select-none cursor-pointer hover:bg-emerald-100/80 active:scale-95 transition-all shadow-2xs group px-2"
                         >
                           <div className="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(45deg,#047857,#047857_8px,#ecfdf5_8px,#ecfdf5_16px)] pointer-events-none"></div>
                           <span className="relative drop-shadow-2xs">{captchaCode}</span>
                         </div>
                       </div>
-                      <div className="col-span-8 sm:col-span-8 relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
+                      <div className="col-span-8 sm:col-span-8 relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                         <input
                           type="text"
                           required
@@ -2100,7 +2111,7 @@ export default function App() {
                           value={captchaInput}
                           onChange={(e) => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
                           placeholder="••••"
-                          className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-widest"
+                          className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-widest"
                         />
                       </div>
                     </div>
@@ -2108,31 +2119,31 @@ export default function App() {
                 )}
 
                 {/* Password Input */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">
                     {authTab === 'register' ? 'CREATE PASSWORD' : 'PASSWORD'}
                   </label>
-                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
+                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={authTab === 'register' ? "CREATE PASSWORD" : "PASSWORD"}
-                      className="flex-1 pl-3.5 pr-10 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
+                      className="flex-1 pl-3 pr-8 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 text-slate-500 hover:text-slate-800 transition-colors"
+                      className="absolute right-3 text-slate-500 hover:text-slate-800 transition-colors"
                     >
-                      {showPassword ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                      {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
                 {authTab === 'login' && (
-                  <div className="flex justify-end px-1 -mt-1">
+                  <div className="flex justify-end px-1 -mt-0.5">
                     <button
                       type="button"
                       onClick={() => {
@@ -2140,7 +2151,7 @@ export default function App() {
                         setAuthError('');
                         setForgotStep(1);
                       }}
-                      className="text-[11px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
+                      className="text-[10px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
                     >
                       Forgot Password?
                     </button>
@@ -2149,15 +2160,15 @@ export default function App() {
 
                 {/* Invitation Code (Register only) */}
                 {authTab === 'register' && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-black text-slate-900 uppercase tracking-wide block px-0.5">INVITATION CODE (OPTIONAL)</label>
-                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl sm:rounded-2xl p-1 focus-within:bg-white transition-all shadow-2xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">INVITATION CODE (OPTIONAL)</label>
+                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
                       <input
                         type="text"
                         value={invitationCode}
                         onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, ''))}
                         placeholder="INVITATION CODE"
-                        className="w-full px-3.5 py-2.5 bg-transparent text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
+                        className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono"
                       />
                     </div>
                   </div>
@@ -2167,7 +2178,7 @@ export default function App() {
                   <motion.p
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="text-xs font-black text-rose-500 text-center bg-rose-50 border border-rose-100 py-2.5 px-3 rounded-xl mt-2"
+                    className="text-[11px] font-black text-rose-500 text-center bg-rose-50 border border-rose-100 py-2 px-2.5 rounded-lg mt-1"
                   >
                     ⚠️ {authError}
                   </motion.p>
@@ -2175,9 +2186,9 @@ export default function App() {
 
                 <button
                   type="submit"
-                  className="w-full py-4 rounded-[1.5rem] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-4"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-[11px] shadow-md shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-2"
                 >
-                  <UserCheck className="w-4.5 h-4.5" />
+                  <UserCheck className="w-4 h-4" />
                   <span>{authTab === 'login' ? 'Login Now' : 'Create Account'}</span>
                 </button>
               </form>
@@ -2186,7 +2197,7 @@ export default function App() {
             </div>
 
             {/* Bottom SSL Safe Protection Indicator */}
-            <div className="flex items-center justify-center gap-1.5 text-[9px] text-teal-200/75 font-extrabold tracking-widest uppercase z-10 relative py-3 select-none">
+            <div className="flex items-center justify-center gap-1.5 text-[8.5px] text-teal-200/75 font-extrabold tracking-widest uppercase z-10 relative py-1.5 select-none">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>SSL Secure Encryption Protected</span>
             </div>

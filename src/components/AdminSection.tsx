@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
-  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag
+  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag, Power, PauseCircle
 } from 'lucide-react';
 import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
@@ -26,6 +26,7 @@ interface AdminSectionProps {
   transactions: TransactionRecord[];
   setTransactions: React.Dispatch<React.SetStateAction<TransactionRecord[]>>;
   purchases?: PurchaseRecord[];
+  setPurchases?: React.Dispatch<React.SetStateAction<PurchaseRecord[]>>;
   onClose: () => void;
   triggerToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   onUpdateCurrentUserProfile: (profile: UserProfile) => void;
@@ -41,6 +42,7 @@ export default function AdminSection({
   transactions,
   setTransactions,
   purchases = [],
+  setPurchases,
   onClose,
   triggerToast,
   onUpdateCurrentUserProfile,
@@ -249,6 +251,91 @@ export default function AdminSection({
     fromStorage.forEach(p => map.set(p.id, p));
 
     return Array.from(map.values());
+  };
+
+  // Helper to toggle plan deactivation (complete / active state)
+  const handleToggleDeactivatePurchase = (purchaseId: string, userId: string) => {
+    let newStatus = false;
+
+    if (setPurchases) {
+      setPurchases((prev) => {
+        const list = prev || [];
+        return list.map(p => {
+          if (p.id === purchaseId) {
+            newStatus = !p.completed;
+            return { ...p, completed: newStatus };
+          }
+          return p;
+        });
+      });
+    }
+
+    // Update user-specific localStorage key
+    try {
+      const raw = localStorage.getItem(`adpaint_purchases_${userId}`);
+      if (raw) {
+        const userP: PurchaseRecord[] = JSON.parse(raw);
+        const updatedUserP = userP.map(p => {
+          if (p.id === purchaseId) {
+            newStatus = !p.completed;
+            return { ...p, completed: newStatus };
+          }
+          return p;
+        });
+        localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(updatedUserP));
+      }
+    } catch (e) {}
+
+    // Update global localStorage key
+    try {
+      const rawMain = localStorage.getItem('adpaint_purchases');
+      if (rawMain) {
+        const mainP: PurchaseRecord[] = JSON.parse(rawMain);
+        const updatedMain = mainP.map(p => {
+          if (p.id === purchaseId) {
+            newStatus = !p.completed;
+            return { ...p, completed: newStatus };
+          }
+          return p;
+        });
+        localStorage.setItem('adpaint_purchases', JSON.stringify(updatedMain));
+      }
+    } catch (e) {}
+
+    onSyncConfig?.();
+    triggerToast(newStatus ? 'User plan deactivated!' : 'User plan reactivated!', newStatus ? 'info' : 'success');
+  };
+
+  // Helper to delete user purchase completely
+  const handleDeletePurchase = (purchaseId: string, userId: string) => {
+    if (!window.confirm('Are you sure you want to delete this purchased plan for the user?')) {
+      return;
+    }
+
+    if (setPurchases) {
+      setPurchases((prev) => (prev || []).filter(p => p.id !== purchaseId));
+    }
+
+    try {
+      const raw = localStorage.getItem(`adpaint_purchases_${userId}`);
+      if (raw) {
+        const userP: PurchaseRecord[] = JSON.parse(raw);
+        const updatedUserP = userP.filter(p => p.id !== purchaseId);
+        localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(updatedUserP));
+      }
+    } catch (e) {}
+
+    try {
+      const rawMain = localStorage.getItem('adpaint_purchases');
+      if (rawMain) {
+        const mainP: PurchaseRecord[] = JSON.parse(rawMain);
+        const updatedMain = mainP.filter(p => p.id !== purchaseId);
+        localStorage.setItem('adpaint_purchases', JSON.stringify(updatedMain));
+      }
+    } catch (e) {}
+
+    onSyncConfig?.();
+    triggerToast('User plan deleted successfully!', 'success');
   };
 
   // Plans editor states
@@ -1426,18 +1513,18 @@ export default function AdminSection({
                       }
 
                       return (
-                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                           {userP.map((pur, idx) => (
-                            <div key={pur.id || idx} className="p-3 bg-slate-950 rounded-2xl border border-slate-800/90 space-y-1.5">
+                            <div key={pur.id || idx} className="p-3 bg-slate-950 rounded-2xl border border-slate-800/90 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-black text-white flex items-center gap-1.5">
-                                  <Package className="w-3 h-3 text-emerald-400" />
+                                  <Package className="w-3.5 h-3.5 text-emerald-400" />
                                   <span>{pur.planTitle}</span>
                                 </span>
                                 <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
-                                  pur.completed ? 'bg-slate-800 text-slate-400' : 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                                  pur.completed ? 'bg-amber-950/80 text-amber-400 border border-amber-800/60' : 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
                                 }`}>
-                                  {pur.completed ? 'Completed' : 'Active'}
+                                  {pur.completed ? 'Deactivated' : 'Active'}
                                 </span>
                               </div>
                               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-900">
@@ -1459,6 +1546,32 @@ export default function AdminSection({
                                   <span className="text-slate-500">Total Claimed: </span>
                                   <strong className="text-amber-300 font-bold">₹{(pur.totalClaimed || 0).toFixed(2)}</strong>
                                 </div>
+                              </div>
+
+                              {/* Admin Action Controls for Plan Deactivation / Deletion */}
+                              <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-900">
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleDeactivatePurchase(pur.id, editingUser.id)}
+                                  className={`px-2.5 py-1 text-[9px] font-extrabold rounded-lg border transition-all cursor-pointer flex items-center gap-1 ${
+                                    pur.completed
+                                      ? 'bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border-emerald-700/60'
+                                      : 'bg-amber-950/60 hover:bg-amber-900/80 text-amber-400 border-amber-700/60'
+                                  }`}
+                                  title={pur.completed ? "Reactivate this plan" : "Deactivate this plan"}
+                                >
+                                  <Power className="w-3 h-3" />
+                                  <span>{pur.completed ? 'Reactivate Plan' : 'Deactivate Plan'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePurchase(pur.id, editingUser.id)}
+                                  className="px-2 py-1 text-[9px] font-extrabold rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-400 border border-rose-800/60 transition-all cursor-pointer flex items-center gap-1"
+                                  title="Delete this purchase record"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -1586,10 +1699,35 @@ export default function AdminSection({
                                 </div>
                                 <div className="flex flex-wrap gap-1">
                                   {userPurchasesList.map((p, pIdx) => (
-                                    <span key={p.id || pIdx} className="text-[8.5px] bg-slate-950 border border-slate-700/80 text-teal-300 px-2 py-0.5 rounded-md font-mono flex items-center gap-1">
-                                      <Tag className="w-2.5 h-2.5 text-teal-400" />
+                                    <div
+                                      key={p.id || pIdx}
+                                      className={`text-[8.5px] border px-2 py-0.5 rounded-md font-mono flex items-center gap-1.5 ${
+                                        p.completed
+                                          ? 'bg-slate-950/80 border-slate-800 text-slate-500'
+                                          : 'bg-slate-950 border-emerald-900/60 text-teal-300'
+                                      }`}
+                                    >
+                                      <Tag className={`w-2.5 h-2.5 ${p.completed ? 'text-slate-600' : 'text-teal-400'}`} />
                                       <span>{p.planTitle} (₹{p.price})</span>
-                                    </span>
+                                      <span className={`text-[7.5px] font-black px-1 rounded ${
+                                        p.completed ? 'bg-amber-950/80 text-amber-400 border border-amber-800/60' : 'bg-emerald-950 text-emerald-400 border border-emerald-800/60'
+                                      }`}>
+                                        {p.completed ? 'OFF' : 'ON'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleToggleDeactivatePurchase(p.id, user.id);
+                                        }}
+                                        className={`p-0.5 rounded hover:bg-slate-800 transition-colors cursor-pointer ${
+                                          p.completed ? 'text-emerald-400' : 'text-amber-400'
+                                        }`}
+                                        title={p.completed ? "Reactivate Plan" : "Deactivate Plan"}
+                                      >
+                                        <Power className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
                                   ))}
                                 </div>
                               </div>
