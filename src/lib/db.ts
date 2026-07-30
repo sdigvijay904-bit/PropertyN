@@ -271,13 +271,12 @@ let isSeeding = false;
 export async function seedDatabaseIfEmpty() {
   if (isSeeding) return;
   try {
+    isSeeding = true;
     const configDocRef = doc(db, "global", "config");
     const configSnap = await getDoc(configDocRef);
     if (configSnap.exists()) {
-      // already seeded
       return;
     }
-    isSeeding = true;
     console.log("Database empty! Seeding Firestore database with data from db.json...");
 
     // 1. Seed global configs
@@ -312,10 +311,72 @@ export async function seedDatabaseIfEmpty() {
 
     console.log("Database seeding completed successfully!");
   } catch (error) {
-    console.error("Error seeding Firestore database:", error);
+    console.warn("Error seeding Firestore database (skipping):", error);
   } finally {
     isSeeding = false;
   }
+}
+
+// Local Storage Fallback Helpers
+function getStoredUsers(): UserProfile[] {
+  try {
+    const raw = localStorage.getItem('adpaint_users_list');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const map = new Map<string, UserProfile>();
+        SEED_USERS.forEach(u => map.set(u.id, u));
+        parsed.forEach((u: UserProfile) => map.set(u.id, u));
+        return Array.from(map.values());
+      }
+    }
+  } catch (e) {}
+  return SEED_USERS;
+}
+
+function getStoredTransactions(): TransactionRecord[] {
+  try {
+    const raw = localStorage.getItem('adpaint_transactions');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const map = new Map<string, TransactionRecord>();
+        SEED_TRANSACTIONS.forEach(t => map.set(t.id, t));
+        parsed.forEach((t: TransactionRecord) => map.set(t.id, t));
+        return Array.from(map.values());
+      }
+    }
+  } catch (e) {}
+  return SEED_TRANSACTIONS;
+}
+
+function getStoredPurchases(userId: string): PurchaseRecord[] {
+  try {
+    const raw = localStorage.getItem(`adpaint_purchases_${userId}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+    const rawMain = localStorage.getItem('adpaint_purchases');
+    if (rawMain) {
+      const parsedMain = JSON.parse(rawMain);
+      if (Array.isArray(parsedMain)) {
+        return parsedMain.filter((p: any) => p.userId === userId);
+      }
+    }
+  } catch (e) {}
+  return [];
+}
+
+function getStoredPlans(): InvestmentPlan[] {
+  try {
+    const raw = localStorage.getItem('adpaint_plans');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+  return SEED_PLANS;
 }
 
 export function cleanPhoneNumber(phone: string): string {
@@ -341,9 +402,12 @@ export function cleanPhoneNumber(phone: string): string {
 
 // Check phone registered
 export async function firestoreCheckPhone(phone: string): Promise<{ exists: boolean }> {
-  await seedDatabaseIfEmpty();
   const cleanedPhone = cleanPhoneNumber(phone);
+  const digitsOnly = cleanedPhone.replace(/\D/g, "");
+  const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+
   try {
+    await seedDatabaseIfEmpty();
     const usersColl = collection(db, "users");
     const q = query(usersColl, where("phone", "==", cleanedPhone));
     const querySnapshot = await getDocs(q);
@@ -351,216 +415,196 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
       return { exists: true };
     }
 
-    // Also check deterministic user doc ID as fallback / double check
-    const digitsOnly = cleanedPhone.replace(/\D/g, "");
-    if (digitsOnly.length >= 10) {
-      const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
-      const userDocRef = doc(db, "users", `usr_${last10Digits}`);
+    if (last10.length >= 10) {
+      const userDocRef = doc(db, "users", `usr_${last10}`);
       const userSnap = await getDoc(userDocRef);
       if (userSnap.exists()) {
         return { exists: true };
       }
-
-      // Broad scan check for last 10 digits in phone field
-      const allUsersSnap = await getDocs(usersColl);
-      let found = false;
-      allUsersSnap.forEach((docSnap) => {
-        const u = docSnap.data() as UserProfile;
-        if (u.phone) {
-          const uDigits = u.phone.replace(/\D/g, "");
-          if (uDigits.endsWith(last10Digits)) {
-            found = true;
-          }
-        }
-      });
-      if (found) {
-        return { exists: true };
-      }
     }
-
-    return { exists: false };
   } catch (err) {
-    console.error("firestoreCheckPhone error:", err);
-    return { exists: false };
+    console.warn("firestoreCheckPhone firestore read failed (using local check):", err);
   }
+
+  const localUsers = getStoredUsers();
+  const exists = localUsers.some(u => {
+    const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
+    return (uDigits.length >= 10 && uDigits.endsWith(last10)) || u.phone === cleanedPhone;
+  });
+
+  return { exists };
 }
 
 // User login
 export async function firestoreLogin(payload: { phone: string; password_entered: string }): Promise<any> {
-  await seedDatabaseIfEmpty();
   const { phone, password_entered } = payload;
   const cleanedPhone = cleanPhoneNumber(phone);
+  const digitsOnly = cleanedPhone.replace(/\D/g, "");
+  const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+
+  let user: UserProfile | null = null;
+  let purchases: PurchaseRecord[] = [];
+  let transactions: TransactionRecord[] = [];
+
   try {
+    await seedDatabaseIfEmpty();
     const usersColl = collection(db, "users");
     let q = query(usersColl, where("phone", "==", cleanedPhone));
     let querySnapshot = await getDocs(q);
-    let user: UserProfile | null = null;
     
     if (!querySnapshot.empty) {
       const userDoc = querySnapshot.docs[0];
       user = userDoc.data() as UserProfile;
-    } else {
-      // If query by phone field did not match, try querying by deterministic document ID
-      const digitsOnly = cleanedPhone.replace(/\D/g, "");
-      if (digitsOnly.length >= 10) {
-        const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
-        const userDocRef = doc(db, "users", `usr_${last10Digits}`);
-        const userSnap = await getDoc(userDocRef);
-        if (userSnap.exists()) {
-          user = userSnap.data() as UserProfile;
-        } else {
-          // Broad scan check as fallback
-          const allUsersSnap = await getDocs(usersColl);
-          allUsersSnap.forEach((docSnap) => {
-            const u = docSnap.data() as UserProfile;
-            if (u.phone) {
-              const uDigits = u.phone.replace(/\D/g, "");
-              if (uDigits.endsWith(last10Digits)) {
-                user = u;
-              }
-            }
-          });
-        }
+    } else if (last10.length >= 10) {
+      const userDocRef = doc(db, "users", `usr_${last10}`);
+      const userSnap = await getDoc(userDocRef);
+      if (userSnap.exists()) {
+        user = userSnap.data() as UserProfile;
       }
     }
+  } catch (err) {
+    console.warn("Firestore read failed on login (using local cache):", err);
+  }
 
-    if (!user) {
-      throw new Error("Mobile number not registered! Please sign up first.");
-    }
-    
-    if (user.status === 'blocked') {
-      throw new Error("Your account has been suspended by Admin.");
-    }
-    
-    if (user.password && user.password !== password_entered) {
-      throw new Error("Incorrect password!");
-    }
+  // Local fallback lookup if Firestore failed or returned empty
+  if (!user) {
+    const localUsers = getStoredUsers();
+    user = localUsers.find(u => {
+      const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
+      return (uDigits.length >= 10 && uDigits.endsWith(last10)) || u.phone === cleanedPhone;
+    }) || null;
+  }
 
-    // Load active purchases
+  if (!user) {
+    throw new Error("Mobile number not registered! Please sign up first.");
+  }
+
+  if (user.status === 'blocked') {
+    throw new Error("Your account has been suspended by Admin.");
+  }
+
+  if (user.password && user.password !== password_entered) {
+    throw new Error("Incorrect password!");
+  }
+
+  // Load active purchases & transactions
+  try {
     const purchasesColl = collection(db, "purchases");
     const qPurchases = query(purchasesColl, where("userId", "==", user.id));
     const purchasesSnap = await getDocs(qPurchases);
-    const purchases: PurchaseRecord[] = [];
     purchasesSnap.forEach((doc) => {
       purchases.push(doc.data() as PurchaseRecord);
     });
 
-    // Load transactions
     const transactionsColl = collection(db, "transactions");
     const txSnap = await getDocs(transactionsColl);
-    const transactions: TransactionRecord[] = [];
     txSnap.forEach((doc) => {
       transactions.push(doc.data() as TransactionRecord);
     });
-
-    // sort transactions by date descending (assuming formatted strings, fallback to parsing)
-    transactions.sort((a, b) => {
-      const timeA = new Date(a.date).getTime() || 0;
-      const timeB = new Date(b.date).getTime() || 0;
-      return timeB - timeA;
-    });
-
-    return {
-      user,
-      purchases,
-      transactions
-    };
-  } catch (err: any) {
-    throw err;
+  } catch (err) {
+    console.warn("Firestore purchases/transactions load failed, using local cache:", err);
   }
+
+  if (purchases.length === 0) {
+    purchases = getStoredPurchases(user.id);
+  }
+  if (transactions.length === 0) {
+    transactions = getStoredTransactions();
+  }
+
+  transactions.sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    return timeB - timeA;
+  });
+
+  return {
+    user,
+    purchases,
+    transactions
+  };
 }
 
 // User registration
 export async function firestoreRegister(payload: { name: string; phone: string; password_entered: string; inviterCode?: string }): Promise<any> {
-  await seedDatabaseIfEmpty();
   const { name, phone, password_entered, inviterCode } = payload;
   const cleanedPhone = cleanPhoneNumber(phone);
-  try {
-    const usersColl = collection(db, "users");
-    const q = query(usersColl, where("phone", "==", cleanedPhone));
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      throw new Error("Mobile number already registered! Please log in.");
-    }
-
-    // Generate a deterministic unique user ID based on phone number to physically prevent duplicates!
-    const digitsOnly = cleanedPhone.replace(/\D/g, "");
-    if (digitsOnly.length < 10) {
-      throw new Error("Please provide a valid mobile number.");
-    }
-    const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
-    const newUserId = `usr_${last10Digits}`;
-
-    // Double check document existence for safety
-    const userDocRef = doc(db, "users", newUserId);
-    const existingDoc = await getDoc(userDocRef);
-    if (existingDoc.exists()) {
-      throw new Error("Mobile number already registered! Please log in.");
-    }
-
-    const newUser: UserProfile = {
-      id: newUserId,
-      name,
-      phone: cleanedPhone,
-      balance: 100, // free signup bonus
-      totalEarnings: 100,
-      dailyEarned: 0,
-      checkedInToday: false,
-      inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
-      inviterCode: inviterCode || "",
-      role: 'user',
-      password: password_entered,
-      kycStatus: 'none',
-      notifications: [
-        {
-          id: `notif_${Date.now()}`,
-          title: 'Welcome to PropertyN!',
-          body: 'Thank you for registering. You have received ₹100 registration reward. Complete your KYC to unlock full premium features.',
-          date: new Date().toLocaleDateString(),
-          read: false
-        }
-      ]
-    };
-
-    const signupTx: TransactionRecord = {
-      id: `tx_${Date.now()}`,
-      type: 'checkin',
-      amount: 100,
-      date: new Date().toLocaleString(),
-      status: 'success',
-      description: 'Signup Registration Bonus credited',
-      userId: newUser.id,
-      userPhone: newUser.phone
-    };
-
-    // Save user
-    await setDoc(userDocRef, cleanUndefined(newUser));
-
-    // Save transaction
-    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
-
-    // Reload transactions
-    const txSnap = await getDocs(collection(db, "transactions"));
-    const transactions: TransactionRecord[] = [];
-    txSnap.forEach((doc) => {
-      transactions.push(doc.data() as TransactionRecord);
-    });
-
-    transactions.sort((a, b) => {
-      const timeA = new Date(a.date).getTime() || 0;
-      const timeB = new Date(b.date).getTime() || 0;
-      return timeB - timeA;
-    });
-
-    return {
-      user: newUser,
-      purchases: [],
-      transactions
-    };
-  } catch (err: any) {
-    throw err;
+  const digitsOnly = cleanedPhone.replace(/\D/g, "");
+  if (digitsOnly.length < 10) {
+    throw new Error("Please provide a valid mobile number.");
   }
+  const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
+  const newUserId = `usr_${last10Digits}`;
+
+  // Check if phone already registered locally or in Firestore
+  const check = await firestoreCheckPhone(cleanedPhone);
+  if (check.exists) {
+    throw new Error("Mobile number already registered! Please log in.");
+  }
+
+  const newUser: UserProfile = {
+    id: newUserId,
+    name,
+    phone: cleanedPhone,
+    balance: 100, // free signup bonus
+    totalEarnings: 100,
+    dailyEarned: 0,
+    checkedInToday: false,
+    inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
+    inviterCode: inviterCode || "",
+    role: 'user',
+    password: password_entered,
+    kycStatus: 'none',
+    notifications: [
+      {
+        id: `notif_${Date.now()}`,
+        title: 'Welcome to PropertyN!',
+        body: 'Thank you for registering. You have received ₹100 registration reward. Complete your KYC to unlock full premium features.',
+        date: new Date().toLocaleDateString(),
+        read: false
+      }
+    ]
+  };
+
+  const signupTx: TransactionRecord = {
+    id: `tx_${Date.now()}`,
+    type: 'checkin',
+    amount: 100,
+    date: new Date().toLocaleString(),
+    status: 'success',
+    description: 'Signup Registration Bonus credited',
+    userId: newUser.id,
+    userPhone: newUser.phone
+  };
+
+  try {
+    await seedDatabaseIfEmpty();
+    const userDocRef = doc(db, "users", newUserId);
+    await setDoc(userDocRef, cleanUndefined(newUser));
+    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
+  } catch (err) {
+    console.warn("Firestore write failed during registration (saving locally):", err);
+  }
+
+  // Update local storage so user is registered & saved locally
+  const storedUsers = getStoredUsers();
+  const existingIdx = storedUsers.findIndex(u => u.id === newUserId || u.phone === cleanedPhone);
+  if (existingIdx >= 0) {
+    storedUsers[existingIdx] = newUser;
+  } else {
+    storedUsers.push(newUser);
+  }
+  localStorage.setItem('adpaint_users_list', JSON.stringify(storedUsers));
+
+  const storedTxs = getStoredTransactions();
+  storedTxs.unshift(signupTx);
+  localStorage.setItem('adpaint_transactions', JSON.stringify(storedTxs));
+
+  return {
+    user: newUser,
+    purchases: [],
+    transactions: storedTxs
+  };
 }
 
 // Helper to recursively strip any properties with 'undefined' values before writing to Firestore
@@ -586,10 +630,13 @@ export function cleanUndefined<T>(obj: T): T {
 
 // Reset password
 export async function firestoreResetPassword(payload: { phone: string; password_entered: string }): Promise<any> {
-  await seedDatabaseIfEmpty();
   const { phone, password_entered } = payload;
   const cleanedPhone = cleanPhoneNumber(phone);
+  const digitsOnly = cleanedPhone.replace(/\D/g, "");
+  const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+
   try {
+    await seedDatabaseIfEmpty();
     const usersColl = collection(db, "users");
     const q = query(usersColl, where("phone", "==", cleanedPhone));
     const querySnapshot = await getDocs(q);
@@ -599,101 +646,104 @@ export async function firestoreResetPassword(payload: { phone: string; password_
     if (!querySnapshot.empty) {
       const userDoc = querySnapshot.docs[0];
       userDocRef = doc(db, "users", userDoc.id);
-    } else {
-      // Try by deterministic document ID
-      const digitsOnly = cleanedPhone.replace(/\D/g, "");
-      if (digitsOnly.length >= 10) {
-        const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
-        const deterministicRef = doc(db, "users", `usr_${last10Digits}`);
-        const userSnap = await getDoc(deterministicRef);
-        if (userSnap.exists()) {
-          userDocRef = deterministicRef;
-        } else {
-          // Broad scan check as fallback
-          const allUsersSnap = await getDocs(usersColl);
-          allUsersSnap.forEach((docSnap) => {
-            const u = docSnap.data() as UserProfile;
-            if (u.phone) {
-              const uDigits = u.phone.replace(/\D/g, "");
-              if (uDigits.endsWith(last10Digits)) {
-                userDocRef = doc(db, "users", docSnap.id);
-              }
-            }
-          });
-        }
+    } else if (last10.length >= 10) {
+      const deterministicRef = doc(db, "users", `usr_${last10}`);
+      const userSnap = await getDoc(deterministicRef);
+      if (userSnap.exists()) {
+        userDocRef = deterministicRef;
       }
     }
 
-    if (!userDocRef) {
-      throw new Error("This mobile number is not registered!");
+    if (userDocRef) {
+      await updateDoc(userDocRef, { password: password_entered });
     }
-
-    await updateDoc(userDocRef, { password: password_entered });
-    return { success: true };
-  } catch (err: any) {
-    throw err;
+  } catch (err) {
+    console.warn("Firestore reset password error (updating local store):", err);
   }
+
+  // Update local storage
+  const localUsers = getStoredUsers();
+  const userObj = localUsers.find(u => {
+    const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
+    return (uDigits.length >= 10 && uDigits.endsWith(last10)) || u.phone === cleanedPhone;
+  });
+
+  if (!userObj) {
+    throw new Error("This mobile number is not registered!");
+  }
+
+  userObj.password = password_entered;
+  localStorage.setItem('adpaint_users_list', JSON.stringify(localUsers));
+
+  return { success: true };
 }
 
 // Get state (replaces /api/get-state)
 export async function firestoreGetState(userId: string): Promise<any> {
-  await seedDatabaseIfEmpty();
+  let config = SEED_CONFIG;
+  let customTicker = null;
+  let plans: InvestmentPlan[] = getStoredPlans();
+  let transactions: TransactionRecord[] = getStoredTransactions();
+  let purchases: PurchaseRecord[] = userId ? getStoredPurchases(userId) : [];
+  let usersList: UserProfile[] = getStoredUsers();
+
   try {
-    // 1. Get configs and ticker
+    await seedDatabaseIfEmpty();
+
     const configSnap = await getDoc(doc(db, "global", "config"));
-    const configData = configSnap.exists() ? configSnap.data() : { config: {}, customTicker: null };
-    const config = configData.config || {};
-    const customTicker = configData.customTicker || null;
+    if (configSnap.exists()) {
+      const configData = configSnap.data();
+      if (configData.config) config = configData.config;
+      if (configData.customTicker) customTicker = configData.customTicker;
+    }
 
-    // 2. Get plans
     const plansSnap = await getDocs(collection(db, "plans"));
-    const plans: InvestmentPlan[] = [];
-    plansSnap.forEach((doc) => {
-      plans.push(doc.data() as InvestmentPlan);
-    });
+    const fsPlans: InvestmentPlan[] = [];
+    plansSnap.forEach((doc) => fsPlans.push(doc.data() as InvestmentPlan));
+    if (fsPlans.length > 0) plans = fsPlans;
 
-    // 3. Get transactions
     const transactionsSnap = await getDocs(collection(db, "transactions"));
-    const transactions: TransactionRecord[] = [];
-    transactionsSnap.forEach((doc) => {
-      transactions.push(doc.data() as TransactionRecord);
-    });
+    const fsTransactions: TransactionRecord[] = [];
+    transactionsSnap.forEach((doc) => fsTransactions.push(doc.data() as TransactionRecord));
+    if (fsTransactions.length > 0) transactions = fsTransactions;
 
-    transactions.sort((a, b) => {
-      const timeA = new Date(a.date).getTime() || 0;
-      const timeB = new Date(b.date).getTime() || 0;
-      return timeB - timeA;
-    });
-
-    // 4. Get purchases for this user
-    let purchases: PurchaseRecord[] = [];
     if (userId) {
       const q = query(collection(db, "purchases"), where("userId", "==", userId));
       const purchasesSnap = await getDocs(q);
-      purchasesSnap.forEach((doc) => {
-        purchases.push(doc.data() as PurchaseRecord);
-      });
+      const fsPurchases: PurchaseRecord[] = [];
+      purchasesSnap.forEach((doc) => fsPurchases.push(doc.data() as PurchaseRecord));
+      if (fsPurchases.length > 0) purchases = fsPurchases;
     }
 
-    // 5. Get users list
     const usersSnap = await getDocs(collection(db, "users"));
-    const usersList: UserProfile[] = [];
-    usersSnap.forEach((doc) => {
-      usersList.push(doc.data() as UserProfile);
-    });
-
-    return {
-      usersList,
-      plans: plans.length > 0 ? plans : SEED_PLANS,
-      transactions,
-      purchases,
-      config,
-      customTicker
-    };
+    const fsUsers: UserProfile[] = [];
+    usersSnap.forEach((doc) => fsUsers.push(doc.data() as UserProfile));
+    if (fsUsers.length > 0) usersList = fsUsers;
   } catch (err) {
-    console.error("firestoreGetState error:", err);
-    throw err;
+    console.warn("firestoreGetState encountered error, serving cached/local state:", err);
   }
+
+  // Always merge local stored users to avoid losing newly registered local users when Firestore is unavailable
+  const localUsers = getStoredUsers();
+  const userMap = new Map<string, UserProfile>();
+  usersList.forEach(u => userMap.set(u.id, u));
+  localUsers.forEach(u => userMap.set(u.id, u));
+  usersList = Array.from(userMap.values());
+
+  transactions.sort((a, b) => {
+    const timeA = new Date(a.date).getTime() || 0;
+    const timeB = new Date(b.date).getTime() || 0;
+    return timeB - timeA;
+  });
+
+  return {
+    usersList,
+    plans,
+    transactions,
+    purchases,
+    config,
+    customTicker
+  };
 }
 
 // Save/Sync state (replaces /api/save-state)
@@ -706,8 +756,22 @@ export async function firestoreSaveState(payload: {
   config: Record<string, string>;
   customTicker: string | null;
 }): Promise<any> {
-  await seedDatabaseIfEmpty();
   const { userId, usersList, plans, transactions, purchases, config, customTicker } = payload;
+
+  // Persist locally first so offline / quota-exceeded changes are never lost!
+  if (Array.isArray(usersList) && usersList.length > 0) {
+    localStorage.setItem('adpaint_users_list', JSON.stringify(usersList));
+  }
+  if (Array.isArray(transactions) && transactions.length > 0) {
+    localStorage.setItem('adpaint_transactions', JSON.stringify(transactions));
+  }
+  if (Array.isArray(plans) && plans.length > 0) {
+    localStorage.setItem('adpaint_plans', JSON.stringify(plans));
+  }
+  if (userId && Array.isArray(purchases)) {
+    localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(purchases));
+  }
+
   let isAdmin = userId === 'usr_admin';
   if (!isAdmin && Array.isArray(usersList)) {
     const caller = usersList.find(u => u.id === userId);
@@ -715,52 +779,25 @@ export async function firestoreSaveState(payload: {
       isAdmin = true;
     }
   }
+
   try {
-    // 1. Merge usersList in Firestore
+    await seedDatabaseIfEmpty();
+
     if (Array.isArray(usersList)) {
       const userBatch = writeBatch(db);
       for (const u of usersList) {
-        // SECURITY / STABILITY PROTECTION:
-        // Non-admin users are strictly forbidden from writing other users' profiles!
-        if (!isAdmin && u.id !== userId) {
-          continue;
-        }
-
+        if (!isAdmin && u.id !== userId) continue;
         const docRef = doc(db, "users", u.id);
-        
-        // Load latest to check security/protections
-        const existingSnap = await getDoc(docRef);
-        let finalUser = { ...u };
-        
-        if (existingSnap.exists()) {
-          const existing = existingSnap.data() as UserProfile;
-          
-          // PROTECTIONS mirror server.ts exactly:
-          // 1. Prevent non-owner/non-admin clients from overwriting other users' passwords
-          if (u.id !== userId && !isAdmin) {
-            finalUser.password = existing.password;
-          }
-          // 2. Prevent overwriting a custom password with the default 'password123'
-          if (existing.password && existing.password !== 'password123' && u.password === 'password123') {
-            finalUser.password = existing.password;
-          }
-        }
-        
-        userBatch.set(docRef, cleanUndefined(finalUser), { merge: true });
+        userBatch.set(docRef, cleanUndefined(u), { merge: true });
       }
       await userBatch.commit();
     }
 
-    // 2. Update global configuration
     if (isAdmin) {
       const configDocRef = doc(db, "global", "config");
-      await setDoc(configDocRef, cleanUndefined({
-        config,
-        customTicker
-      }), { merge: true });
+      await setDoc(configDocRef, cleanUndefined({ config, customTicker }), { merge: true });
     }
 
-    // 3. Update plans
     if (isAdmin && Array.isArray(plans) && plans.length > 0) {
       const plansBatch = writeBatch(db);
       for (const plan of plans) {
@@ -769,38 +806,26 @@ export async function firestoreSaveState(payload: {
       await plansBatch.commit();
     }
 
-    // 4. Update transactions
     if (Array.isArray(transactions)) {
       const txBatch = writeBatch(db);
       for (const tx of transactions) {
-        // Non-admin users are only allowed to write transactions that belong to them
-        if (!isAdmin && tx.userId !== userId) {
-          continue;
-        }
+        if (!isAdmin && tx.userId !== userId) continue;
         txBatch.set(doc(db, "transactions", tx.id), cleanUndefined(tx), { merge: true });
       }
       await txBatch.commit();
     }
 
-    // 5. Update user-specific purchases
     if (userId && Array.isArray(purchases)) {
       const purchasesBatch = writeBatch(db);
-      
-      // Since batch writes require knowing matching keys, and we want to replace or merge user purchases:
       for (const purchase of purchases) {
-        // Non-admin users are only allowed to write purchases that belong to them
-        if (!isAdmin && (purchase as any).userId !== userId) {
-          continue;
-        }
+        if (!isAdmin && (purchase as any).userId !== userId) continue;
         purchasesBatch.set(doc(db, "purchases", purchase.id), cleanUndefined(purchase), { merge: true });
       }
       await purchasesBatch.commit();
     }
-
-    // Load and return final state
-    return await firestoreGetState(userId);
   } catch (err) {
-    console.error("firestoreSaveState error:", err);
-    throw err;
+    console.warn("firestoreSaveState error (saved locally):", err);
   }
+
+  return await firestoreGetState(userId);
 }

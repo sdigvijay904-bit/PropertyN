@@ -1128,7 +1128,12 @@ export default function App() {
       setMobileNumber('');
       setPassword('');
     } catch (err: any) {
-      setAuthError(err.message || 'Server communication error. Please try again.');
+      const rawMsg = err?.message || '';
+      if (rawMsg.includes('Quota limit') || rawMsg.includes('quota') || rawMsg.includes('RESOURCE_EXHAUSTED')) {
+        setAuthError('Server is currently busy. Please try logging in again.');
+      } else {
+        setAuthError(rawMsg || 'Server communication error. Please try again.');
+      }
     }
   };
 
