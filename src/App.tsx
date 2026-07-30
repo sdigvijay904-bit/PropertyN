@@ -1023,15 +1023,6 @@ export default function App() {
       setAuthError('Please enter a valid 10-digit mobile number');
       return;
     }
-    if (!captchaInput) {
-      setAuthError('Please enter the verification code');
-      return;
-    }
-    if (captchaInput !== captchaCode) {
-      setAuthError('Incorrect Verification Code');
-      generateCaptcha(); // regenerate on failure
-      return;
-    }
     if (!password || password.length < 6) {
       setAuthError('Password must be at least 6 characters');
       return;
@@ -2070,36 +2061,6 @@ export default function App() {
                     />
                   </div>
                 </div>
-
-                {/* Verification Code / Captcha Verification */}
-                {authTab === 'register' && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-wide block px-0.5">VERIFICATION CODE</label>
-                    <div className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-4 sm:col-span-4">
-                        <div 
-                          onClick={generateCaptcha}
-                          title="Click to refresh verification code"
-                          className="h-9 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-center font-mono font-black text-emerald-800 text-base tracking-[0.2em] relative overflow-hidden select-none cursor-pointer hover:bg-emerald-100/80 active:scale-95 transition-all shadow-2xs group px-2"
-                        >
-                          <div className="absolute inset-0 opacity-15 bg-[repeating-linear-gradient(45deg,#047857,#047857_8px,#ecfdf5_8px,#ecfdf5_16px)] pointer-events-none"></div>
-                          <span className="relative drop-shadow-2xs">{captchaCode}</span>
-                        </div>
-                      </div>
-                      <div className="col-span-8 sm:col-span-8 relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
-                        <input
-                          type="text"
-                          required
-                          maxLength={4}
-                          value={captchaInput}
-                          onChange={(e) => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
-                          placeholder="••••"
-                          className="w-full px-3 py-1.5 bg-transparent text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none font-mono tracking-widest"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Password Input */}
                 <div className="space-y-1">
