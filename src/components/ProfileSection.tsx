@@ -11,7 +11,7 @@ import {
   Bell, Settings, Gift, CreditCard, Star
 } from 'lucide-react';
 import { UserProfile, PurchaseRecord, TransactionRecord, BankAccount } from '../types';
-import { Real3DWalletIcon, Real3DCashIcon, Real3DIncomeIcon } from './RealIcons';
+import { Real3DWalletIcon, Real3DRechargedBadgeIcon, Real3DIncomeIcon, Real3DRechargeActionIcon, Real3DWithdrawActionIcon } from './RealIcons';
 
 interface ProfileSectionProps {
   user: UserProfile;
@@ -730,8 +730,8 @@ export default function ProfileSection({
 
               {/* RECHARGED */}
               <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-                <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-pink-50/80 border border-pink-100 flex items-center justify-center mb-1 shrink-0">
-                  <Real3DCashIcon className="w-8 h-8" />
+                <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-indigo-50/80 border border-indigo-100 flex items-center justify-center mb-1 shrink-0">
+                  <Real3DRechargedBadgeIcon className="w-8 h-8" />
                 </div>
                 <span className="text-[9px] min-[360px]:text-[10px] font-black text-slate-500 uppercase tracking-wider">RECHARGED</span>
                 <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
@@ -760,7 +760,7 @@ export default function ProfileSection({
                 onClick={onOpenRecharge}
                 className="py-3.5 flex items-center justify-center gap-2 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-teal-700 cursor-pointer group"
               >
-                <Real3DWalletIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                <Real3DRechargeActionIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 <span>Recharge</span>
               </button>
               <button
@@ -768,7 +768,7 @@ export default function ProfileSection({
                 onClick={onOpenWithdraw}
                 className="py-3.5 flex items-center justify-center gap-2 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-rose-700 cursor-pointer group"
               >
-                <Real3DCashIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                <Real3DWithdrawActionIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 <span>Withdraw</span>
               </button>
             </div>

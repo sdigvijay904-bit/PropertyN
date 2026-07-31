@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Wallet, Landmark, Send, HelpCircle, ShieldCheck, Sparkles, ShoppingBag, Coins, BadgeAlert, ArrowUpRight, TrendingUp, Calendar, Award, Heart, Search, X, Star, Info, ChevronRight, MapPin, Percent, Plus, Minus, Check, Smartphone, Download, Banknote, Settings, Volume2, Megaphone } from 'lucide-react';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
 import { openTelegramUrl } from '../lib/telegram';
-import { Real3DWalletIcon, Real3DCashIcon, Real3DTelegramIcon, Real3DAppIcon, Real3DIncomeIcon } from './RealIcons';
+import { Real3DWalletIcon, Real3DRechargedBadgeIcon, Real3DIncomeIcon, Real3DRechargeActionIcon, Real3DWithdrawActionIcon, Real3DTelegramIcon, Real3DAppIcon } from './RealIcons';
 
 interface HomeSectionProps {
   user: UserProfile;
@@ -285,8 +285,8 @@ export default function HomeSection({
 
         {/* RECHARGED */}
         <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-          <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-pink-50/80 border border-pink-100 flex items-center justify-center mb-1 shrink-0">
-            <Real3DCashIcon className="w-8 h-8" />
+          <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-indigo-50/80 border border-indigo-100 flex items-center justify-center mb-1 shrink-0">
+            <Real3DRechargedBadgeIcon className="w-8 h-8" />
           </div>
           <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">RECHARGED</span>
           <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
@@ -333,7 +333,7 @@ export default function HomeSection({
           className="flex flex-col items-center space-y-1.5 cursor-pointer group"
         >
           <div className="w-13.5 h-13.5 rounded-full bg-[#f0fdf4] border border-emerald-100 flex items-center justify-center shadow-xs group-active:scale-95 transition-all">
-            <Real3DWalletIcon className="w-9 h-9" />
+            <Real3DRechargeActionIcon className="w-9 h-9" />
           </div>
           <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">RECHARGE</span>
         </button>
@@ -344,8 +344,8 @@ export default function HomeSection({
           onClick={onOpenWithdraw}
           className="flex flex-col items-center space-y-1.5 cursor-pointer group"
         >
-          <div className="w-13.5 h-13.5 rounded-full bg-[#fdf2f8] border border-pink-100 flex items-center justify-center shadow-xs group-active:scale-95 transition-all">
-            <Real3DCashIcon className="w-9 h-9" />
+          <div className="w-13.5 h-13.5 rounded-full bg-[#fff1f2] border border-rose-100 flex items-center justify-center shadow-xs group-active:scale-95 transition-all">
+            <Real3DWithdrawActionIcon className="w-9 h-9" />
           </div>
           <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">WITHDRAW</span>
         </button>
