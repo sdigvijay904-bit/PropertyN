@@ -893,6 +893,41 @@ export default function App() {
     };
   }, []);
 
+  // Set up Firestore real-time listener for currently logged-in user profile (Balance, Bank, Status updates)
+  useEffect(() => {
+    if (!isLoggedIn || !userProfile?.id || isQuotaExceeded()) return;
+    let unsubUser: (() => void) | null = null;
+    try {
+      const userDocRef = doc(db, "users", userProfile.id);
+      unsubUser = onSnapshot(userDocRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const liveUser = snapshot.data() as UserProfile;
+          if (liveUser && liveUser.id === userProfile.id) {
+            const sanitized = sanitizeUserCheckIn(liveUser);
+            if (sanitized && JSON.stringify(sanitized) !== JSON.stringify(userProfileRef.current)) {
+              setUserProfile(sanitized);
+              localStorage.setItem('adpaint_user', JSON.stringify(sanitized));
+              userProfileRef.current = sanitized;
+            }
+          }
+        }
+      }, (err) => {
+        console.warn("Real-time user snapshot listener notice:", err?.message || err);
+        markQuotaExceeded(err);
+        if (unsubUser) {
+          unsubUser();
+          unsubUser = null;
+        }
+      });
+    } catch (err) {
+      markQuotaExceeded(err);
+    }
+
+    return () => {
+      if (unsubUser) unsubUser();
+    };
+  }, [isLoggedIn, userProfile?.id]);
+
   // Set up periodic real-time background sync loop and foreground listener
   useEffect(() => {
     // Initial sync upon mount to fetch global configs (avatar, UPI, links) for mobile APK & Web
@@ -1781,8 +1816,31 @@ export default function App() {
               onUpdateCurrentUserProfile={(profile) => {
                 saveStateToStorage(profile);
               }}
-              onSyncConfig={() => {
-                pushStateToServer(userProfile, plans, purchases, transactions, usersList);
+              onSyncConfig={(updatedPlans, updatedPurchases, updatedUsers, updatedTx) => {
+                if (updatedPlans) {
+                  setPlans(updatedPlans);
+                  plansRef.current = updatedPlans;
+                }
+                if (updatedPurchases) {
+                  setPurchases(updatedPurchases);
+                  purchasesRef.current = updatedPurchases;
+                }
+                if (updatedUsers) {
+                  setUsersList(updatedUsers);
+                  usersListRef.current = updatedUsers;
+                }
+                if (updatedTx) {
+                  setTransactions(updatedTx);
+                  transactionsRef.current = updatedTx;
+                }
+
+                pushStateToServer(
+                  userProfile,
+                  updatedPlans || plansRef.current,
+                  updatedPurchases || purchasesRef.current,
+                  updatedTx || transactionsRef.current,
+                  updatedUsers || usersListRef.current
+                );
               }}
             />
           ) : (

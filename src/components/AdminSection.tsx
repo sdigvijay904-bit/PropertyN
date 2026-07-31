@@ -31,7 +31,12 @@ interface AdminSectionProps {
   onClose: () => void;
   triggerToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   onUpdateCurrentUserProfile: (profile: UserProfile) => void;
-  onSyncConfig?: () => void;
+  onSyncConfig?: (
+    updatedPlans?: InvestmentPlan[],
+    updatedPurchases?: PurchaseRecord[],
+    updatedUsersList?: UserProfile[],
+    updatedTx?: TransactionRecord[]
+  ) => void;
 }
 
 export default function AdminSection({
@@ -237,18 +242,25 @@ export default function AdminSection({
   const getUserPurchases = (userId: string, userPhone?: string): PurchaseRecord[] => {
     const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
     
+    let deletedPurchases: string[] = [];
+    try {
+      const rawDel = localStorage.getItem('adpaint_deleted_purchases');
+      if (rawDel) deletedPurchases = JSON.parse(rawDel);
+    } catch (e) {}
+
     const fromProp = (purchases || []).filter(p => 
-      p.userId === userId || 
-      (cleanPhone.length >= 10 && (p as any).userPhone && (p as any).userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
+      !deletedPurchases.includes(p.id) &&
+      (p.userId === userId || 
+      (cleanPhone.length >= 10 && (p as any).userPhone && (p as any).userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10))))
     );
 
-    const fromStorage = getStoredPurchases(userId, transactions, plans);
+    const fromStorage = getStoredPurchases(userId, transactions, plans).filter(p => !deletedPurchases.includes(p.id));
 
     const map = new Map<string, PurchaseRecord>();
     fromProp.forEach(p => map.set(p.id, p));
     fromStorage.forEach(p => map.set(p.id, p));
 
-    return Array.from(map.values());
+    return Array.from(map.values()).filter(p => !deletedPurchases.includes(p.id));
   };
 
   // Helper to fetch user deposits (recharges)
@@ -347,7 +359,14 @@ export default function AdminSection({
       } catch (e) {}
     }
 
-    onSyncConfig?.();
+    const updatedPurchasesList = (purchases || []).map(p => {
+      if (p.id === purchaseId) {
+        return { ...p, completed: newStatus };
+      }
+      return p;
+    });
+
+    onSyncConfig?.(undefined, updatedPurchasesList);
     triggerToast(newStatus ? 'User plan deactivated!' : 'User plan reactivated!', newStatus ? 'info' : 'success');
   };
 
@@ -357,10 +376,37 @@ export default function AdminSection({
       return;
     }
 
+    // 1. Mark in adpaint_deleted_purchases
+    try {
+      const rawDel = localStorage.getItem('adpaint_deleted_purchases');
+      const delList: string[] = rawDel ? JSON.parse(rawDel) : [];
+      if (!delList.includes(purchaseId)) {
+        delList.push(purchaseId);
+      }
+      const txEq = purchaseId.startsWith('pur_') ? purchaseId.replace('pur_', 'tx_pur_') : `tx_pur_${purchaseId}`;
+      if (!delList.includes(txEq)) {
+        delList.push(txEq);
+      }
+      localStorage.setItem('adpaint_deleted_purchases', JSON.stringify(delList));
+    } catch (e) {}
+
+    // 2. Filter local purchases
+    const updatedPurchases = (purchases || []).filter(p => p.id !== purchaseId);
     if (setPurchases) {
-      setPurchases((prev) => (prev || []).filter(p => p.id !== purchaseId));
+      setPurchases(updatedPurchases);
     }
 
+    // 3. Filter matching purchase transactions
+    const updatedTransactions = (transactions || []).filter(tx => 
+      tx.id !== purchaseId &&
+      tx.id !== purchaseId.replace('pur_', 'tx_pur_') &&
+      tx.id.replace('tx_pur_', 'pur_') !== purchaseId
+    );
+    if (setTransactions) {
+      setTransactions(updatedTransactions);
+    }
+
+    // 4. Clean local storage
     try {
       const raw = localStorage.getItem(`adpaint_purchases_${userId}`);
       if (raw) {
@@ -368,6 +414,7 @@ export default function AdminSection({
         const updatedUserP = userP.filter(p => p.id !== purchaseId);
         localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(updatedUserP));
       }
+      localStorage.removeItem(`adpaint_backup_purchases_${userId}`);
     } catch (e) {}
 
     try {
@@ -379,13 +426,20 @@ export default function AdminSection({
       }
     } catch (e) {}
 
+    try {
+      localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTransactions));
+    } catch (e) {}
+
+    // 5. Delete document from Firestore
     if (!isQuotaExceeded()) {
       try {
         deleteDoc(doc(db, "purchases", purchaseId)).catch(() => {});
+        deleteDoc(doc(db, "transactions", purchaseId)).catch(() => {});
+        deleteDoc(doc(db, "transactions", purchaseId.replace('pur_', 'tx_pur_'))).catch(() => {});
       } catch (e) {}
     }
 
-    onSyncConfig?.();
+    onSyncConfig?.(undefined, updatedPurchases, undefined, updatedTransactions);
     triggerToast('User plan deleted successfully!', 'success');
   };
 
@@ -615,6 +669,7 @@ export default function AdminSection({
     localStorage.setItem('adpaint_users_list', JSON.stringify(finalUsers));
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
     
+    onSyncConfig?.(undefined, undefined, finalUsers, updatedTx);
     triggerToast(`Approved ₹${tx.amount} recharge for +91 ${targetUser.phone.replace('+91 ', '')}`, 'success');
   };
 
@@ -654,6 +709,7 @@ export default function AdminSection({
 
     setTransactions(updatedTx);
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
+    onSyncConfig?.(undefined, undefined, undefined, updatedTx);
     triggerToast('Recharge request rejected.', 'info');
   };
 
@@ -685,6 +741,7 @@ export default function AdminSection({
 
     setTransactions(updatedTx);
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
+    onSyncConfig?.(undefined, undefined, undefined, updatedTx);
     triggerToast(`Withdrawal of ₹${tx.amount} approved and settled!`, 'success');
   };
 
@@ -748,6 +805,7 @@ export default function AdminSection({
     localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
 
+    onSyncConfig?.(undefined, undefined, updatedUsers, updatedTx);
     triggerToast(`Withdrawal rejected! ₹${tx.amount} refunded to user's balance.`, 'info');
   };
 
@@ -811,7 +869,7 @@ export default function AdminSection({
       } catch (e) {}
     }
 
-    onSyncConfig?.();
+    onSyncConfig?.(undefined, undefined, updatedUsers, updatedTx);
     triggerToast(`Successfully ${adjustType === 'add' ? 'added' : 'deducted'} ₹${amt} from user balance`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
     setAmountAdjust('');
@@ -853,7 +911,7 @@ export default function AdminSection({
       } catch (e) {}
     }
 
-    onSyncConfig?.();
+    onSyncConfig?.(undefined, undefined, updatedUsers);
     triggerToast('Bank credentials overridden successfully!', 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -927,7 +985,7 @@ export default function AdminSection({
       } catch (e) {}
     }
 
-    onSyncConfig?.();
+    onSyncConfig?.(undefined, undefined, updatedUsers);
     triggerToast('User credentials updated successfully!', 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -963,7 +1021,7 @@ export default function AdminSection({
       } catch (e) {}
     }
 
-    onSyncConfig?.();
+    onSyncConfig?.(undefined, undefined, updatedUsers);
     triggerToast(`User account status updated to ${nextStatus.toUpperCase()}!`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -984,6 +1042,7 @@ export default function AdminSection({
       const updatedUsers = usersList.filter(u => u.id !== userId);
       setUsersList(updatedUsers);
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+      onSyncConfig?.(undefined, undefined, updatedUsers);
 
       triggerToast(`User ${editingUser.name} permanently deleted!`, 'success');
       setEditingUser(null);
@@ -1028,9 +1087,11 @@ export default function AdminSection({
 
     const finalImage = planImage.trim() || 'https://images.unsplash.com/photo-1562624236-f1574fa91191?auto=format&fit=crop&w=600&q=80';
 
+    let updatedPlansList: InvestmentPlan[] = plans;
+
     if (editingPlan) {
       // Editing existing plan
-      const updatedPlans = plans.map(p => {
+      updatedPlansList = plans.map(p => {
         if (p.id === editingPlan.id) {
           return {
             ...p,
@@ -1047,8 +1108,8 @@ export default function AdminSection({
         return p;
       });
 
-      setPlans(updatedPlans);
-      localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
+      setPlans(updatedPlansList);
+      localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlansList));
       triggerToast('Advertisement Plan updated successfully!', 'success');
     } else {
       // Creating a new plan
@@ -1065,13 +1126,13 @@ export default function AdminSection({
         slotsPurchased: 0
       };
 
-      const updatedPlans = [...plans, newPlan];
-      setPlans(updatedPlans);
-      localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
+      updatedPlansList = [...plans, newPlan];
+      setPlans(updatedPlansList);
+      localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlansList));
       triggerToast('New Advertisement Plan published live!', 'success');
     }
 
-    onSyncConfig?.();
+    onSyncConfig?.(updatedPlansList);
 
     // Reset states
     setIsCreatingPlan(false);
@@ -1087,10 +1148,29 @@ export default function AdminSection({
   // Delete Ad Plan Handler
   const handleDeletePlan = (planId: string) => {
     if (window.confirm('Are you sure you want to permanently delete this plan? This takes it offline.')) {
+      // 1. Mark in deleted plans list
+      try {
+        const rawDel = localStorage.getItem('adpaint_deleted_plans');
+        const delList: string[] = rawDel ? JSON.parse(rawDel) : [];
+        if (!delList.includes(planId)) {
+          delList.push(planId);
+          localStorage.setItem('adpaint_deleted_plans', JSON.stringify(delList));
+        }
+      } catch (e) {}
+
+      // 2. Filter local state & storage
       const updatedPlans = plans.filter(p => p.id !== planId);
       setPlans(updatedPlans);
       localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
-      onSyncConfig?.();
+
+      // 3. Delete document from Firestore
+      if (!isQuotaExceeded()) {
+        try {
+          deleteDoc(doc(db, "plans", planId)).catch(() => {});
+        } catch (e) {}
+      }
+
+      onSyncConfig?.(updatedPlans);
       triggerToast('Advertisement plan deleted.', 'info');
     }
   };

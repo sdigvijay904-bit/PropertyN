@@ -383,6 +383,12 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
   const map = new Map<string, PurchaseRecord>();
   if (!userId) return [];
 
+  let deletedPurchases: string[] = [];
+  try {
+    const rawDel = localStorage.getItem('adpaint_deleted_purchases');
+    if (rawDel) deletedPurchases = JSON.parse(rawDel);
+  } catch (e) {}
+
   // 1. Check user-specific localStorage key
   try {
     const userRaw = localStorage.getItem(`adpaint_purchases_${userId}`);
@@ -390,7 +396,7 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
       const parsed = JSON.parse(userRaw);
       if (Array.isArray(parsed)) {
         parsed.forEach((p: PurchaseRecord) => {
-          if (p && p.id) map.set(p.id, p);
+          if (p && p.id && !deletedPurchases.includes(p.id)) map.set(p.id, p);
         });
       }
     }
@@ -403,7 +409,7 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
       const parsedMain = JSON.parse(mainRaw);
       if (Array.isArray(parsedMain)) {
         parsedMain.forEach((p: PurchaseRecord) => {
-          if (p && p.id && (p.userId === userId || !p.userId)) {
+          if (p && p.id && !deletedPurchases.includes(p.id) && (p.userId === userId || !p.userId)) {
             if (!map.has(p.id)) map.set(p.id, p);
           }
         });
@@ -418,7 +424,7 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
       const parsedBackup = JSON.parse(backupRaw);
       if (Array.isArray(parsedBackup)) {
         parsedBackup.forEach((p: PurchaseRecord) => {
-          if (p && p.id && !map.has(p.id)) map.set(p.id, p);
+          if (p && p.id && !deletedPurchases.includes(p.id) && !map.has(p.id)) map.set(p.id, p);
         });
       }
     }
@@ -430,6 +436,11 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
 
   txList.forEach(tx => {
     if (tx.type === 'purchase' && (tx.userId === userId || !tx.userId)) {
+      const reconstructedId = tx.id.startsWith('tx_pur_') ? tx.id.replace('tx_pur_', 'pur_') : `pur_${tx.id}`;
+      if (deletedPurchases.includes(reconstructedId) || deletedPurchases.includes(tx.id)) {
+        return;
+      }
+
       const existingMatch = Array.from(map.values()).find(p => 
         p.id === tx.id || 
         p.id === tx.id.replace('tx_pur_', 'pur_') ||
@@ -440,7 +451,6 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
       if (!existingMatch) {
         const matchedPlan = planList.find(pl => tx.description.includes(pl.title) || pl.price === tx.amount) || planList[0];
         if (matchedPlan) {
-          const reconstructedId = tx.id.startsWith('tx_pur_') ? tx.id.replace('tx_pur_', 'pur_') : `pur_${tx.id}`;
           const reconstructedPurchase: PurchaseRecord = {
             id: reconstructedId,
             userId: userId,
@@ -454,13 +464,15 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
             totalClaimed: 0,
             completed: false
           };
-          map.set(reconstructedId, reconstructedPurchase);
+          if (!deletedPurchases.includes(reconstructedPurchase.id)) {
+            map.set(reconstructedId, reconstructedPurchase);
+          }
         }
       }
     }
   });
 
-  const result = Array.from(map.values());
+  const result = Array.from(map.values()).filter(p => !deletedPurchases.includes(p.id));
   if (result.length > 0) {
     try {
       localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(result));
@@ -471,14 +483,22 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
 }
 
 function getStoredPlans(): InvestmentPlan[] {
+  let deletedPlans: string[] = [];
+  try {
+    const rawDel = localStorage.getItem('adpaint_deleted_plans');
+    if (rawDel) deletedPlans = JSON.parse(rawDel);
+  } catch (e) {}
+
   try {
     const raw = localStorage.getItem('adpaint_plans');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.filter((p: InvestmentPlan) => p && p.id && !deletedPlans.includes(p.id));
+      }
     }
   } catch (e) {}
-  return SEED_PLANS;
+  return SEED_PLANS.filter(p => !deletedPlans.includes(p.id));
 }
 
 export function cleanPhoneNumber(phone: string): string {
@@ -1048,6 +1068,22 @@ export async function firestoreGetState(userId: string): Promise<any> {
   usersList.forEach(u => userMap.set(u.id, u));
   usersList = Array.from(userMap.values());
 
+  // Clean out any deleted plans or deleted purchases
+  let deletedPlans: string[] = [];
+  try {
+    const rawDelP = localStorage.getItem('adpaint_deleted_plans');
+    if (rawDelP) deletedPlans = JSON.parse(rawDelP);
+  } catch (e) {}
+
+  let deletedPurchases: string[] = [];
+  try {
+    const rawDelPur = localStorage.getItem('adpaint_deleted_purchases');
+    if (rawDelPur) deletedPurchases = JSON.parse(rawDelPur);
+  } catch (e) {}
+
+  plans = plans.filter(p => p && p.id && !deletedPlans.includes(p.id));
+  purchases = purchases.filter(p => p && p.id && !deletedPurchases.includes(p.id));
+
   transactions.sort((a, b) => {
     const timeA = new Date(a.date).getTime() || 0;
     const timeB = new Date(b.date).getTime() || 0;
@@ -1074,7 +1110,26 @@ export async function firestoreSaveState(payload: {
   config: Record<string, string>;
   customTicker: string | null;
 }): Promise<any> {
-  const { userId, usersList, plans, transactions, purchases, config, customTicker } = payload;
+  let { userId, usersList, plans, transactions, purchases, config, customTicker } = payload;
+
+  let deletedPlans: string[] = [];
+  try {
+    const rawDelP = localStorage.getItem('adpaint_deleted_plans');
+    if (rawDelP) deletedPlans = JSON.parse(rawDelP);
+  } catch (e) {}
+
+  let deletedPurchases: string[] = [];
+  try {
+    const rawDelPur = localStorage.getItem('adpaint_deleted_purchases');
+    if (rawDelPur) deletedPurchases = JSON.parse(rawDelPur);
+  } catch (e) {}
+
+  if (Array.isArray(plans)) {
+    plans = plans.filter(p => p && p.id && !deletedPlans.includes(p.id));
+  }
+  if (Array.isArray(purchases)) {
+    purchases = purchases.filter(p => p && p.id && !deletedPurchases.includes(p.id));
+  }
 
   // Persist locally first so offline / quota-exceeded changes are never lost!
   if (Array.isArray(usersList) && usersList.length > 0) {
