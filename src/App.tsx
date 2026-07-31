@@ -461,11 +461,23 @@ export default function App() {
         let usersUpdated = false;
         if (data.usersList && data.usersList.length > 0) {
           const serverUserMap = new Map(data.usersList.map((u: any) => [u.id, u]));
+          
+          const phoneToUserMap = new Map<string, any>();
+          data.usersList.forEach((u: any) => {
+            const rawP = u.phone ? u.phone.replace(/\D/g, '') : '';
+            const last10 = rawP.length >= 10 ? rawP.slice(-10) : rawP;
+            if (last10) phoneToUserMap.set(last10, u);
+          });
+
           let hasMissingUser = false;
           
           // Find any users in local memory that aren't on the server yet
           currentUsersList.forEach((localUser: any) => {
-            if (!serverUserMap.has(localUser.id)) {
+            const localRawP = localUser.phone ? localUser.phone.replace(/\D/g, '') : '';
+            const localLast10 = localRawP.length >= 10 ? localRawP.slice(-10) : localRawP;
+            const serverByPhone = localLast10 ? phoneToUserMap.get(localLast10) : null;
+
+            if (!serverUserMap.has(localUser.id) && !serverByPhone) {
               serverUserMap.set(localUser.id, localUser);
               hasMissingUser = true;
             }
@@ -477,15 +489,29 @@ export default function App() {
           if (isDifferent) {
             setUsersList(mergedUsers);
             localStorage.setItem('adpaint_users_list', JSON.stringify(mergedUsers));
+            usersListRef.current = mergedUsers;
           }
           
           if (activeUser) {
-            const latestMe = mergedUsers.find((u: any) => u.id === activeUser.id);
+            const activeUserPhone = activeUser.phone ? activeUser.phone.replace(/\D/g, '') : '';
+            const activeLast10 = activeUserPhone.length >= 10 ? activeUserPhone.slice(-10) : activeUserPhone;
+
+            const latestMe = mergedUsers.find((u: any) => {
+              if (u.id === activeUser.id) return true;
+              if (activeLast10) {
+                const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+                const uLast10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : uPhoneDigits;
+                if (uLast10 && uLast10 === activeLast10) return true;
+              }
+              return false;
+            });
+
             if (latestMe) {
               const sanitizedMe = sanitizeUserCheckIn(latestMe)!;
               if (JSON.stringify(sanitizedMe) !== JSON.stringify(activeUser)) {
                 setUserProfile(sanitizedMe);
                 localStorage.setItem('adpaint_user', JSON.stringify(sanitizedMe));
+                userProfileRef.current = sanitizedMe;
               }
             }
           }
@@ -683,8 +709,20 @@ export default function App() {
             setUsersList(data.usersList);
             localStorage.setItem('adpaint_users_list', JSON.stringify(data.usersList));
             usersListRef.current = data.usersList;
-            if (userId) {
-              const latestMe = data.usersList.find((u: any) => u.id === userId);
+            if (targetUser) {
+              const targetPhone = targetUser.phone ? targetUser.phone.replace(/\D/g, '') : '';
+              const targetLast10 = targetPhone.length >= 10 ? targetPhone.slice(-10) : targetPhone;
+
+              const latestMe = data.usersList.find((u: any) => {
+                if (u.id === targetUser.id) return true;
+                if (targetLast10) {
+                  const uPhoneDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+                  const uLast10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : uPhoneDigits;
+                  if (uLast10 && uLast10 === targetLast10) return true;
+                }
+                return false;
+              });
+
               if (latestMe) {
                 setUserProfile(latestMe);
                 localStorage.setItem('adpaint_user', JSON.stringify(latestMe));
@@ -705,6 +743,8 @@ export default function App() {
         }
       } catch (e) {
         console.warn("Network transmission error (persisted locally):", e);
+      } finally {
+        pushTimeoutRef.current = null;
       }
     }, 100);
   };

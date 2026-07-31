@@ -1041,11 +1041,11 @@ export async function firestoreGetState(userId: string): Promise<any> {
     }
   }
 
-  // Always merge local stored users to avoid losing newly registered local users when Firestore is unavailable
+  // Always merge local stored users first, so Firestore server users data (admin updates, balances) take precedence!
   const localUsers = getStoredUsers();
   const userMap = new Map<string, UserProfile>();
-  usersList.forEach(u => userMap.set(u.id, u));
   localUsers.forEach(u => userMap.set(u.id, u));
+  usersList.forEach(u => userMap.set(u.id, u));
   usersList = Array.from(userMap.values());
 
   transactions.sort((a, b) => {
