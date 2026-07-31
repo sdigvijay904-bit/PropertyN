@@ -13,7 +13,7 @@ import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { cleanUndefined } from '../lib/db';
+import { cleanUndefined, isQuotaExceeded, markQuotaExceeded, getStoredPurchases } from '../lib/db';
 import { firebaseService } from '../firebase/config';
 import { formatTelegramUrl } from '../lib/telegram';
 
@@ -93,19 +93,22 @@ export default function AdminSection({
     window.dispatchEvent(new Event('adpaint_avatar_updated'));
 
     // Instantly write to Firebase Firestore global/config so Mobile APK updates live in real time
-    try {
-      const configDocRef = doc(db, "global", "config");
-      const snap = await getDoc(configDocRef);
-      const existingConfig = snap.exists() && snap.data().config ? snap.data().config : {};
-      existingConfig['adpaint_support_avatar'] = url;
+    if (!isQuotaExceeded()) {
+      try {
+        const configDocRef = doc(db, "global", "config");
+        const snap = await getDoc(configDocRef);
+        const existingConfig = snap.exists() && snap.data().config ? snap.data().config : {};
+        existingConfig['adpaint_support_avatar'] = url;
 
-      await setDoc(configDocRef, {
-        config: existingConfig,
-        customTicker: localStorage.getItem('adpaint_custom_ticker') || null
-      }, { merge: true });
-      console.log("Avatar synced directly to Firestore global/config!");
-    } catch (err) {
-      console.error("Direct Firestore config sync error:", err);
+        await setDoc(configDocRef, {
+          config: existingConfig,
+          customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+        }, { merge: true });
+        console.log("Avatar synced directly to Firestore global/config!");
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct Firestore config sync error:", err);
+      }
     }
 
     if (onSyncConfig) {
@@ -239,13 +242,7 @@ export default function AdminSection({
       (cleanPhone.length >= 10 && (p as any).userPhone && (p as any).userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
     );
 
-    let fromStorage: PurchaseRecord[] = [];
-    try {
-      const raw = localStorage.getItem(`adpaint_purchases_${userId}`);
-      if (raw) {
-        fromStorage = JSON.parse(raw);
-      }
-    } catch (e) {}
+    const fromStorage = getStoredPurchases(userId, transactions, plans);
 
     const map = new Map<string, PurchaseRecord>();
     fromProp.forEach(p => map.set(p.id, p));
@@ -557,40 +554,43 @@ export default function AdminSection({
     }
 
     // Direct immediate write to Firestore for target user and transaction
-    try {
-      const updatedUserObj = finalUsers.find(u => u.id === targetUserId);
-      if (updatedUserObj) {
-        await setDoc(doc(db, "users", targetUserId), cleanUndefined(updatedUserObj));
-      }
-
-      // Save credited sponsors' updated profiles and commission transactions
-      for (const sponsorId of creditSponsorList) {
-        const sponsorObj = finalUsers.find(u => u.id === sponsorId);
-        if (sponsorObj) {
-          await setDoc(doc(db, "users", sponsorId), cleanUndefined(sponsorObj));
+    if (!isQuotaExceeded()) {
+      try {
+        const updatedUserObj = finalUsers.find(u => u.id === targetUserId);
+        if (updatedUserObj) {
+          await setDoc(doc(db, "users", targetUserId), cleanUndefined(updatedUserObj));
         }
-      }
-      const newCommissionTxs = updatedTx.filter(t => t.type === 'commission' && creditSponsorList.includes(t.userId || ''));
-      for (const commTx of newCommissionTxs) {
-        await setDoc(doc(db, "transactions", commTx.id), cleanUndefined(commTx));
-      }
 
-      // Save approved recharge transaction directly
-      const approvedTxObj = updatedTx.find(t => t.id === txId);
-      if (approvedTxObj) {
-        await setDoc(doc(db, "transactions", txId), cleanUndefined(approvedTxObj));
-      }
-
-      // Try to find a matching record in the deposits collection and approve it there too
-      if (tx.utr) {
-        const allDeposits = await firebaseService.getDeposits();
-        const matchDep = allDeposits.find(d => d.utr === tx.utr && d.status === 'Pending');
-        if (matchDep) {
-          await firebaseService.updateDepositStatus(matchDep.id, 'Approved', currentProfile?.id || 'admin');
+        // Save credited sponsors' updated profiles and commission transactions
+        for (const sponsorId of creditSponsorList) {
+          const sponsorObj = finalUsers.find(u => u.id === sponsorId);
+          if (sponsorObj) {
+            await setDoc(doc(db, "users", sponsorId), cleanUndefined(sponsorObj));
+          }
         }
+        const newCommissionTxs = updatedTx.filter(t => t.type === 'commission' && creditSponsorList.includes(t.userId || ''));
+        for (const commTx of newCommissionTxs) {
+          await setDoc(doc(db, "transactions", commTx.id), cleanUndefined(commTx));
+        }
+
+        // Save approved recharge transaction directly
+        const approvedTxObj = updatedTx.find(t => t.id === txId);
+        if (approvedTxObj) {
+          await setDoc(doc(db, "transactions", txId), cleanUndefined(approvedTxObj));
+        }
+
+        // Try to find a matching record in the deposits collection and approve it there too
+        if (tx.utr) {
+          const allDeposits = await firebaseService.getDeposits();
+          const matchDep = allDeposits.find(d => d.utr === tx.utr && d.status === 'Pending');
+          if (matchDep) {
+            await firebaseService.updateDepositStatus(matchDep.id, 'Approved', currentProfile?.id || 'admin');
+          }
+        }
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct Firestore writes in handleApproveRecharge failed:", err);
       }
-    } catch (err) {
-      console.error("Direct Firestore writes in handleApproveRecharge failed:", err);
     }
 
     setUsersList(finalUsers);
@@ -615,22 +615,25 @@ export default function AdminSection({
     });
 
     // Direct immediate write to Firestore
-    try {
-      const rejectedTxObj = updatedTx.find(t => t.id === txId);
-      if (rejectedTxObj) {
-        await setDoc(doc(db, "transactions", txId), cleanUndefined(rejectedTxObj));
-      }
-
-      // Try to find a matching record in the deposits collection and reject it there too
-      if (tx.utr) {
-        const allDeposits = await firebaseService.getDeposits();
-        const matchDep = allDeposits.find(d => d.utr === tx.utr && d.status === 'Pending');
-        if (matchDep) {
-          await firebaseService.updateDepositStatus(matchDep.id, 'Rejected', currentProfile?.id || 'admin');
+    if (!isQuotaExceeded()) {
+      try {
+        const rejectedTxObj = updatedTx.find(t => t.id === txId);
+        if (rejectedTxObj) {
+          await setDoc(doc(db, "transactions", txId), cleanUndefined(rejectedTxObj));
         }
+
+        // Try to find a matching record in the deposits collection and reject it there too
+        if (tx.utr) {
+          const allDeposits = await firebaseService.getDeposits();
+          const matchDep = allDeposits.find(d => d.utr === tx.utr && d.status === 'Pending');
+          if (matchDep) {
+            await firebaseService.updateDepositStatus(matchDep.id, 'Rejected', currentProfile?.id || 'admin');
+          }
+        }
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct Firestore writes in handleRejectRecharge failed:", err);
       }
-    } catch (err) {
-      console.error("Direct Firestore writes in handleRejectRecharge failed:", err);
     }
 
     setTransactions(updatedTx);
@@ -652,13 +655,16 @@ export default function AdminSection({
     });
 
     // Direct immediate write to Firestore
-    try {
-      const approvedTxObj = updatedTx.find(t => t.id === txId);
-      if (approvedTxObj) {
-        await setDoc(doc(db, "transactions", txId), cleanUndefined(approvedTxObj));
+    if (!isQuotaExceeded()) {
+      try {
+        const approvedTxObj = updatedTx.find(t => t.id === txId);
+        if (approvedTxObj) {
+          await setDoc(doc(db, "transactions", txId), cleanUndefined(approvedTxObj));
+        }
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct Firestore write in handleApproveWithdrawal failed:", err);
       }
-    } catch (err) {
-      console.error("Direct Firestore write in handleApproveWithdrawal failed:", err);
     }
 
     setTransactions(updatedTx);
@@ -703,18 +709,21 @@ export default function AdminSection({
     });
 
     // Direct immediate write to Firestore
-    try {
-      const updatedUserObj = updatedUsers.find(u => u.id === targetUserId);
-      if (updatedUserObj) {
-        await setDoc(doc(db, "users", targetUserId), cleanUndefined(updatedUserObj));
-      }
+    if (!isQuotaExceeded()) {
+      try {
+        const updatedUserObj = updatedUsers.find(u => u.id === targetUserId);
+        if (updatedUserObj) {
+          await setDoc(doc(db, "users", targetUserId), cleanUndefined(updatedUserObj));
+        }
 
-      const rejectedTxObj = updatedTx.find(t => t.id === txId);
-      if (rejectedTxObj) {
-        await setDoc(doc(db, "transactions", txId), cleanUndefined(rejectedTxObj));
+        const rejectedTxObj = updatedTx.find(t => t.id === txId);
+        if (rejectedTxObj) {
+          await setDoc(doc(db, "transactions", txId), cleanUndefined(rejectedTxObj));
+        }
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct Firestore writes in handleRejectWithdrawal failed:", err);
       }
-    } catch (err) {
-      console.error("Direct Firestore writes in handleRejectWithdrawal failed:", err);
     }
 
     setUsersList(updatedUsers);
@@ -1053,7 +1062,7 @@ export default function AdminSection({
     const getUserInvested = (u: UserProfile) => {
       const cleanPhone = u.phone ? u.phone.replace(/\D/g, '') : '';
       const rechargeSum = transactions
-        .filter(t => t.type === 'recharge' && (t.status === 'success' || t.status === 'Approved' || t.status === 'approved') && (
+        .filter(t => t.type === 'recharge' && (t.status === 'success' || (t.status as string) === 'Approved' || (t.status as string) === 'approved') && (
           t.userId === u.id || 
           (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
         ))
@@ -2935,19 +2944,22 @@ export default function AdminSection({
                       setSupportAvatarInput('');
                       window.dispatchEvent(new Event('adpaint_avatar_updated'));
 
-                      try {
-                        const configDocRef = doc(db, "global", "config");
-                        const snap = await getDoc(configDocRef);
-                        if (snap.exists() && snap.data().config) {
-                          const existingConfig = { ...snap.data().config };
-                          delete existingConfig['adpaint_support_avatar'];
-                          await setDoc(configDocRef, {
-                            config: existingConfig,
-                            customTicker: localStorage.getItem('adpaint_custom_ticker') || null
-                          }, { merge: true });
+                      if (!isQuotaExceeded()) {
+                        try {
+                          const configDocRef = doc(db, "global", "config");
+                          const snap = await getDoc(configDocRef);
+                          if (snap.exists() && snap.data().config) {
+                            const existingConfig = { ...snap.data().config };
+                            delete existingConfig['adpaint_support_avatar'];
+                            await setDoc(configDocRef, {
+                              config: existingConfig,
+                              customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+                            }, { merge: true });
+                          }
+                        } catch (err) {
+                          markQuotaExceeded(err);
+                          console.error("Direct Firestore reset error:", err);
                         }
-                      } catch (err) {
-                        console.error("Direct Firestore reset error:", err);
                       }
 
                       if (onSyncConfig) {

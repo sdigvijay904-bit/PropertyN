@@ -37,7 +37,10 @@ import {
   firestoreResetPassword,
   firestoreGetState,
   firestoreSaveState,
-  cleanUndefined
+  getStoredPurchases,
+  cleanUndefined,
+  isQuotaExceeded,
+  markQuotaExceeded
 } from './lib/db';
 import { db } from './lib/firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
@@ -113,10 +116,7 @@ export default function App() {
       const storedUser = localStorage.getItem('adpaint_user');
       if (storedUser) {
         const parsedUser = JSON.parse(storedUser);
-        const userPurchasesStr = localStorage.getItem(`adpaint_purchases_${parsedUser.id}`);
-        if (userPurchasesStr) {
-          return JSON.parse(userPurchasesStr);
-        }
+        return getStoredPurchases(parsedUser.id);
       }
       const storedPurchases = localStorage.getItem('adpaint_purchases');
       return storedPurchases ? JSON.parse(storedPurchases) : [];
@@ -298,14 +298,8 @@ export default function App() {
       }
 
       // Load user-specific purchases on startup
-      const userPurchasesStr = localStorage.getItem(`adpaint_purchases_${finalUser.id}`);
-      if (userPurchasesStr) {
-        setPurchases(JSON.parse(userPurchasesStr));
-      } else if (storedPurchases) {
-        setPurchases(JSON.parse(storedPurchases));
-      } else {
-        setPurchases([]);
-      }
+      const userPurchases = getStoredPurchases(finalUser.id);
+      setPurchases(userPurchases);
     } else {
       setPurchases([]);
     }
@@ -401,7 +395,6 @@ export default function App() {
         if (hasReferralInUrl) {
           // Force logout / clear session of previous user to open registration page cleanly
           localStorage.removeItem('adpaint_user');
-          localStorage.removeItem('adpaint_purchases');
           setUserProfile(null);
           setPurchases([]);
           setIsLoggedIn(false);
@@ -429,7 +422,10 @@ export default function App() {
     currentUser: UserProfile | null = userProfileRef.current,
     force: boolean = false
   ) => {
-    // If the local state was updated in the last 6 seconds, we defer syncing to prevent clobbering!
+    // If quota exceeded or local state updated recently, defer syncing
+    if (!force && isQuotaExceeded()) {
+      return;
+    }
     if (!force && Date.now() - lastLocalUpdateRef.current < 6000) {
       console.log("Deferring syncWithServer to allow pending pushStateToServer to complete...");
       return;
@@ -565,13 +561,26 @@ export default function App() {
         // 4. Sync current user's specific purchases list (with merge-back/restore protection)
         let purchasesUpdated = false;
         let mergedPurchases = currentPurchases;
-        if (userId && data.purchases) {
-          const serverPurchasesMap = new Map(data.purchases.map((p: any) => [p.id, p]));
+        if (userId) {
+          const localStoredPurchases = getStoredPurchases(userId, currentTransactions, finalPlans);
+          const serverPurchasesMap = new Map<string, PurchaseRecord>();
+
+          if (Array.isArray(data.purchases)) {
+            data.purchases.forEach((p: any) => serverPurchasesMap.set(p.id, p));
+          }
+
           let hasMissingPurchases = false;
 
           currentPurchases.forEach((localPurchase: any) => {
             if (!serverPurchasesMap.has(localPurchase.id)) {
               serverPurchasesMap.set(localPurchase.id, localPurchase);
+              hasMissingPurchases = true;
+            }
+          });
+
+          localStoredPurchases.forEach((storedPurchase: any) => {
+            if (!serverPurchasesMap.has(storedPurchase.id)) {
+              serverPurchasesMap.set(storedPurchase.id, storedPurchase);
               hasMissingPurchases = true;
             }
           });
@@ -582,6 +591,8 @@ export default function App() {
           if (isDifferent) {
             setPurchases(mergedPurchases);
             localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(mergedPurchases));
+            localStorage.setItem(`adpaint_backup_purchases_${userId}`, JSON.stringify(mergedPurchases));
+            localStorage.setItem('adpaint_purchases', JSON.stringify(mergedPurchases));
             purchasesRef.current = mergedPurchases;
           }
 
@@ -722,7 +733,6 @@ export default function App() {
       nextUsersList = updatedList;
     } else {
       localStorage.removeItem('adpaint_user');
-      localStorage.removeItem('adpaint_purchases');
       setUserProfile(null);
       setPurchases([]);
     }
@@ -739,11 +749,33 @@ export default function App() {
         }
         return p;
       });
+
+      let existingUserP: PurchaseRecord[] = [];
+      let existingMainP: PurchaseRecord[] = [];
+      try {
+        if (userId) {
+          existingUserP = getStoredPurchases(userId);
+        }
+        const rawMain = localStorage.getItem('adpaint_purchases');
+        if (rawMain) existingMainP = JSON.parse(rawMain);
+      } catch (e) {}
+
+      const userMap = new Map<string, PurchaseRecord>();
+      existingUserP.forEach(p => userMap.set(p.id, p));
+      refinedPurchases.forEach(p => userMap.set(p.id, p));
+      const finalUserPurchases = Array.from(userMap.values());
+
+      const mainMap = new Map<string, PurchaseRecord>();
+      existingMainP.forEach(p => mainMap.set(p.id, p));
+      refinedPurchases.forEach(p => mainMap.set(p.id, p));
+      const finalMainPurchases = Array.from(mainMap.values());
+
       if (userId) {
-        localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(refinedPurchases));
+        localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(finalUserPurchases));
+        localStorage.setItem(`adpaint_backup_purchases_${userId}`, JSON.stringify(finalUserPurchases));
       }
-      localStorage.setItem('adpaint_purchases', JSON.stringify(refinedPurchases));
-      setPurchases(refinedPurchases);
+      localStorage.setItem('adpaint_purchases', JSON.stringify(finalMainPurchases));
+      setPurchases(finalUserPurchases);
     }
     let finalTx = updatedTx;
     if (updatedTx) {
@@ -774,38 +806,51 @@ export default function App() {
 
   // Set up Firestore real-time listener for global configs (Support Avatar, UPI, Links) for instant Mobile APK & Web updates
   useEffect(() => {
-    const configDocRef = doc(db, "global", "config");
-    const unsub = onSnapshot(configDocRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const serverConfig = data.config || {};
-        const keysToSync = [
-          'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
-          'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
-          'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
-          'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
-        ];
-        keysToSync.forEach(key => {
-          const serverVal = serverConfig[key];
-          if (serverVal) {
-            const localVal = localStorage.getItem(key);
-            if (localVal !== serverVal) {
-              localStorage.setItem(key, serverVal);
-              if (key === 'adpaint_support_avatar') {
-                window.dispatchEvent(new Event('adpaint_avatar_updated'));
+    if (isQuotaExceeded()) return;
+    let unsub: (() => void) | null = null;
+    try {
+      const configDocRef = doc(db, "global", "config");
+      unsub = onSnapshot(configDocRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          const serverConfig = data.config || {};
+          const keysToSync = [
+            'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
+            'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
+            'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
+            'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
+          ];
+          keysToSync.forEach(key => {
+            const serverVal = serverConfig[key];
+            if (serverVal) {
+              const localVal = localStorage.getItem(key);
+              if (localVal !== serverVal) {
+                localStorage.setItem(key, serverVal);
+                if (key === 'adpaint_support_avatar') {
+                  window.dispatchEvent(new Event('adpaint_avatar_updated'));
+                }
               }
             }
+          });
+          if (data.customTicker) {
+            localStorage.setItem('adpaint_custom_ticker', data.customTicker);
           }
-        });
-        if (data.customTicker) {
-          localStorage.setItem('adpaint_custom_ticker', data.customTicker);
         }
-      }
-    }, (err) => {
-      console.warn("Real-time config snapshot listener:", err);
-    });
+      }, (err) => {
+        console.warn("Real-time config snapshot listener notice:", err?.message || err);
+        markQuotaExceeded(err);
+        if (unsub) {
+          unsub();
+          unsub = null;
+        }
+      });
+    } catch (err) {
+      markQuotaExceeded(err);
+    }
 
-    return () => unsub();
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   // Set up periodic real-time background sync loop and foreground listener
@@ -824,7 +869,7 @@ export default function App() {
 
     const interval = setInterval(() => {
       syncWithServer();
-    }, 6000); // 6 seconds interval provides real-time responsiveness without overloading state or triggering loops
+    }, 30000); // 30 seconds interval prevents exhausting database quotas while maintaining synchronization
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -1100,19 +1145,27 @@ export default function App() {
       return;
     }
 
-    const targetPhone = `+91 ${mobileNumber}`;
+    const targetPhone = mobileNumber.trim();
 
     try {
       const loginData = await firestoreLogin({ phone: targetPhone, password_entered: password });
       const serverUser = sanitizeUserCheckIn(loginData.user)!;
-      const serverPurchases = loginData.purchases;
+      const serverPurchases = loginData.purchases || [];
+
+      const localPurchases = getStoredPurchases(serverUser.id, loginData.transactions);
+      const mergedPMap = new Map<string, PurchaseRecord>();
+      localPurchases.forEach(p => mergedPMap.set(p.id, p));
+      serverPurchases.forEach((p: PurchaseRecord) => mergedPMap.set(p.id, p));
+      const finalPurchases = Array.from(mergedPMap.values());
 
       setUserProfile(serverUser);
-      setPurchases(serverPurchases);
+      setPurchases(finalPurchases);
       setTransactions(loginData.transactions);
       localStorage.setItem('adpaint_user', JSON.stringify(serverUser));
       localStorage.setItem('adpaint_transactions', JSON.stringify(loginData.transactions));
-      localStorage.setItem(`adpaint_purchases_${serverUser.id}`, JSON.stringify(serverPurchases));
+      localStorage.setItem(`adpaint_purchases_${serverUser.id}`, JSON.stringify(finalPurchases));
+      localStorage.setItem(`adpaint_backup_purchases_${serverUser.id}`, JSON.stringify(finalPurchases));
+      localStorage.setItem('adpaint_purchases', JSON.stringify(finalPurchases));
 
       setIsLoggedIn(true);
       if (serverUser.role !== 'admin' && !localStorage.getItem(`adpaint_notice_shown_${serverUser.id}`)) {
@@ -1147,7 +1200,7 @@ export default function App() {
       return;
     }
 
-    const targetPhone = `+91 ${forgotPhone}`;
+    const targetPhone = forgotPhone.trim();
     
     try {
       const checkData = await firestoreCheckPhone(targetPhone);
@@ -1190,7 +1243,7 @@ export default function App() {
       return;
     }
 
-    const targetPhone = `+91 ${forgotPhone}`;
+    const targetPhone = forgotPhone.trim();
 
     try {
       await firestoreResetPassword({ phone: targetPhone, password_entered: forgotNewPassword });
@@ -1520,26 +1573,30 @@ export default function App() {
     };
 
     // 1. Direct immediate write to transactions collection in Firestore to prevent any sync failure
-    try {
-      await setDoc(doc(db, "transactions", rechargeTx.id), cleanUndefined(rechargeTx));
-    } catch (err) {
-      console.error("Direct transaction write to Firestore failed:", err);
-    }
+    if (!isQuotaExceeded()) {
+      try {
+        await setDoc(doc(db, "transactions", rechargeTx.id), cleanUndefined(rechargeTx));
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct transaction write to Firestore failed:", err);
+      }
 
-    // 2. Direct immediate write to deposits collection in Firestore using firebaseService wrapper
-    try {
-      await firebaseService.saveDepositRequest({
-        userId: userProfile.id,
-        userName: userProfile.name,
-        email: (userProfile as any).email || `${userProfile.phone.replace(/[^0-9]/g, '')}@propertyn.com`,
-        mobileNumber: userProfile.phone,
-        orderId: `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-        depositAmount: amount,
-        utr: utr,
-        paymentTime: new Date().toLocaleString()
-      });
-    } catch (err) {
-      console.error("Direct deposit write to Firestore failed:", err);
+      // 2. Direct immediate write to deposits collection in Firestore using firebaseService wrapper
+      try {
+        await firebaseService.saveDepositRequest({
+          userId: userProfile.id,
+          userName: userProfile.name,
+          email: (userProfile as any).email || `${userProfile.phone.replace(/[^0-9]/g, '')}@propertyn.com`,
+          mobileNumber: userProfile.phone,
+          orderId: `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          depositAmount: amount,
+          utr: utr,
+          paymentTime: new Date().toLocaleString()
+        });
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct deposit write to Firestore failed:", err);
+      }
     }
 
     saveStateToStorage(userProfile, plans, purchases, [...transactions, rechargeTx], teamMembers);
@@ -1569,11 +1626,14 @@ export default function App() {
     };
 
     // Direct immediate write to transactions and users collections in Firestore to prevent any sync failure
-    try {
-      await setDoc(doc(db, "transactions", withdrawTx.id), cleanUndefined(withdrawTx));
-      await setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser));
-    } catch (err) {
-      console.error("Direct withdrawal write to Firestore failed:", err);
+    if (!isQuotaExceeded()) {
+      try {
+        await setDoc(doc(db, "transactions", withdrawTx.id), cleanUndefined(withdrawTx));
+        await setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser));
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct withdrawal write to Firestore failed:", err);
+      }
     }
 
     saveStateToStorage(updatedUser, plans, purchases, [...transactions, withdrawTx], teamMembers);

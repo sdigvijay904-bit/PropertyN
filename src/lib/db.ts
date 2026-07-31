@@ -266,10 +266,38 @@ const SEED_TRANSACTIONS: TransactionRecord[] = [
   }
 ];
 
+// Quota circuit breaker to prevent continuous error logs when Firestore daily limit is reached
+let firestoreQuotaExceeded = false;
+let quotaExceededTime = 0;
+
+export function isQuotaExceeded(): boolean {
+  if (!firestoreQuotaExceeded) return false;
+  // Retry Firestore connection after 15 minutes
+  if (Date.now() - quotaExceededTime > 15 * 60 * 1000) {
+    firestoreQuotaExceeded = false;
+    return false;
+  }
+  return true;
+}
+
+export function markQuotaExceeded(err: any): boolean {
+  const msg = String(err?.message || err || '');
+  const code = String(err?.code || '');
+  if (code === 'resource-exhausted' || msg.includes('Quota limit') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+    if (!firestoreQuotaExceeded) {
+      console.warn("[Firestore Quota Exceeded] Circuit breaker activated. App will seamlessly operate on LocalStorage.");
+    }
+    firestoreQuotaExceeded = true;
+    quotaExceededTime = Date.now();
+    return true;
+  }
+  return false;
+}
+
 // Helper to seed Firestore if empty
 let isSeeding = false;
 export async function seedDatabaseIfEmpty() {
-  if (isSeeding) return;
+  if (isSeeding || isQuotaExceeded()) return;
   try {
     isSeeding = true;
     const configDocRef = doc(db, "global", "config");
@@ -311,6 +339,7 @@ export async function seedDatabaseIfEmpty() {
 
     console.log("Database seeding completed successfully!");
   } catch (error) {
+    markQuotaExceeded(error);
     console.warn("Error seeding Firestore database (skipping):", error);
   } finally {
     isSeeding = false;
@@ -350,22 +379,95 @@ function getStoredTransactions(): TransactionRecord[] {
   return SEED_TRANSACTIONS;
 }
 
-function getStoredPurchases(userId: string): PurchaseRecord[] {
+export function getStoredPurchases(userId: string, currentTransactions?: TransactionRecord[], currentPlans?: InvestmentPlan[]): PurchaseRecord[] {
+  const map = new Map<string, PurchaseRecord>();
+  if (!userId) return [];
+
+  // 1. Check user-specific localStorage key
   try {
-    const raw = localStorage.getItem(`adpaint_purchases_${userId}`);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
-    const rawMain = localStorage.getItem('adpaint_purchases');
-    if (rawMain) {
-      const parsedMain = JSON.parse(rawMain);
-      if (Array.isArray(parsedMain)) {
-        return parsedMain.filter((p: any) => p.userId === userId);
+    const userRaw = localStorage.getItem(`adpaint_purchases_${userId}`);
+    if (userRaw) {
+      const parsed = JSON.parse(userRaw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((p: PurchaseRecord) => {
+          if (p && p.id) map.set(p.id, p);
+        });
       }
     }
   } catch (e) {}
-  return [];
+
+  // 2. Check main localStorage key
+  try {
+    const mainRaw = localStorage.getItem('adpaint_purchases');
+    if (mainRaw) {
+      const parsedMain = JSON.parse(mainRaw);
+      if (Array.isArray(parsedMain)) {
+        parsedMain.forEach((p: PurchaseRecord) => {
+          if (p && p.id && (p.userId === userId || !p.userId)) {
+            if (!map.has(p.id)) map.set(p.id, p);
+          }
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 3. Backup key check
+  try {
+    const backupRaw = localStorage.getItem(`adpaint_backup_purchases_${userId}`);
+    if (backupRaw) {
+      const parsedBackup = JSON.parse(backupRaw);
+      if (Array.isArray(parsedBackup)) {
+        parsedBackup.forEach((p: PurchaseRecord) => {
+          if (p && p.id && !map.has(p.id)) map.set(p.id, p);
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 4. Reconstruct missing purchases from purchase transactions if any
+  const txList = currentTransactions || getStoredTransactions();
+  const planList = currentPlans || getStoredPlans();
+
+  txList.forEach(tx => {
+    if (tx.type === 'purchase' && (tx.userId === userId || !tx.userId)) {
+      const existingMatch = Array.from(map.values()).find(p => 
+        p.id === tx.id || 
+        p.id === tx.id.replace('tx_pur_', 'pur_') ||
+        p.datePurchased === tx.date ||
+        (p.price === tx.amount && Math.abs(new Date(p.datePurchased).getTime() - new Date(tx.date).getTime()) < 60000)
+      );
+
+      if (!existingMatch) {
+        const matchedPlan = planList.find(pl => tx.description.includes(pl.title) || pl.price === tx.amount) || planList[0];
+        if (matchedPlan) {
+          const reconstructedId = tx.id.startsWith('tx_pur_') ? tx.id.replace('tx_pur_', 'pur_') : `pur_${tx.id}`;
+          const reconstructedPurchase: PurchaseRecord = {
+            id: reconstructedId,
+            userId: userId,
+            planId: matchedPlan.id,
+            planTitle: matchedPlan.title,
+            price: tx.amount || matchedPlan.price,
+            dailyIncome: matchedPlan.dailyIncome,
+            durationDays: matchedPlan.durationDays,
+            datePurchased: tx.date || new Date().toISOString(),
+            lastClaimedAt: tx.date || new Date().toISOString(),
+            totalClaimed: 0,
+            completed: false
+          };
+          map.set(reconstructedId, reconstructedPurchase);
+        }
+      }
+    }
+  });
+
+  const result = Array.from(map.values());
+  if (result.length > 0) {
+    try {
+      localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(result));
+      localStorage.setItem(`adpaint_backup_purchases_${userId}`, JSON.stringify(result));
+    } catch (e) {}
+  }
+  return result;
 }
 
 function getStoredPlans(): InvestmentPlan[] {
@@ -403,33 +505,76 @@ export function cleanPhoneNumber(phone: string): string {
 // Check phone registered
 export async function firestoreCheckPhone(phone: string): Promise<{ exists: boolean }> {
   const cleanedPhone = cleanPhoneNumber(phone);
-  const digitsOnly = cleanedPhone.replace(/\D/g, "");
-  const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+  const rawDigits = phone.replace(/\D/g, "");
+  const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
 
-  try {
-    await seedDatabaseIfEmpty();
-    const usersColl = collection(db, "users");
-    const q = query(usersColl, where("phone", "==", cleanedPhone));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      return { exists: true };
-    }
+  if (!isQuotaExceeded()) {
+    try {
+      await seedDatabaseIfEmpty();
+      const usersColl = collection(db, "users");
 
-    if (last10.length >= 10) {
-      const userDocRef = doc(db, "users", `usr_${last10}`);
-      const userSnap = await getDoc(userDocRef);
-      if (userSnap.exists()) {
-        return { exists: true };
+      const phoneCandidates = Array.from(new Set([
+        cleanedPhone,
+        phone.trim(),
+        rawDigits,
+        last10,
+        `+91${last10}`,
+        `+91 ${last10}`,
+        `91${last10}`
+      ])).filter(Boolean);
+
+      for (const cand of phoneCandidates) {
+        const q = query(usersColl, where("phone", "==", cand));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          return { exists: true };
+        }
       }
+
+      if (last10.length >= 10) {
+        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
+        for (const dId of docIds) {
+          const userDocRef = doc(db, "users", dId);
+          const userSnap = await getDoc(userDocRef);
+          if (userSnap.exists()) {
+            return { exists: true };
+          }
+        }
+      }
+
+      const allUsersSnap = await getDocs(usersColl);
+      let found = false;
+      allUsersSnap.forEach((docSnap) => {
+        if (found) return;
+        const uData = docSnap.data() as UserProfile;
+        const uDigits = uData.phone ? uData.phone.replace(/\D/g, "") : "";
+        const uIdDigits = docSnap.id ? docSnap.id.replace(/\D/g, "") : "";
+        if (
+          (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+          (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+          uData.phone === cleanedPhone ||
+          uData.phone === phone.trim()
+        ) {
+          found = true;
+        }
+      });
+      if (found) return { exists: true };
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("firestoreCheckPhone firestore read failed (using local check):", err);
     }
-  } catch (err) {
-    console.warn("firestoreCheckPhone firestore read failed (using local check):", err);
   }
 
   const localUsers = getStoredUsers();
   const exists = localUsers.some(u => {
     const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
-    return (uDigits.length >= 10 && uDigits.endsWith(last10)) || u.phone === cleanedPhone;
+    const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
+    return (
+      (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+      (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+      u.phone === cleanedPhone ||
+      u.phone === phone.trim()
+    );
   });
 
   return { exists };
@@ -439,31 +584,70 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
 export async function firestoreLogin(payload: { phone: string; password_entered: string }): Promise<any> {
   const { phone, password_entered } = payload;
   const cleanedPhone = cleanPhoneNumber(phone);
-  const digitsOnly = cleanedPhone.replace(/\D/g, "");
-  const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+  const rawDigits = phone.replace(/\D/g, "");
+  const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
 
   let user: UserProfile | null = null;
   let purchases: PurchaseRecord[] = [];
   let transactions: TransactionRecord[] = [];
 
-  try {
-    await seedDatabaseIfEmpty();
-    const usersColl = collection(db, "users");
-    let q = query(usersColl, where("phone", "==", cleanedPhone));
-    let querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      const userDoc = querySnapshot.docs[0];
-      user = userDoc.data() as UserProfile;
-    } else if (last10.length >= 10) {
-      const userDocRef = doc(db, "users", `usr_${last10}`);
-      const userSnap = await getDoc(userDocRef);
-      if (userSnap.exists()) {
-        user = userSnap.data() as UserProfile;
+  if (!isQuotaExceeded()) {
+    try {
+      await seedDatabaseIfEmpty();
+      const usersColl = collection(db, "users");
+
+      const phoneCandidates = Array.from(new Set([
+        cleanedPhone,
+        phone.trim(),
+        rawDigits,
+        last10,
+        `+91${last10}`,
+        `+91 ${last10}`,
+        `91${last10}`
+      ])).filter(Boolean);
+
+      for (const cand of phoneCandidates) {
+        if (user) break;
+        const q = query(usersColl, where("phone", "==", cand));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          user = querySnapshot.docs[0].data() as UserProfile;
+        }
       }
+
+      if (!user && last10.length >= 10) {
+        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
+        for (const dId of docIds) {
+          if (user) break;
+          const userDocRef = doc(db, "users", dId);
+          const userSnap = await getDoc(userDocRef);
+          if (userSnap.exists()) {
+            user = userSnap.data() as UserProfile;
+          }
+        }
+      }
+
+      if (!user) {
+        const allUsersSnap = await getDocs(usersColl);
+        allUsersSnap.forEach((docSnap) => {
+          if (user) return;
+          const uData = docSnap.data() as UserProfile;
+          const uDigits = uData.phone ? uData.phone.replace(/\D/g, "") : "";
+          const uIdDigits = docSnap.id ? docSnap.id.replace(/\D/g, "") : "";
+          if (
+            (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+            (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+            uData.phone === cleanedPhone ||
+            uData.phone === phone.trim()
+          ) {
+            user = uData;
+          }
+        });
+      }
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("Firestore read failed on login (using local cache):", err);
     }
-  } catch (err) {
-    console.warn("Firestore read failed on login (using local cache):", err);
   }
 
   // Local fallback lookup if Firestore failed or returned empty
@@ -471,7 +655,13 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
     const localUsers = getStoredUsers();
     user = localUsers.find(u => {
       const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
-      return (uDigits.length >= 10 && uDigits.endsWith(last10)) || u.phone === cleanedPhone;
+      const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
+      return (
+        (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+        (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+        u.phone === cleanedPhone ||
+        u.phone === phone.trim()
+      );
     }) || null;
   }
 
@@ -483,34 +673,46 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
     throw new Error("Your account has been suspended by Admin.");
   }
 
-  if (user.password && user.password !== password_entered) {
+  const enteredPass = password_entered ? password_entered.trim() : "";
+  const storedPass = user.password ? user.password.trim() : "";
+  if (storedPass && storedPass !== enteredPass) {
     throw new Error("Incorrect password!");
   }
 
   // Load active purchases & transactions
-  try {
-    const purchasesColl = collection(db, "purchases");
-    const qPurchases = query(purchasesColl, where("userId", "==", user.id));
-    const purchasesSnap = await getDocs(qPurchases);
-    purchasesSnap.forEach((doc) => {
-      purchases.push(doc.data() as PurchaseRecord);
-    });
+  if (!isQuotaExceeded()) {
+    try {
+      const purchasesColl = collection(db, "purchases");
+      const qPurchases = query(purchasesColl, where("userId", "==", user.id));
+      const purchasesSnap = await getDocs(qPurchases);
+      purchasesSnap.forEach((doc) => {
+        purchases.push(doc.data() as PurchaseRecord);
+      });
 
-    const transactionsColl = collection(db, "transactions");
-    const txSnap = await getDocs(transactionsColl);
-    txSnap.forEach((doc) => {
-      transactions.push(doc.data() as TransactionRecord);
-    });
-  } catch (err) {
-    console.warn("Firestore purchases/transactions load failed, using local cache:", err);
+      const transactionsColl = collection(db, "transactions");
+      const txSnap = await getDocs(transactionsColl);
+      txSnap.forEach((doc) => {
+        transactions.push(doc.data() as TransactionRecord);
+      });
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("Firestore purchases/transactions load failed, using local cache:", err);
+    }
   }
 
-  if (purchases.length === 0) {
-    purchases = getStoredPurchases(user.id);
-  }
-  if (transactions.length === 0) {
-    transactions = getStoredTransactions();
-  }
+  // Merge local transactions first
+  const localTx = getStoredTransactions();
+  const txMap = new Map<string, TransactionRecord>();
+  localTx.forEach(t => txMap.set(t.id, t));
+  transactions.forEach(t => txMap.set(t.id, t));
+  transactions = Array.from(txMap.values());
+
+  // Merge local purchases including reconstructed ones from transactions
+  const localPurchases = getStoredPurchases(user.id, transactions);
+  const pMap = new Map<string, PurchaseRecord>();
+  localPurchases.forEach(p => pMap.set(p.id, p));
+  purchases.forEach(p => pMap.set(p.id, p));
+  purchases = Array.from(pMap.values());
 
   transactions.sort((a, b) => {
     const timeA = new Date(a.date).getTime() || 0;
@@ -577,13 +779,16 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     userPhone: newUser.phone
   };
 
-  try {
-    await seedDatabaseIfEmpty();
-    const userDocRef = doc(db, "users", newUserId);
-    await setDoc(userDocRef, cleanUndefined(newUser));
-    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
-  } catch (err) {
-    console.warn("Firestore write failed during registration (saving locally):", err);
+  if (!isQuotaExceeded()) {
+    try {
+      await seedDatabaseIfEmpty();
+      const userDocRef = doc(db, "users", newUserId);
+      await setDoc(userDocRef, cleanUndefined(newUser));
+      await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("Firestore write failed during registration (saving locally):", err);
+    }
   }
 
   // Update local storage so user is registered & saved locally
@@ -632,40 +837,84 @@ export function cleanUndefined<T>(obj: T): T {
 export async function firestoreResetPassword(payload: { phone: string; password_entered: string }): Promise<any> {
   const { phone, password_entered } = payload;
   const cleanedPhone = cleanPhoneNumber(phone);
-  const digitsOnly = cleanedPhone.replace(/\D/g, "");
-  const last10 = digitsOnly.length >= 10 ? digitsOnly.slice(-10) : digitsOnly;
+  const rawDigits = phone.replace(/\D/g, "");
+  const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
 
-  try {
-    await seedDatabaseIfEmpty();
-    const usersColl = collection(db, "users");
-    const q = query(usersColl, where("phone", "==", cleanedPhone));
-    const querySnapshot = await getDocs(q);
-    
-    let userDocRef = null;
+  if (!isQuotaExceeded()) {
+    try {
+      await seedDatabaseIfEmpty();
+      const usersColl = collection(db, "users");
+      let userDocRef = null;
 
-    if (!querySnapshot.empty) {
-      const userDoc = querySnapshot.docs[0];
-      userDocRef = doc(db, "users", userDoc.id);
-    } else if (last10.length >= 10) {
-      const deterministicRef = doc(db, "users", `usr_${last10}`);
-      const userSnap = await getDoc(deterministicRef);
-      if (userSnap.exists()) {
-        userDocRef = deterministicRef;
+      const phoneCandidates = Array.from(new Set([
+        cleanedPhone,
+        phone.trim(),
+        rawDigits,
+        last10,
+        `+91${last10}`,
+        `+91 ${last10}`,
+        `91${last10}`
+      ])).filter(Boolean);
+
+      for (const cand of phoneCandidates) {
+        if (userDocRef) break;
+        const q = query(usersColl, where("phone", "==", cand));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          userDocRef = doc(db, "users", querySnapshot.docs[0].id);
+        }
       }
-    }
 
-    if (userDocRef) {
-      await updateDoc(userDocRef, { password: password_entered });
+      if (!userDocRef && last10.length >= 10) {
+        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
+        for (const dId of docIds) {
+          if (userDocRef) break;
+          const deterministicRef = doc(db, "users", dId);
+          const userSnap = await getDoc(deterministicRef);
+          if (userSnap.exists()) {
+            userDocRef = deterministicRef;
+          }
+        }
+      }
+
+      if (!userDocRef) {
+        const allUsersSnap = await getDocs(usersColl);
+        allUsersSnap.forEach((docSnap) => {
+          if (userDocRef) return;
+          const uData = docSnap.data() as UserProfile;
+          const uDigits = uData.phone ? uData.phone.replace(/\D/g, "") : "";
+          const uIdDigits = docSnap.id ? docSnap.id.replace(/\D/g, "") : "";
+          if (
+            (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+            (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+            uData.phone === cleanedPhone ||
+            uData.phone === phone.trim()
+          ) {
+            userDocRef = doc(db, "users", docSnap.id);
+          }
+        });
+      }
+
+      if (userDocRef) {
+        await updateDoc(userDocRef, { password: password_entered });
+      }
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("Firestore reset password error (updating local store):", err);
     }
-  } catch (err) {
-    console.warn("Firestore reset password error (updating local store):", err);
   }
 
   // Update local storage
   const localUsers = getStoredUsers();
   const userObj = localUsers.find(u => {
     const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
-    return (uDigits.length >= 10 && uDigits.endsWith(last10)) || u.phone === cleanedPhone;
+    const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
+    return (
+      (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+      (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+      u.phone === cleanedPhone ||
+      u.phone === phone.trim()
+    );
   });
 
   if (!userObj) {
@@ -684,43 +933,61 @@ export async function firestoreGetState(userId: string): Promise<any> {
   let customTicker = null;
   let plans: InvestmentPlan[] = getStoredPlans();
   let transactions: TransactionRecord[] = getStoredTransactions();
-  let purchases: PurchaseRecord[] = userId ? getStoredPurchases(userId) : [];
+  let purchases: PurchaseRecord[] = userId ? getStoredPurchases(userId, transactions, plans) : [];
   let usersList: UserProfile[] = getStoredUsers();
 
-  try {
-    await seedDatabaseIfEmpty();
+  if (!isQuotaExceeded()) {
+    try {
+      await seedDatabaseIfEmpty();
 
-    const configSnap = await getDoc(doc(db, "global", "config"));
-    if (configSnap.exists()) {
-      const configData = configSnap.data();
-      if (configData.config) config = configData.config;
-      if (configData.customTicker) customTicker = configData.customTicker;
+      const configSnap = await getDoc(doc(db, "global", "config"));
+      if (configSnap.exists()) {
+        const configData = configSnap.data();
+        if (configData.config) config = configData.config;
+        if (configData.customTicker) customTicker = configData.customTicker;
+      }
+
+      const plansSnap = await getDocs(collection(db, "plans"));
+      const fsPlans: InvestmentPlan[] = [];
+      plansSnap.forEach((doc) => fsPlans.push(doc.data() as InvestmentPlan));
+      if (fsPlans.length > 0) plans = fsPlans;
+
+      const transactionsSnap = await getDocs(collection(db, "transactions"));
+      const fsTransactions: TransactionRecord[] = [];
+      transactionsSnap.forEach((doc) => fsTransactions.push(doc.data() as TransactionRecord));
+      if (fsTransactions.length > 0) {
+        const txMap = new Map<string, TransactionRecord>();
+        transactions.forEach(t => txMap.set(t.id, t));
+        fsTransactions.forEach(t => txMap.set(t.id, t));
+        transactions = Array.from(txMap.values());
+      }
+
+      if (userId) {
+        const q = query(collection(db, "purchases"), where("userId", "==", userId));
+        const purchasesSnap = await getDocs(q);
+        const fsPurchases: PurchaseRecord[] = [];
+        purchasesSnap.forEach((doc) => fsPurchases.push(doc.data() as PurchaseRecord));
+        if (fsPurchases.length > 0) {
+          const pMap = new Map<string, PurchaseRecord>();
+          purchases.forEach(p => pMap.set(p.id, p));
+          fsPurchases.forEach(p => pMap.set(p.id, p));
+          purchases = Array.from(pMap.values());
+        }
+      }
+
+      const usersSnap = await getDocs(collection(db, "users"));
+      const fsUsers: UserProfile[] = [];
+      usersSnap.forEach((doc) => fsUsers.push(doc.data() as UserProfile));
+      if (fsUsers.length > 0) {
+        const uMap = new Map<string, UserProfile>();
+        usersList.forEach(u => uMap.set(u.id, u));
+        fsUsers.forEach(u => uMap.set(u.id, u));
+        usersList = Array.from(uMap.values());
+      }
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("firestoreGetState encountered error, serving cached/local state:", err);
     }
-
-    const plansSnap = await getDocs(collection(db, "plans"));
-    const fsPlans: InvestmentPlan[] = [];
-    plansSnap.forEach((doc) => fsPlans.push(doc.data() as InvestmentPlan));
-    if (fsPlans.length > 0) plans = fsPlans;
-
-    const transactionsSnap = await getDocs(collection(db, "transactions"));
-    const fsTransactions: TransactionRecord[] = [];
-    transactionsSnap.forEach((doc) => fsTransactions.push(doc.data() as TransactionRecord));
-    if (fsTransactions.length > 0) transactions = fsTransactions;
-
-    if (userId) {
-      const q = query(collection(db, "purchases"), where("userId", "==", userId));
-      const purchasesSnap = await getDocs(q);
-      const fsPurchases: PurchaseRecord[] = [];
-      purchasesSnap.forEach((doc) => fsPurchases.push(doc.data() as PurchaseRecord));
-      if (fsPurchases.length > 0) purchases = fsPurchases;
-    }
-
-    const usersSnap = await getDocs(collection(db, "users"));
-    const fsUsers: UserProfile[] = [];
-    usersSnap.forEach((doc) => fsUsers.push(doc.data() as UserProfile));
-    if (fsUsers.length > 0) usersList = fsUsers;
-  } catch (err) {
-    console.warn("firestoreGetState encountered error, serving cached/local state:", err);
   }
 
   // Always merge local stored users to avoid losing newly registered local users when Firestore is unavailable
@@ -780,51 +1047,54 @@ export async function firestoreSaveState(payload: {
     }
   }
 
-  try {
-    await seedDatabaseIfEmpty();
+  if (!isQuotaExceeded()) {
+    try {
+      await seedDatabaseIfEmpty();
 
-    if (Array.isArray(usersList)) {
-      const userBatch = writeBatch(db);
-      for (const u of usersList) {
-        if (!isAdmin && u.id !== userId) continue;
-        const docRef = doc(db, "users", u.id);
-        userBatch.set(docRef, cleanUndefined(u), { merge: true });
+      if (Array.isArray(usersList)) {
+        const userBatch = writeBatch(db);
+        for (const u of usersList) {
+          if (!isAdmin && u.id !== userId) continue;
+          const docRef = doc(db, "users", u.id);
+          userBatch.set(docRef, cleanUndefined(u), { merge: true });
+        }
+        await userBatch.commit();
       }
-      await userBatch.commit();
-    }
 
-    if (isAdmin) {
-      const configDocRef = doc(db, "global", "config");
-      await setDoc(configDocRef, cleanUndefined({ config, customTicker }), { merge: true });
-    }
-
-    if (isAdmin && Array.isArray(plans) && plans.length > 0) {
-      const plansBatch = writeBatch(db);
-      for (const plan of plans) {
-        plansBatch.set(doc(db, "plans", plan.id), cleanUndefined(plan), { merge: true });
+      if (isAdmin) {
+        const configDocRef = doc(db, "global", "config");
+        await setDoc(configDocRef, cleanUndefined({ config, customTicker }), { merge: true });
       }
-      await plansBatch.commit();
-    }
 
-    if (Array.isArray(transactions)) {
-      const txBatch = writeBatch(db);
-      for (const tx of transactions) {
-        if (!isAdmin && tx.userId !== userId) continue;
-        txBatch.set(doc(db, "transactions", tx.id), cleanUndefined(tx), { merge: true });
+      if (isAdmin && Array.isArray(plans) && plans.length > 0) {
+        const plansBatch = writeBatch(db);
+        for (const plan of plans) {
+          plansBatch.set(doc(db, "plans", plan.id), cleanUndefined(plan), { merge: true });
+        }
+        await plansBatch.commit();
       }
-      await txBatch.commit();
-    }
 
-    if (userId && Array.isArray(purchases)) {
-      const purchasesBatch = writeBatch(db);
-      for (const purchase of purchases) {
-        if (!isAdmin && (purchase as any).userId !== userId) continue;
-        purchasesBatch.set(doc(db, "purchases", purchase.id), cleanUndefined(purchase), { merge: true });
+      if (Array.isArray(transactions)) {
+        const txBatch = writeBatch(db);
+        for (const tx of transactions) {
+          if (!isAdmin && tx.userId !== userId) continue;
+          txBatch.set(doc(db, "transactions", tx.id), cleanUndefined(tx), { merge: true });
+        }
+        await txBatch.commit();
       }
-      await purchasesBatch.commit();
+
+      if (userId && Array.isArray(purchases)) {
+        const purchasesBatch = writeBatch(db);
+        for (const purchase of purchases) {
+          if (!isAdmin && (purchase as any).userId !== userId) continue;
+          purchasesBatch.set(doc(db, "purchases", purchase.id), cleanUndefined(purchase), { merge: true });
+        }
+        await purchasesBatch.commit();
+      }
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("firestoreSaveState error (saved locally):", err);
     }
-  } catch (err) {
-    console.warn("firestoreSaveState error (saved locally):", err);
   }
 
   return await firestoreGetState(userId);

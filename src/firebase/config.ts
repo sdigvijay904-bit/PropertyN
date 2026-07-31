@@ -27,6 +27,7 @@ import {
   Firestore
 } from 'firebase/firestore';
 import firebaseConfigJson from '../../firebase-applet-config.json';
+import { isQuotaExceeded, markQuotaExceeded } from '../lib/db';
 
 // Default Firebase configuration fallbacks or actual environment variables
 const firebaseConfig = {
@@ -129,7 +130,7 @@ export const firebaseService = {
 
   // --- SETTINGS APIS ---
   getSettings: async (): Promise<PaymentSettings> => {
-    if (isRealFirebaseActive && db) {
+    if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         const docRef = doc(db, 'settings', 'payment_config');
         const docSnap = await getDoc(docRef);
@@ -137,6 +138,7 @@ export const firebaseService = {
           return docSnap.data() as PaymentSettings;
         }
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Firestore error in getSettings, falling back:", e);
       }
     }
@@ -159,11 +161,12 @@ export const firebaseService = {
     };
     
     // Save to Firestore if available
-    if (isRealFirebaseActive && db) {
+    if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         const docRef = doc(db, 'settings', 'payment_config');
         await setDoc(docRef, cleanSettings);
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Firestore updateSettings error:", e);
       }
     }
@@ -180,7 +183,7 @@ export const firebaseService = {
 
   // --- DEPOSITS APIS ---
   getDeposits: async (): Promise<DepositRequest[]> => {
-    if (isRealFirebaseActive && db) {
+    if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         const collRef = collection(db, 'deposits');
         const querySnap = await getDocs(collRef);
@@ -190,6 +193,7 @@ export const firebaseService = {
         });
         return list;
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Firestore getDeposits error, falling back:", e);
       }
     }
@@ -217,10 +221,11 @@ export const firebaseService = {
     }
 
     // Save to Firestore if available
-    if (isRealFirebaseActive && db) {
+    if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         await setDoc(doc(db, 'deposits', newDeposit.id), newDeposit);
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Firestore saveDepositRequest error:", e);
       }
     }
@@ -255,7 +260,7 @@ export const firebaseService = {
     };
 
     // Save to Firestore if available
-    if (isRealFirebaseActive && db) {
+    if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         const docRef = doc(db, 'deposits', depositId);
         await updateDoc(docRef, {
@@ -263,6 +268,7 @@ export const firebaseService = {
           ...(status === 'Approved' ? { approvedAt: updatedDeposit.approvedAt } : { rejectedAt: updatedDeposit.rejectedAt })
         });
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Firestore updateDepositStatus error:", e);
       }
     }
@@ -279,7 +285,7 @@ export const firebaseService = {
 
   // --- LOGS APIS ---
   getLogs: async (): Promise<PaymentLog[]> => {
-    if (isRealFirebaseActive && db) {
+    if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         const collRef = collection(db, 'logs');
         const querySnap = await getDocs(collRef);
@@ -289,6 +295,7 @@ export const firebaseService = {
         });
         return list;
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Firestore getLogs error, falling back:", e);
       }
     }
@@ -305,10 +312,11 @@ export const firebaseService = {
       timestamp: new Date().toISOString()
     };
 
-    if (isRealFirebaseActive && db) {
+    if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         await setDoc(doc(db, 'logs', log.id), log);
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Firestore logAction error:", e);
       }
     }
