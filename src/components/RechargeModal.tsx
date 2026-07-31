@@ -328,15 +328,33 @@ export default function RechargeModal({
     }
   };
 
-  const handleDirectUpiPay = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    setIsRedirecting(true);
-    // Synchronously launch the standard upi:// deep link in the same user gesture thread
-    window.location.href = upiPayloadLink;
-    // Keep the overlay visible for 4 seconds for secure transition feel, then hide
-    setTimeout(() => {
-      setIsRedirecting(false);
-    }, 4000);
+  const getAppUpiUri = (appName?: 'phonepe' | 'paytm' | 'gpay') => {
+    const query = `pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}`;
+    if (appName === 'phonepe') return `phonepe://pay?${query}`;
+    if (appName === 'paytm') return `paytmmp://pay?${query}`;
+    if (appName === 'gpay') return `gpay://upi/pay?${query}`;
+    return `upi://pay?${query}`;
+  };
+
+  const handleLaunchUpi = (appName?: 'phonepe' | 'paytm' | 'gpay') => {
+    try {
+      navigator.clipboard.writeText(upiId);
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 3000);
+    } catch (e) {}
+
+    const link = getAppUpiUri(appName);
+    const intentUrl = `intent://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountInput}&cu=INR&tn=Recharge_${user.phone}#Intent;scheme=upi;end;`;
+
+    setQrNotice(`⚡ ${appName ? appName.toUpperCase() : 'UPI'} App opening... UPI ID (${upiId}) copied to clipboard!`);
+
+    try {
+      window.location.href = link;
+    } catch (err) {
+      try {
+        window.location.href = intentUrl;
+      } catch (e) {}
+    }
   };
 
   return (
@@ -656,27 +674,65 @@ export default function RechargeModal({
 
                 {/* Dedicated Payment Button Box */}
                 <div className="bg-gradient-to-b from-teal-50/70 to-white rounded-2xl border-2 border-teal-100 p-3.5 space-y-2.5 shadow-sm mt-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5.5 h-5.5 rounded-lg bg-teal-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">2</span>
-                    <h4 className="text-[11px] font-black text-teal-900 uppercase tracking-wider">Pay Directly</h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5.5 h-5.5 rounded-lg bg-teal-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">2</span>
+                      <h4 className="text-[11px] font-black text-teal-900 uppercase tracking-wider">Pay Directly (App Launcher)</h4>
+                    </div>
+                    <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">UPI Auto-Detect</span>
                   </div>
                   
+                  {/* Universal UPI App Button */}
                   <a
-                    href={upiPayloadLink}
-                    onClick={handleDirectUpiPay}
-                    className="w-full py-2.5 px-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl transition-all shadow-md shadow-teal-600/10 flex items-center justify-between active:scale-98 cursor-pointer border border-teal-500/10"
+                    href={getAppUpiUri()}
+                    onClick={() => handleLaunchUpi()}
+                    target="_self"
+                    className="w-full py-3 px-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl transition-all shadow-md shadow-teal-600/10 flex items-center justify-between active:scale-98 cursor-pointer border border-teal-500/10"
                   >
-                    <div className="flex items-center gap-2 text-left">
-                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
-                        <Smartphone className="w-4 h-4 text-teal-100 animate-pulse" />
+                    <div className="flex items-center gap-2.5 text-left">
+                      <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
+                        <Smartphone className="w-5 h-5 text-teal-100 animate-pulse" />
                       </div>
                       <div>
-                        <p className="font-black text-[10px] tracking-wider text-white">PAY VIA ANY UPI APP</p>
-                        <p className="text-[8px] text-teal-100 font-medium tracking-normal normal-case">Pay with Paytm, PhonePe, GPay, or any UPI app</p>
+                        <p className="font-black text-[11px] tracking-wider text-white uppercase">PAY VIA ANY UPI APP</p>
+                        <p className="text-[8.5px] text-teal-100 font-medium tracking-normal normal-case">Pay with Paytm, PhonePe, GPay, or any UPI app</p>
                       </div>
                     </div>
-                    <span className="text-[8px] bg-amber-400 text-slate-950 px-1.5 py-0.5 rounded-md font-black shrink-0 tracking-wider">RECOMMENDED</span>
+                    <span className="text-[8.5px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md font-black shrink-0 tracking-wider">RECOMMENDED</span>
                   </a>
+
+                  {/* Direct Dedicated App Launchers */}
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <a
+                      href={getAppUpiUri('phonepe')}
+                      onClick={() => handleLaunchUpi('phonepe')}
+                      target="_self"
+                      className="py-2.5 px-2 bg-indigo-50/80 hover:bg-indigo-100 border border-indigo-150 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all cursor-pointer group shadow-2xs"
+                    >
+                      <span className="text-[11px] font-black text-indigo-900 group-hover:scale-105 transition-transform">PhonePe</span>
+                      <span className="text-[8px] text-indigo-600 font-extrabold uppercase">Open App</span>
+                    </a>
+
+                    <a
+                      href={getAppUpiUri('paytm')}
+                      onClick={() => handleLaunchUpi('paytm')}
+                      target="_self"
+                      className="py-2.5 px-2 bg-sky-50/80 hover:bg-sky-100 border border-sky-150 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all cursor-pointer group shadow-2xs"
+                    >
+                      <span className="text-[11px] font-black text-sky-900 group-hover:scale-105 transition-transform">Paytm</span>
+                      <span className="text-[8px] text-sky-600 font-extrabold uppercase">Open App</span>
+                    </a>
+
+                    <a
+                      href={getAppUpiUri('gpay')}
+                      onClick={() => handleLaunchUpi('gpay')}
+                      target="_self"
+                      className="py-2.5 px-2 bg-emerald-50/80 hover:bg-emerald-100 border border-emerald-150 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all cursor-pointer group shadow-2xs"
+                    >
+                      <span className="text-[11px] font-black text-emerald-900 group-hover:scale-105 transition-transform">Google Pay</span>
+                      <span className="text-[8px] text-emerald-600 font-extrabold uppercase">Open App</span>
+                    </a>
+                  </div>
                 </div>
 
 
@@ -897,8 +953,9 @@ export default function RechargeModal({
                     </a>
 
                     <a
-                      href={upiPayloadLink}
-                      onClick={handleDirectUpiPay}
+                      href={getAppUpiUri()}
+                      onClick={() => handleLaunchUpi()}
+                      target="_self"
                       className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                     >
                       <Smartphone className="w-4 h-4 text-emerald-100" />

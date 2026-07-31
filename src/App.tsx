@@ -1836,7 +1836,7 @@ export default function App() {
       .reduce((sum, t) => sum + t.amount, 0);
 
     const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-    const withdrawableLimit = Math.min(userProfile.balance, maxWithdrawablePlanEarnings);
+    const withdrawableLimit = maxWithdrawablePlanEarnings;
 
     if (amount > withdrawableLimit) {
       const fmtMax = maxWithdrawablePlanEarnings % 1 === 0 ? maxWithdrawablePlanEarnings.toLocaleString('en-IN') : maxWithdrawablePlanEarnings.toFixed(2);

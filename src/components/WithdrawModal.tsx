@@ -55,7 +55,7 @@ export default function WithdrawModal({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-  const withdrawableLimit = Math.min(user.balance, maxWithdrawablePlanEarnings);
+  const withdrawableLimit = maxWithdrawablePlanEarnings;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
