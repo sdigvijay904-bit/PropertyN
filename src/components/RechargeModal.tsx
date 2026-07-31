@@ -641,7 +641,7 @@ export default function RechargeModal({
                     <div className="space-y-1">
                       <p className="text-[10px] font-black text-teal-700 uppercase tracking-wider">Official Merchant UPI ID</p>
                       <div className="flex items-center justify-between gap-2 bg-teal-50/50 p-3 rounded-2xl border border-teal-100/30">
-                        <span className="font-mono font-black text-teal-950 text-sm select-all tracking-wide truncate">{upiId}</span>
+                        <span className="font-mono font-black text-teal-950 text-xs min-[360px]:text-sm select-all tracking-wide break-all text-left flex-1">{upiId}</span>
                         <button
                           type="button"
                           onClick={handleCopyUpi}

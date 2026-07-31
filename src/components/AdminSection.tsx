@@ -2915,15 +2915,15 @@ export default function AdminSection({
                 </p>
 
                 <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-bold">Current Telegram Channel:</span>
-                    <span className="font-mono text-emerald-400 font-black truncate max-w-[180px]">
+                  <div className="flex justify-between items-center text-xs gap-2">
+                    <span className="text-slate-400 font-bold shrink-0">Current Telegram Channel:</span>
+                    <span className="font-mono text-emerald-400 font-black break-all text-right select-all">
                       {savedTgChannel}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-bold">Current Support Chat:</span>
-                    <span className="font-mono text-emerald-300 font-black truncate max-w-[180px]">
+                  <div className="flex justify-between items-center text-xs gap-2">
+                    <span className="text-slate-400 font-bold shrink-0">Current Support Chat:</span>
+                    <span className="font-mono text-emerald-300 font-black break-all text-right select-all">
                       {savedTgSupport}
                     </span>
                   </div>
@@ -2990,9 +2990,9 @@ export default function AdminSection({
                 </p>
 
                 <div className="p-3 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-400 font-bold">Current APK URL:</span>
-                    <span className="font-mono text-teal-400 font-black truncate max-w-[180px]">
+                  <div className="flex justify-between items-center text-xs gap-2">
+                    <span className="text-slate-400 font-bold shrink-0">Current APK URL:</span>
+                    <span className="font-mono text-teal-400 font-black break-all text-right select-all">
                       {savedApkUrl}
                     </span>
                   </div>

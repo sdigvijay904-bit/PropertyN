@@ -715,38 +715,38 @@ export default function ProfileSection({
         return (
           <div className="space-y-5 text-left">
             {/* 3 Stat Cards in a Row (BALANCE, RECHARGED, TOTAL INCOME) strictly matching screenshot */}
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2 min-[360px]:gap-2.5">
               {/* BALANCE */}
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 rounded-2xl bg-orange-100/90 text-orange-500 flex items-center justify-center mb-2 shrink-0 shadow-2xs">
-                  <Wallet className="w-6 h-6 stroke-[2.2]" />
+              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 rounded-2xl bg-orange-100/90 text-orange-500 flex items-center justify-center mb-1.5 shrink-0 shadow-2xs">
+                  <Wallet className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 stroke-[2.2]" />
                 </div>
-                <span className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-wider">BALANCE</span>
-                <span className="text-sm min-[375px]:text-base font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+                <span className="text-[9px] min-[360px]:text-[10px] font-black text-slate-500 uppercase tracking-wider">BALANCE</span>
+                <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
                   ₹{Math.round(user.balance).toLocaleString('en-IN')}
                 </span>
               </div>
 
               {/* RECHARGED */}
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 rounded-2xl bg-blue-100/90 text-blue-500 flex items-center justify-center mb-2 shrink-0 shadow-2xs">
-                  <Banknote className="w-6 h-6 stroke-[2.2]" />
+              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 rounded-2xl bg-blue-100/90 text-blue-500 flex items-center justify-center mb-1.5 shrink-0 shadow-2xs">
+                  <Banknote className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 stroke-[2.2]" />
                 </div>
-                <span className="text-[10px] sm:text-xs font-black text-slate-500 uppercase tracking-wider">RECHARGED</span>
-                <span className="text-sm min-[375px]:text-base font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+                <span className="text-[9px] min-[360px]:text-[10px] font-black text-slate-500 uppercase tracking-wider">RECHARGED</span>
+                <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
                   ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
                 </span>
               </div>
 
               {/* TOTAL INCOME */}
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-100/90 text-emerald-500 flex items-center justify-center mb-2 shrink-0 shadow-2xs">
-                  <TrendingUp className="w-6 h-6 stroke-[2.2]" />
+              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 rounded-2xl bg-emerald-100/90 text-emerald-500 flex items-center justify-center mb-1.5 shrink-0 shadow-2xs">
+                  <TrendingUp className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 stroke-[2.2]" />
                 </div>
-                <span className="text-[8.5px] min-[360px]:text-[10px] font-black text-slate-500 uppercase tracking-tighter whitespace-nowrap truncate w-full">
+                <span className="text-[8px] min-[360px]:text-[9.5px] font-black text-slate-500 uppercase tracking-tighter whitespace-nowrap">
                   TOTAL INCOME
                 </span>
-                <span className="text-sm min-[375px]:text-base font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+                <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
                   ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
                 </span>
               </div>
@@ -867,7 +867,7 @@ export default function ProfileSection({
 
               <div>
                 <h2 className="text-lg font-black tracking-tight flex items-center gap-1.5 text-white">
-                  ID : {user.phone.substring(0, 6)}**{user.phone.substring(user.phone.length - 2)}
+                  ID : {user.phone && user.phone.length > 6 ? user.phone.substring(0, 6) + '**' + user.phone.substring(user.phone.length - 2) : user.phone}
                 </h2>
                 {/* VIP Member pill badge */}
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-bold text-white/95 border border-white/10 mt-1">

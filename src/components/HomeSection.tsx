@@ -272,36 +272,36 @@ export default function HomeSection({
       {/* 3 Stat Cards in a Row (BALANCE, RECHARGED, TOTAL INCOME) */}
       <div className="mx-4 grid grid-cols-3 gap-2">
         {/* BALANCE */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
+        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
           <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center mb-1.5 shrink-0">
             <Wallet className="w-5 h-5" />
           </div>
           <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">BALANCE</span>
-          <span className="text-sm font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+          <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
             ₹{Math.round(user.balance).toLocaleString('en-IN')}
           </span>
         </div>
 
         {/* RECHARGED */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
+        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
           <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center mb-1.5 shrink-0">
             <Banknote className="w-5 h-5" />
           </div>
           <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">RECHARGED</span>
-          <span className="text-sm font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+          <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
             ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
           </span>
         </div>
 
         {/* TOTAL INCOME */}
-        <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
+        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
           <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-500 flex items-center justify-center mb-1.5 shrink-0">
             <TrendingUp className="w-5 h-5" />
           </div>
-          <span className="text-[8.5px] min-[360px]:text-[9.5px] font-bold text-slate-500 uppercase tracking-tighter whitespace-nowrap truncate w-full">
+          <span className="text-[8px] min-[360px]:text-[9px] font-bold text-slate-500 uppercase tracking-tighter whitespace-nowrap">
             TOTAL INCOME
           </span>
-          <span className="text-sm font-black text-slate-900 tracking-tight mt-0.5 truncate w-full px-0.5">
+          <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
             ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
           </span>
         </div>

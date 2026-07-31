@@ -989,15 +989,54 @@ export default function App() {
           localStorage.setItem(`adpaint_backup_purchases_${currentUserId}`, JSON.stringify(liveUserPurchases));
         }
       }, () => {});
+
+      // Live Users collection listener for Admin real-time panel & team updates
+      const usersColRef = collection(db, "users");
+      const unsubUsers = onSnapshot(usersColRef, (snap) => {
+        const liveUsers: UserProfile[] = [];
+        snap.forEach(d => {
+          const u = d.data() as UserProfile;
+          if (u && u.id) liveUsers.push(u);
+        });
+        if (liveUsers.length > 0) {
+          const isDiff = JSON.stringify(liveUsers) !== JSON.stringify(usersListRef.current);
+          if (isDiff) {
+            setUsersList(liveUsers);
+            usersListRef.current = liveUsers;
+            localStorage.setItem('adpaint_users_list', JSON.stringify(liveUsers));
+          }
+        }
+      }, () => {});
+
+      // Live Transactions collection listener for Admin real-time panel
+      const txColRef = collection(db, "transactions");
+      const unsubTx = onSnapshot(txColRef, (snap) => {
+        const liveTx: TransactionRecord[] = [];
+        snap.forEach(d => {
+          const tx = d.data() as TransactionRecord;
+          if (tx && tx.id) liveTx.push(tx);
+        });
+        if (liveTx.length > 0) {
+          liveTx.sort((a, b) => new Date(b.date || (b as any).timestamp || 0).getTime() - new Date(a.date || (a as any).timestamp || 0).getTime());
+          const isDiff = JSON.stringify(liveTx) !== JSON.stringify(transactionsRef.current);
+          if (isDiff) {
+            setTransactions(liveTx);
+            transactionsRef.current = liveTx;
+            localStorage.setItem('adpaint_transactions', JSON.stringify(liveTx));
+          }
+        }
+      }, () => {});
+
+      return () => {
+        if (unsubUser) unsubUser();
+        if (unsubDeleted) unsubDeleted();
+        if (unsubPurchases) unsubPurchases();
+        if (unsubUsers) unsubUsers();
+        if (unsubTx) unsubTx();
+      };
     } catch (err) {
       markQuotaExceeded(err);
     }
-
-    return () => {
-      if (unsubUser) unsubUser();
-      if (unsubDeleted) unsubDeleted();
-      if (unsubPurchases) unsubPurchases();
-    };
   }, [isLoggedIn, userProfile?.id, userProfile?.phone]);
 
   // Set up periodic real-time background sync loop and foreground listener
@@ -1097,7 +1136,7 @@ export default function App() {
       list.push({
         id: u1.id,
         name: u1.name,
-        phone: u1.phone.length > 7 ? u1.phone.substring(0, 7) + '***' + u1.phone.substring(u1.phone.length - 4) : u1.phone,
+        phone: u1.phone && u1.phone.length > 7 ? u1.phone.substring(0, 7) + '***' + u1.phone.substring(u1.phone.length - 4) : u1.phone,
         level: 1,
         dateJoined: getUserJoinedDate(u1),
         totalInvested: invested,
@@ -1112,7 +1151,7 @@ export default function App() {
         list.push({
           id: u2.id,
           name: u2.name,
-          phone: u2.phone.length > 7 ? u2.phone.substring(0, 7) + '***' + u2.phone.substring(u2.phone.length - 4) : u2.phone,
+          phone: u2.phone && u2.phone.length > 7 ? u2.phone.substring(0, 7) + '***' + u2.phone.substring(u2.phone.length - 4) : u2.phone,
           level: 2,
           dateJoined: getUserJoinedDate(u2),
           totalInvested: invested2,
@@ -1127,7 +1166,7 @@ export default function App() {
           list.push({
             id: u3.id,
             name: u3.name,
-            phone: u3.phone.length > 7 ? u3.phone.substring(0, 7) + '***' + u3.phone.substring(u3.phone.length - 4) : u3.phone,
+            phone: u3.phone && u3.phone.length > 7 ? u3.phone.substring(0, 7) + '***' + u3.phone.substring(u3.phone.length - 4) : u3.phone,
             level: 3,
             dateJoined: getUserJoinedDate(u3),
             totalInvested: invested3,

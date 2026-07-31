@@ -462,8 +462,8 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
                 {/* Merchant UPI copy box */}
                 <div className="space-y-1.5 text-left">
                   <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Merchant UPI ID</span>
-                  <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="text-xs font-black font-mono text-emerald-950 truncate select-all">{settings.upiId}</span>
+                  <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl gap-2">
+                    <span className="text-xs font-black font-mono text-emerald-950 break-all select-all flex-1 text-left">{settings.upiId}</span>
                     <button
                       type="button"
                       onClick={() => handleCopy(settings.upiId, 'upi')}

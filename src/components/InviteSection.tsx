@@ -237,7 +237,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           <div className="text-left space-y-1.5">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Referral Link</span>
             <div className="flex items-center gap-2 p-2.5 bg-slate-50/70 rounded-2xl border border-slate-200/60 shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.015)]">
-              <span className="text-xs text-slate-600 font-mono truncate flex-1 pl-1.5">{referralLink}</span>
+              <span className="text-[11px] text-slate-700 font-mono break-all select-all flex-1 pl-1.5 text-left leading-snug">{referralLink}</span>
               <button
                 type="button"
                 onClick={copyLink}
