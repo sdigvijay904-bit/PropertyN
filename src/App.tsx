@@ -96,17 +96,7 @@ export default function App() {
       const storedPlans = localStorage.getItem('adpaint_plans');
       if (storedPlans) {
         const parsedPlans = JSON.parse(storedPlans);
-        const hasOldTheme = parsedPlans.some((p: any) => 
-          p.title.includes('Beautiful Homes') || 
-          p.title.includes('Ad-Sponsor') || 
-          p.title.includes('Paint') || 
-          p.title.includes('Ad-Plan') ||
-          p.title.includes('Special Offer') ||
-          p.title.includes('Apex Ultima') ||
-          p.title.includes('Royale Luxury') ||
-          p.title.includes('Tractor Budget')
-        );
-        if (!hasOldTheme && parsedPlans.length > 0) {
+        if (Array.isArray(parsedPlans) && parsedPlans.length > 0) {
           return parsedPlans;
         }
       }
@@ -309,23 +299,11 @@ export default function App() {
     if (storedPlans) {
       try {
         const parsedPlans = JSON.parse(storedPlans);
-        const hasOldTheme = parsedPlans.some((p: any) => 
-          p.title.includes('Beautiful Homes') || 
-          p.title.includes('Ad-Sponsor') || 
-          p.title.includes('Paint') || 
-          p.title.includes('Ad-Plan') ||
-          p.title.includes('Special Offer') ||
-          p.title.includes('Apex Ultima') ||
-          p.title.includes('Royale Luxury') ||
-          p.title.includes('Tractor Budget')
-        );
-        if (!hasOldTheme && parsedPlans.length > 0) {
+        if (Array.isArray(parsedPlans) && parsedPlans.length > 0) {
           loadedPlans = parsedPlans;
-        } else {
-          localStorage.setItem('adpaint_plans', JSON.stringify(INITIAL_PLANS));
         }
       } catch (e) {
-        localStorage.setItem('adpaint_plans', JSON.stringify(INITIAL_PLANS));
+        console.warn("Failed to parse stored plans", e);
       }
     } else {
       localStorage.setItem('adpaint_plans', JSON.stringify(INITIAL_PLANS));
@@ -611,10 +589,8 @@ export default function App() {
           currentPurchases.forEach((localPurchase: any) => {
             if (deletedPurchasesList.includes(localPurchase.id)) return;
             if (!serverPurchasesMap.has(localPurchase.id)) {
-              if (userId === 'usr_admin') {
-                serverPurchasesMap.set(localPurchase.id, localPurchase);
-                hasMissingPurchases = true;
-              }
+              serverPurchasesMap.set(localPurchase.id, localPurchase);
+              hasMissingPurchases = true;
             }
           });
 
@@ -851,10 +827,12 @@ export default function App() {
     }
   };
 
-  // Set up Firestore real-time listener for global configs (Support Avatar, UPI, Links) for instant Mobile APK & Web updates
+  // Set up Firestore real-time listener for global configs & plans for instant Mobile APK & Web updates
   useEffect(() => {
     if (isQuotaExceeded()) return;
     let unsub: (() => void) | null = null;
+    let unsubPlans: (() => void) | null = null;
+
     try {
       const configDocRef = doc(db, "global", "config");
       unsub = onSnapshot(configDocRef, (snapshot) => {
@@ -891,12 +869,42 @@ export default function App() {
           unsub = null;
         }
       });
+
+      // Live Plans collection listener so all browsers and users get admin updated plan prices real-time
+      const plansColRef = collection(db, "plans");
+      unsubPlans = onSnapshot(plansColRef, (snapshot) => {
+        let rawDelP: string[] = [];
+        try {
+          const raw = localStorage.getItem('adpaint_deleted_plans');
+          if (raw) rawDelP = JSON.parse(raw);
+        } catch (e) {}
+
+        const livePlans: InvestmentPlan[] = [];
+        snapshot.forEach(docSnap => {
+          const pData = docSnap.data() as InvestmentPlan;
+          if (pData && pData.id && !rawDelP.includes(pData.id)) {
+            livePlans.push(pData);
+          }
+        });
+
+        if (livePlans.length > 0) {
+          const isDiff = JSON.stringify(livePlans) !== JSON.stringify(plansRef.current);
+          if (isDiff) {
+            setPlans(livePlans);
+            plansRef.current = livePlans;
+            localStorage.setItem('adpaint_plans', JSON.stringify(livePlans));
+          }
+        }
+      }, (err) => {
+        console.warn("Real-time plans snapshot listener notice:", err?.message || err);
+      });
     } catch (err) {
       markQuotaExceeded(err);
     }
 
     return () => {
       if (unsub) unsub();
+      if (unsubPlans) unsubPlans();
     };
   }, []);
 
@@ -906,6 +914,8 @@ export default function App() {
     let unsubUser: (() => void) | null = null;
     let unsubDeleted: (() => void) | null = null;
     let unsubPurchases: (() => void) | null = null;
+    let unsubUsers: (() => void) | null = null;
+    let unsubTx: (() => void) | null = null;
 
     try {
       // User document listener
@@ -994,40 +1004,57 @@ export default function App() {
 
       // Live Users collection listener for Admin real-time panel & team updates
       const usersColRef = collection(db, "users");
-      const unsubUsers = onSnapshot(usersColRef, (snap) => {
+      unsubUsers = onSnapshot(usersColRef, (snap) => {
         const liveUsers: UserProfile[] = [];
         snap.forEach(d => {
           const u = d.data() as UserProfile;
-          if (u && u.id) liveUsers.push(u);
+          if (u) {
+            liveUsers.push({ ...u, id: u.id || d.id });
+          }
         });
         if (liveUsers.length > 0) {
-          const isDiff = JSON.stringify(liveUsers) !== JSON.stringify(usersListRef.current);
+          const uMap = new Map<string, UserProfile>();
+          usersListRef.current.forEach(u => uMap.set(u.id, u));
+          liveUsers.forEach(u => uMap.set(u.id, u));
+          const merged = Array.from(uMap.values());
+
+          const isDiff = JSON.stringify(merged) !== JSON.stringify(usersListRef.current);
           if (isDiff) {
-            setUsersList(liveUsers);
-            usersListRef.current = liveUsers;
-            localStorage.setItem('adpaint_users_list', JSON.stringify(liveUsers));
+            setUsersList(merged);
+            usersListRef.current = merged;
+            localStorage.setItem('adpaint_users_list', JSON.stringify(merged));
           }
         }
-      }, () => {});
+      }, (err) => {
+        console.warn("Notice reading live users snapshot:", err);
+      });
 
       // Live Transactions collection listener for Admin real-time panel
       const txColRef = collection(db, "transactions");
-      const unsubTx = onSnapshot(txColRef, (snap) => {
+      unsubTx = onSnapshot(txColRef, (snap) => {
         const liveTx: TransactionRecord[] = [];
         snap.forEach(d => {
           const tx = d.data() as TransactionRecord;
-          if (tx && tx.id) liveTx.push(tx);
+          if (tx) {
+            liveTx.push({ ...tx, id: tx.id || d.id });
+          }
         });
         if (liveTx.length > 0) {
-          liveTx.sort((a, b) => new Date(b.date || (b as any).timestamp || 0).getTime() - new Date(a.date || (a as any).timestamp || 0).getTime());
-          const isDiff = JSON.stringify(liveTx) !== JSON.stringify(transactionsRef.current);
+          const txMap = new Map<string, TransactionRecord>();
+          transactionsRef.current.forEach(t => txMap.set(t.id, t));
+          liveTx.forEach(t => txMap.set(t.id, t));
+          const mergedTx = Array.from(txMap.values());
+
+          const isDiff = JSON.stringify(mergedTx) !== JSON.stringify(transactionsRef.current);
           if (isDiff) {
-            setTransactions(liveTx);
-            transactionsRef.current = liveTx;
-            localStorage.setItem('adpaint_transactions', JSON.stringify(liveTx));
+            setTransactions(mergedTx);
+            transactionsRef.current = mergedTx;
+            localStorage.setItem('adpaint_transactions', JSON.stringify(mergedTx));
           }
         }
-      }, () => {});
+      }, (err) => {
+        console.warn("Notice reading live transactions snapshot:", err);
+      });
 
       return () => {
         if (unsubUser) unsubUser();
@@ -1949,6 +1976,7 @@ export default function App() {
               setPurchases={handleAdminSetPurchases}
               onClose={handleLogout}
               triggerToast={triggerToast}
+              onRefreshData={handleSyncData}
               onUpdateCurrentUserProfile={(profile) => {
                 saveStateToStorage(profile);
               }}

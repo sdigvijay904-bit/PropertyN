@@ -31,6 +31,7 @@ interface AdminSectionProps {
   onClose: () => void;
   triggerToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   onUpdateCurrentUserProfile: (profile: UserProfile) => void;
+  onRefreshData?: () => Promise<void>;
   onSyncConfig?: (
     updatedPlans?: InvestmentPlan[],
     updatedPurchases?: PurchaseRecord[],
@@ -52,9 +53,11 @@ export default function AdminSection({
   onClose,
   triggerToast,
   onUpdateCurrentUserProfile,
+  onRefreshData,
   onSyncConfig
 }: AdminSectionProps) {
   const [adminTab, setAdminTab] = useState<'stats' | 'users' | 'approvals' | 'plans' | 'custom_notif' | 'upi_config'>('stats');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // UPI / QR code config states
   const [upiIdInput, setUpiIdInput] = useState<string>(() => {
@@ -470,8 +473,14 @@ export default function AdminSection({
     .filter(t => t.type === 'withdraw' && t.status === 'success')
     .reduce((acc, t) => acc + t.amount, 0);
 
-  const pendingRecharges = transactions.filter(t => t.type === 'recharge' && t.status === 'pending');
-  const pendingWithdrawals = transactions.filter(t => t.type === 'withdraw' && t.status === 'pending');
+  const pendingRecharges = transactions.filter(t => 
+    t.type === 'recharge' && 
+    (t.status === 'pending' || (t.status as string) === 'Pending' || (t.status as string) === 'requested')
+  );
+  const pendingWithdrawals = transactions.filter(t => 
+    t.type === 'withdraw' && 
+    (t.status === 'pending' || (t.status as string) === 'Pending' || (t.status as string) === 'requested')
+  );
 
   // Approve Recharge Handler
   const handleApproveRecharge = async (txId: string) => {
@@ -479,13 +488,26 @@ export default function AdminSection({
     if (!tx) return;
 
     // Find the user associated with this transaction
-    const targetUserId = tx.userId;
-    const targetUser = usersList.find(u => u.id === targetUserId);
+    const txUserDigits = tx.userId ? tx.userId.replace(/\D/g, '').slice(-10) : '';
+    const txPhoneDigits = tx.userPhone ? tx.userPhone.replace(/\D/g, '').slice(-10) : '';
+    
+    let targetUser = usersList.find(u => u.id === tx.userId);
+    if (!targetUser) {
+      targetUser = usersList.find(u => {
+        if (tx.userPhone && u.phone === tx.userPhone) return true;
+        const uDigits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+        if (uDigits && (uDigits === txUserDigits || uDigits === txPhoneDigits)) return true;
+        const uIdDigits = u.id ? u.id.replace(/\D/g, '').slice(-10) : '';
+        if (uIdDigits && (uIdDigits === txUserDigits || uIdDigits === txPhoneDigits)) return true;
+        return false;
+      });
+    }
 
     if (!targetUser) {
       triggerToast('User not found for this recharge.', 'error');
       return;
     }
+    const targetUserId = targetUser.id;
 
     // 1. Update user balance and totalInvested
     const updatedUsers = usersList.map(u => {
@@ -1131,6 +1153,19 @@ export default function AdminSection({
       triggerToast('New Advertisement Plan published live!', 'success');
     }
 
+    if (!isQuotaExceeded()) {
+      try {
+        const savedPlanObj = editingPlan
+          ? updatedPlansList.find(p => p.id === editingPlan.id)
+          : updatedPlansList[updatedPlansList.length - 1];
+        if (savedPlanObj) {
+          setDoc(doc(db, "plans", savedPlanObj.id), cleanUndefined(savedPlanObj), { merge: true }).catch(() => {});
+        }
+      } catch (e) {
+        console.warn("Notice saving plan to firestore:", e);
+      }
+    }
+
     onSyncConfig?.(updatedPlansList);
 
     // Reset states
@@ -1189,13 +1224,26 @@ export default function AdminSection({
     setTickerMessage('');
   };
 
-  // Filter users by search query
-  const filteredUsers = usersList.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.phone.includes(searchQuery) ||
-    (u.inviteCode && u.inviteCode.includes(searchQuery)) ||
-    (u.inviterCode && u.inviterCode.includes(searchQuery))
-  );
+  // Filter users by search query safely
+  const filteredUsers = usersList.filter(u => {
+    if (!u) return false;
+    const searchLower = searchQuery.toLowerCase().trim();
+    if (!searchLower) return true;
+
+    const nameStr = (u.name || '').toLowerCase();
+    const phoneStr = (u.phone || '');
+    const inviteCodeStr = (u.inviteCode || '');
+    const inviterCodeStr = (u.inviterCode || '');
+    const idStr = (u.id || '').toLowerCase();
+
+    return (
+      nameStr.includes(searchLower) ||
+      phoneStr.includes(searchQuery.trim()) ||
+      inviteCodeStr.includes(searchQuery.trim()) ||
+      inviterCodeStr.includes(searchQuery.trim()) ||
+      idStr.includes(searchLower)
+    );
+  });
 
   const getDownlineTree = (targetUser: UserProfile) => {
     const list: { id: string; name: string; phone: string; level: number; totalInvested: number; inviterName: string }[] = [];
@@ -1307,13 +1355,33 @@ export default function AdminSection({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-900/40 hover:bg-slate-900/60 border border-slate-700/50 rounded-2xl text-[10px] font-black uppercase tracking-wider text-slate-200 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
-          >
-            <LogOut className="w-3.5 h-3.5 text-rose-400" />
-            <span>Sign Out</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                if (onRefreshData) {
+                  setIsRefreshing(true);
+                  await onRefreshData();
+                  setIsRefreshing(false);
+                } else {
+                  onSyncConfig?.();
+                  triggerToast('Refreshed local records.', 'info');
+                }
+              }}
+              disabled={isRefreshing}
+              className="px-3 py-2 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 rounded-2xl text-[10px] font-black uppercase tracking-wider text-emerald-200 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Syncing...' : 'Sync Database'}</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-900/40 hover:bg-slate-900/60 border border-slate-700/50 rounded-2xl text-[10px] font-black uppercase tracking-wider text-slate-200 transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5 text-rose-400" />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </div>
 
