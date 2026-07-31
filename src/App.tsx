@@ -1468,12 +1468,23 @@ export default function App() {
 
     const purchaseTx: TransactionRecord = {
       id: `tx_pur_${Date.now()}`,
+      userId: userProfile.id,
+      userPhone: userProfile.phone,
       type: 'purchase',
       amount: totalCost,
       date: new Date().toLocaleString(),
       status: 'success',
       description: `Purchased Advertisement Plan: ${plan.title} (${quantity} Slots)`
     };
+
+    // Immediate direct Firestore write for purchases
+    if (!isQuotaExceeded()) {
+      try {
+        setDoc(doc(db, "purchases", newPurchase.id), cleanUndefined(newPurchase)).catch(() => {});
+        setDoc(doc(db, "transactions", purchaseTx.id), cleanUndefined(purchaseTx)).catch(() => {});
+        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser)).catch(() => {});
+      } catch (e) {}
+    }
 
     // Update remaining slots on plan
     const updatedPlans = plans.map((p) => {
@@ -1524,26 +1535,39 @@ export default function App() {
       totalEarnings: userProfile.totalEarnings + accrued
     };
 
+    let targetUpdatedPurchase: PurchaseRecord | null = null;
     const updatedPurchases = purchases.map((p) => {
       if (p.id === purchaseId) {
-        return {
+        const item = {
           ...p,
           totalClaimed: p.totalClaimed + accrued,
           completed: isCompleting ? true : p.completed,
           lastClaimedAt: new Date(claimUntil).toISOString()
         };
+        targetUpdatedPurchase = item;
+        return item;
       }
       return p;
     });
 
     const claimTx: TransactionRecord = {
       id: `tx_claim_${Date.now()}`,
+      userId: userProfile.id,
+      userPhone: userProfile.phone,
       type: 'claim',
       amount: accrued,
       date: new Date().toLocaleString(),
       status: 'success',
       description: `Claimed accrued advertisement rewards from: ${purchase.planTitle}${isCompleting ? ' (Plan Completed)' : ''}`
     };
+
+    if (!isQuotaExceeded() && targetUpdatedPurchase) {
+      try {
+        setDoc(doc(db, "purchases", (targetUpdatedPurchase as PurchaseRecord).id), cleanUndefined(targetUpdatedPurchase)).catch(() => {});
+        setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx)).catch(() => {});
+        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser)).catch(() => {});
+      } catch (e) {}
+    }
 
     saveStateToStorage(updatedUser, plans, updatedPurchases, [...transactions, claimTx], teamMembers);
     triggerToast(

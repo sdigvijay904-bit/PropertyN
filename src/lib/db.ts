@@ -683,10 +683,22 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
   if (!isQuotaExceeded()) {
     try {
       const purchasesColl = collection(db, "purchases");
-      const qPurchases = query(purchasesColl, where("userId", "==", user.id));
-      const purchasesSnap = await getDocs(qPurchases);
-      purchasesSnap.forEach((doc) => {
-        purchases.push(doc.data() as PurchaseRecord);
+      const purchasesSnap = await getDocs(purchasesColl);
+      const userDigits = user.phone ? user.phone.replace(/\D/g, "") : "";
+      const userLast10 = userDigits.length >= 10 ? userDigits.slice(-10) : userDigits;
+
+      purchasesSnap.forEach((docSnap) => {
+        const pData = docSnap.data() as PurchaseRecord;
+        const pPhoneDigits = (pData as any).userPhone ? String((pData as any).userPhone).replace(/\D/g, "") : "";
+        const isMatch = (
+          pData.userId === user.id ||
+          (pData as any).userId === user.id.replace('usr_', '') ||
+          (userLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(userLast10)) ||
+          pData.userId === user.phone
+        );
+        if (isMatch) {
+          purchases.push(pData);
+        }
       });
 
       const transactionsColl = collection(db, "transactions");
@@ -962,17 +974,34 @@ export async function firestoreGetState(userId: string): Promise<any> {
         transactions = Array.from(txMap.values());
       }
 
-      if (userId) {
-        const q = query(collection(db, "purchases"), where("userId", "==", userId));
-        const purchasesSnap = await getDocs(q);
-        const fsPurchases: PurchaseRecord[] = [];
-        purchasesSnap.forEach((doc) => fsPurchases.push(doc.data() as PurchaseRecord));
-        if (fsPurchases.length > 0) {
-          const pMap = new Map<string, PurchaseRecord>();
-          purchases.forEach(p => pMap.set(p.id, p));
-          fsPurchases.forEach(p => pMap.set(p.id, p));
-          purchases = Array.from(pMap.values());
+      const purchasesSnap = await getDocs(collection(db, "purchases"));
+      const fsPurchases: PurchaseRecord[] = [];
+      purchasesSnap.forEach((docSnap) => {
+        const pData = docSnap.data() as PurchaseRecord;
+        if (userId === 'usr_admin') {
+          fsPurchases.push(pData);
+        } else if (userId) {
+          const uObj = usersList.find(u => u.id === userId);
+          const uPhoneDigits = uObj?.phone ? uObj.phone.replace(/\D/g, "") : "";
+          const uLast10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : uPhoneDigits;
+          const pPhoneDigits = (pData as any).userPhone ? String((pData as any).userPhone).replace(/\D/g, "") : "";
+          
+          const isMatch = (
+            pData.userId === userId ||
+            (pData as any).userId === userId.replace('usr_', '') ||
+            (uLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(uLast10)) ||
+            pData.userId === uObj?.phone
+          );
+          if (isMatch) {
+            fsPurchases.push(pData);
+          }
         }
+      });
+      if (fsPurchases.length > 0) {
+        const pMap = new Map<string, PurchaseRecord>();
+        purchases.forEach(p => pMap.set(p.id, p));
+        fsPurchases.forEach(p => pMap.set(p.id, p));
+        purchases = Array.from(pMap.values());
       }
 
       const usersSnap = await getDocs(collection(db, "users"));
