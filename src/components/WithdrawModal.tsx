@@ -37,14 +37,14 @@ export default function WithdrawModal({
 
   const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '120');
 
-  // Sum total plan income earned (from purchases totalClaimed, claim/checkin/commission transactions, or user.totalEarnings)
+  // Sum total plan income earned (from purchases totalClaimed or claim/checkin/commission transactions)
   const totalClaimedFromPurchases = purchases ? purchases.reduce((sum, p) => sum + (p.totalClaimed || 0), 0) : 0;
   const totalClaimedFromTx = transactions
     .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  // Plan Yield is strictly the actual earned income from plan claims and bonuses
   const totalPlanEarnings = Math.max(
-    user.totalEarnings || 0,
     totalClaimedFromPurchases,
     totalClaimedFromTx
   );
@@ -55,7 +55,7 @@ export default function WithdrawModal({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-  const withdrawableLimit = maxWithdrawablePlanEarnings;
+  const withdrawableLimit = Math.min(user.balance, maxWithdrawablePlanEarnings);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

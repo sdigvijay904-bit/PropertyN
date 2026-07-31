@@ -493,7 +493,6 @@ export default function AdminSection({
         const updated = {
           ...u,
           balance: u.balance + tx.amount,
-          totalEarnings: u.totalEarnings + tx.amount,
           totalInvested: (u.totalInvested || 0) + tx.amount
         };
         // If this is the currently logged-in user, update current session as well

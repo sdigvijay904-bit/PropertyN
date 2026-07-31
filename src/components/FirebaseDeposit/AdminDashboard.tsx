@@ -115,7 +115,7 @@ export default function AdminDashboard({
       updatedUsers[targetUserIndex] = {
         ...targetUser,
         balance: newBalance,
-        totalEarnings: targetUser.totalEarnings + deposit.depositAmount
+        totalInvested: (targetUser.totalInvested || 0) + deposit.depositAmount
       };
 
       // Add a client transaction record in synchronization logs

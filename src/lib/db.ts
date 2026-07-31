@@ -449,14 +449,14 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
       );
 
       if (!existingMatch) {
-        const matchedPlan = planList.find(pl => tx.description.includes(pl.title) || pl.price === tx.amount) || planList[0];
+        const matchedPlan = planList.find(pl => tx.description.includes(pl.title) || pl.price === tx.amount);
         if (matchedPlan) {
           const reconstructedPurchase: PurchaseRecord = {
             id: reconstructedId,
             userId: userId,
             planId: matchedPlan.id,
             planTitle: matchedPlan.title,
-            price: tx.amount || matchedPlan.price,
+            price: matchedPlan.price,
             dailyIncome: matchedPlan.dailyIncome,
             durationDays: matchedPlan.durationDays,
             datePurchased: tx.date || new Date().toISOString(),
