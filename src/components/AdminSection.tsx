@@ -1434,7 +1434,7 @@ export default function AdminSection({
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-emerald-400 font-black uppercase tracking-wider flex items-center gap-1.5">
                             <ShoppingBag className="w-4 h-4 text-emerald-400" />
-                            <span>Total Plans Purchased</span>
+                            <span>Total Plans Bought</span>
                           </span>
                           <span className="text-[10px] font-mono text-teal-300 font-bold bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-lg">
                             Value: ₹{totalPVal.toLocaleString()}
@@ -1928,7 +1928,7 @@ export default function AdminSection({
                     <div className="flex items-center justify-between">
                       <h5 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
                         <ShoppingBag className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Purchased Investment Plans</span>
+                        <span>Bought Investment Plans</span>
                       </h5>
                       {(() => {
                         const userP = getUserPurchases(editingUser.id, editingUser.phone);
@@ -1946,7 +1946,7 @@ export default function AdminSection({
                       if (userP.length === 0) {
                         return (
                           <div className="p-3 bg-slate-950/40 rounded-2xl border border-slate-900 text-center">
-                            <p className="text-[10px] text-slate-500 font-bold">This user has not purchased any investment plans yet.</p>
+                            <p className="text-[10px] text-slate-500 font-bold">This user has not bought any investment plans yet.</p>
                           </div>
                         );
                       }
@@ -1976,7 +1976,7 @@ export default function AdminSection({
                                   <strong className="text-teal-300 font-bold">₹{pur.dailyIncome}/day</strong>
                                 </div>
                                 <div>
-                                  <span className="text-slate-500">Purchased On: </span>
+                                  <span className="text-slate-500">Bought On: </span>
                                   <span className="text-slate-300">
                                     {pur.datePurchased ? new Date(pur.datePurchased).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                                   </span>
@@ -2222,7 +2222,7 @@ export default function AdminSection({
                             {userPurchasesList.length === 0 ? (
                               <div>
                                 <span className="text-[9px] bg-slate-900/60 border border-slate-800 text-slate-500 px-2 py-0.5 rounded-lg font-mono">
-                                  No Plans Purchased
+                                  No Plans Bought
                                 </span>
                               </div>
                             ) : (

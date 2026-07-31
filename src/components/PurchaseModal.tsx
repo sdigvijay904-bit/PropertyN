@@ -202,7 +202,7 @@ export default function PurchaseModal({
               className="w-full py-4.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-sm rounded-xl shadow-md shadow-emerald-100 flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
             >
               <ShoppingCart className="w-5 h-5 text-white" />
-              <span>Confirm Purchase</span>
+              <span>Confirm Buy</span>
             </button>
           </div>
         </motion.div>

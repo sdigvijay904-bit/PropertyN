@@ -11,6 +11,7 @@ import {
   Bell, Settings, Gift, CreditCard, Star
 } from 'lucide-react';
 import { UserProfile, PurchaseRecord, TransactionRecord, BankAccount } from '../types';
+import { Real3DWalletIcon, Real3DCashIcon, Real3DIncomeIcon } from './RealIcons';
 
 interface ProfileSectionProps {
   user: UserProfile;
@@ -192,7 +193,7 @@ export default function ProfileSection({
                       <div className="flex items-start justify-between">
                         <div>
                           <h4 className="text-sm font-black text-teal-950">{item.planTitle}</h4>
-                          <p className="text-[10px] text-gray-400 font-sans font-bold mt-0.5">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</p>
+                          <p className="text-[10px] text-gray-400 font-sans font-bold mt-0.5">Bought: {new Date(item.datePurchased).toLocaleDateString()}</p>
                         </div>
                         <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${item.completed ? 'bg-gray-100 text-gray-500' : 'bg-emerald-50 text-emerald-600 animate-pulse'}`}>
                           {item.completed ? 'Completed' : 'Active & Running'}
@@ -238,7 +239,7 @@ export default function ProfileSection({
                 </div>
                 <div>
                   <p className="text-sm font-black text-slate-800">No Active Plans Found</p>
-                  <p className="text-xs text-gray-400 max-w-[200px] mt-0.5">Please purchase our Special Offer or Product plans on the home screen to start generating daily yields.</p>
+                  <p className="text-xs text-gray-400 max-w-[200px] mt-0.5">Please buy our Special Offer or Product plans on the home screen to start generating daily yields.</p>
                 </div>
 
               </div>
@@ -714,12 +715,12 @@ export default function ProfileSection({
       default:
         return (
           <div className="space-y-5 text-left">
-            {/* 3 Stat Cards in a Row (BALANCE, RECHARGED, TOTAL INCOME) strictly matching screenshot */}
+            {/* 3 Stat Cards in a Row (BALANCE, RECHARGED, TOTAL INCOME) strictly matching HomeSection */}
             <div className="grid grid-cols-3 gap-2 min-[360px]:gap-2.5">
               {/* BALANCE */}
-              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-                <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 rounded-2xl bg-orange-100/90 text-orange-500 flex items-center justify-center mb-1.5 shrink-0 shadow-2xs">
-                  <Wallet className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 stroke-[2.2]" />
+              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-emerald-50/80 border border-emerald-100 flex items-center justify-center mb-1 shrink-0">
+                  <Real3DWalletIcon className="w-8 h-8" />
                 </div>
                 <span className="text-[9px] min-[360px]:text-[10px] font-black text-slate-500 uppercase tracking-wider">BALANCE</span>
                 <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
@@ -728,9 +729,9 @@ export default function ProfileSection({
               </div>
 
               {/* RECHARGED */}
-              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-                <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 rounded-2xl bg-blue-100/90 text-blue-500 flex items-center justify-center mb-1.5 shrink-0 shadow-2xs">
-                  <Banknote className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 stroke-[2.2]" />
+              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-pink-50/80 border border-pink-100 flex items-center justify-center mb-1 shrink-0">
+                  <Real3DCashIcon className="w-8 h-8" />
                 </div>
                 <span className="text-[9px] min-[360px]:text-[10px] font-black text-slate-500 uppercase tracking-wider">RECHARGED</span>
                 <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
@@ -739,9 +740,9 @@ export default function ProfileSection({
               </div>
 
               {/* TOTAL INCOME */}
-              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100 shadow-[0_8px_25px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
-                <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 rounded-2xl bg-emerald-100/90 text-emerald-500 flex items-center justify-center mb-1.5 shrink-0 shadow-2xs">
-                  <TrendingUp className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 stroke-[2.2]" />
+              <div className="bg-white p-2.5 min-[360px]:p-3.5 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+                <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-teal-50/80 border border-teal-100 flex items-center justify-center mb-1 shrink-0">
+                  <Real3DIncomeIcon className="w-8 h-8" />
                 </div>
                 <span className="text-[8px] min-[360px]:text-[9.5px] font-black text-slate-500 uppercase tracking-tighter whitespace-nowrap">
                   TOTAL INCOME
@@ -757,17 +758,17 @@ export default function ProfileSection({
               <button
                 type="button"
                 onClick={onOpenRecharge}
-                className="py-4 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-teal-600 cursor-pointer group"
+                className="py-3.5 flex items-center justify-center gap-2 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-teal-700 cursor-pointer group"
               >
-                <Wallet className="w-4.5 h-4.5 text-teal-500 group-hover:scale-110 transition-transform" />
+                <Real3DWalletIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 <span>Recharge</span>
               </button>
               <button
                 type="button"
                 onClick={onOpenWithdraw}
-                className="py-4 flex items-center justify-center gap-2.5 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-emerald-600 cursor-pointer group"
+                className="py-3.5 flex items-center justify-center gap-2 hover:bg-slate-50/50 active:scale-95 transition-all font-black text-xs text-rose-700 cursor-pointer group"
               >
-                <Landmark className="w-4.5 h-4.5 text-emerald-500 group-hover:scale-110 transition-transform" />
+                <Real3DCashIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
                 <span>Withdraw</span>
               </button>
             </div>

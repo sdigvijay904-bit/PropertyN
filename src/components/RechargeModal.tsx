@@ -615,14 +615,7 @@ export default function RechargeModal({
                         <span>{downloadingQr ? 'Saving QR...' : 'Save QR to Gallery'}</span>
                       </button>
 
-                      <a
-                        href={downloadApiEndpoint}
-                        target="_blank"
-                        download={`payment_qr_${amountInput || '500'}.png`}
-                        className="text-[10px] text-teal-700 font-black underline hover:text-teal-900 transition-colors py-0.5"
-                      >
-                        ⚡ Direct Server Download Link (If button is blocked by APK)
-                      </a>
+
                     </div>
 
                     {qrNotice && (

@@ -114,7 +114,7 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                     <div>
                       <h4 className="text-sm font-black text-teal-950">{item.planTitle}</h4>
                       <div className="flex flex-wrap items-center gap-x-2 mt-1 text-[10px] font-sans font-bold">
-                        <span className="text-gray-400">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</span>
+                        <span className="text-gray-400">Bought: {new Date(item.datePurchased).toLocaleDateString()}</span>
                         <span className="text-slate-200 font-normal">•</span>
                         <span className="text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md font-black">Plan Price: ₹{item.price ? item.price.toLocaleString('en-IN') : '0'}</span>
                       </div>
@@ -172,7 +172,7 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                     <div>
                       <h4 className="text-sm font-black text-slate-700">{item.planTitle}</h4>
                       <div className="flex flex-wrap items-center gap-x-2 mt-1 text-[10px] font-sans font-bold">
-                        <span className="text-gray-400">Purchased: {new Date(item.datePurchased).toLocaleDateString()}</span>
+                        <span className="text-gray-400">Bought: {new Date(item.datePurchased).toLocaleDateString()}</span>
                         <span className="text-slate-200 font-normal">•</span>
                         <span className="text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md font-black">Plan Price: ₹{item.price ? item.price.toLocaleString('en-IN') : '0'}</span>
                       </div>
@@ -204,7 +204,7 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
             </div>
             <div>
               <p className="text-sm font-black text-slate-800">No Active Plans Found</p>
-              <p className="text-xs text-gray-400 max-w-[200px] mx-auto mt-0.5">Please purchase our Special Offer or Product plans on the home screen to start generating daily yields.</p>
+              <p className="text-xs text-gray-400 max-w-[200px] mx-auto mt-0.5">Please buy our Special Offer or Product plans on the home screen to start generating daily yields.</p>
             </div>
           </div>
         )}

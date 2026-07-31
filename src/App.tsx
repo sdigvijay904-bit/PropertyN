@@ -1662,7 +1662,7 @@ export default function App() {
       amount: totalCost,
       date: new Date().toLocaleString(),
       status: 'success',
-      description: `Purchased Advertisement Plan: ${plan.title} (${quantity} Slots)`
+      description: `Bought Advertisement Plan: ${plan.title} (${quantity} Slots)`
     };
 
     // Immediate direct Firestore write for purchases
@@ -1683,7 +1683,7 @@ export default function App() {
     });
 
     saveStateToStorage(updatedUser, updatedPlans, [...purchases, newPurchase], [...transactions, purchaseTx], teamMembers);
-    triggerToast(`Success! Purchased ${quantity} Slots of ${plan.title}. Yield accumulating!`, 'success');
+    triggerToast(`Success! Bought ${quantity} Slots of ${plan.title}. Yield accumulating!`, 'success');
   };
 
   // Claim Order Accrued Earnings

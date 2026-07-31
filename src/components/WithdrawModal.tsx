@@ -53,7 +53,7 @@ export default function WithdrawModal({
     setError('');
 
     if (!hasPurchasedPlan) {
-      setError('Withdrawal Locked: You must purchase at least one Real Estate Fund to unlock withdrawals!');
+      setError('Withdrawal Locked: You must buy at least one Real Estate Fund to unlock withdrawals!');
       return;
     }
 
@@ -174,7 +174,7 @@ export default function WithdrawModal({
                   आप केवल तभी पैसे निकाल सकते हैं जब आपने कोई रियल एस्टेट फंड (Plan) खरीदा हो।
                 </p>
                 <p className="text-[11.5px] text-rose-700 font-medium">
-                  Withdrawals are locked because you do not have an active Real Estate investment. Please purchase at least one plan on the Home screen to unlock withdrawals.
+                  Withdrawals are locked because you do not have an active Real Estate investment. Please buy at least one plan on the Home screen to unlock withdrawals.
                 </p>
               </div>
             )}

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Wallet, Landmark, Send, HelpCircle, ShieldCheck, Sparkles, ShoppingBag, Coins, BadgeAlert, ArrowUpRight, TrendingUp, Calendar, Award, Heart, Search, X, Star, Info, ChevronRight, MapPin, Percent, Plus, Minus, Check, Smartphone, Download, Banknote, Settings, Volume2, Megaphone } from 'lucide-react';
 import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
 import { openTelegramUrl } from '../lib/telegram';
+import { Real3DWalletIcon, Real3DCashIcon, Real3DTelegramIcon, Real3DAppIcon, Real3DIncomeIcon } from './RealIcons';
 
 interface HomeSectionProps {
   user: UserProfile;
@@ -270,35 +271,35 @@ export default function HomeSection({
       </div>
 
       {/* 3 Stat Cards in a Row (BALANCE, RECHARGED, TOTAL INCOME) */}
-      <div className="mx-4 grid grid-cols-3 gap-2">
+      <div className="mx-4 grid grid-cols-3 gap-2 min-[360px]:gap-2.5">
         {/* BALANCE */}
-        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
-          <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center mb-1.5 shrink-0">
-            <Wallet className="w-5 h-5" />
+        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+          <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-emerald-50/80 border border-emerald-100 flex items-center justify-center mb-1 shrink-0">
+            <Real3DWalletIcon className="w-8 h-8" />
           </div>
-          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">BALANCE</span>
+          <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">BALANCE</span>
           <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
             ₹{Math.round(user.balance).toLocaleString('en-IN')}
           </span>
         </div>
 
         {/* RECHARGED */}
-        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
-          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center mb-1.5 shrink-0">
-            <Banknote className="w-5 h-5" />
+        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+          <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-pink-50/80 border border-pink-100 flex items-center justify-center mb-1 shrink-0">
+            <Real3DCashIcon className="w-8 h-8" />
           </div>
-          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">RECHARGED</span>
+          <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">RECHARGED</span>
           <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
             ₹{Math.round(totalRecharged).toLocaleString('en-IN')}
           </span>
         </div>
 
         {/* TOTAL INCOME */}
-        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100 shadow-xs flex flex-col items-center justify-center text-center">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-500 flex items-center justify-center mb-1.5 shrink-0">
-            <TrendingUp className="w-5 h-5" />
+        <div className="bg-white p-2.5 min-[360px]:p-3 rounded-2xl border border-slate-100/80 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center">
+          <div className="w-10 h-10 min-[360px]:w-11 min-[360px]:h-11 rounded-full bg-teal-50/80 border border-teal-100 flex items-center justify-center mb-1 shrink-0">
+            <Real3DIncomeIcon className="w-8 h-8" />
           </div>
-          <span className="text-[8px] min-[360px]:text-[9px] font-bold text-slate-500 uppercase tracking-tighter whitespace-nowrap">
+          <span className="text-[8px] min-[360px]:text-[9px] font-extrabold text-slate-500 uppercase tracking-tighter whitespace-nowrap">
             TOTAL INCOME
           </span>
           <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
@@ -310,7 +311,7 @@ export default function HomeSection({
       {/* Voice / Live Details Ticker Bar */}
       <div 
         onClick={handleBellClick}
-        className="mx-4 px-3.5 py-2.5 bg-slate-200/70 hover:bg-slate-200/90 rounded-full flex items-center justify-between text-xs font-medium text-slate-700 cursor-pointer transition-colors shadow-2xs"
+        className="mx-4 px-3.5 py-2.5 bg-slate-100/90 hover:bg-slate-200/80 rounded-full flex items-center justify-between text-xs font-medium text-slate-700 cursor-pointer transition-colors border border-slate-200/60 shadow-2xs"
       >
         <div className="flex items-center gap-2 overflow-hidden">
           <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -323,16 +324,16 @@ export default function HomeSection({
         <ChevronRight className="w-4 h-4 text-slate-500 shrink-0 ml-1" />
       </div>
 
-      {/* Quick Action Navigation Grid (Strictly matching attached screenshot) */}
-      <div className="mx-4 p-4 bg-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 grid grid-cols-4 gap-2">
+      {/* Quick Action Navigation Grid (Real 3D Icons) */}
+      <div className="mx-4 p-4 bg-white rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-100 grid grid-cols-4 gap-2">
         {/* RECHARGE */}
         <button
           type="button"
           onClick={onOpenRecharge}
           className="flex flex-col items-center space-y-1.5 cursor-pointer group"
         >
-          <div className="w-13 h-13 rounded-full bg-emerald-100/80 text-emerald-600 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
-            <Wallet className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-13.5 h-13.5 rounded-full bg-[#f0fdf4] border border-emerald-100 flex items-center justify-center shadow-xs group-active:scale-95 transition-all">
+            <Real3DWalletIcon className="w-9 h-9" />
           </div>
           <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">RECHARGE</span>
         </button>
@@ -343,22 +344,22 @@ export default function HomeSection({
           onClick={onOpenWithdraw}
           className="flex flex-col items-center space-y-1.5 cursor-pointer group"
         >
-          <div className="w-13 h-13 rounded-full bg-pink-100/80 text-pink-500 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
-            <Banknote className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-13.5 h-13.5 rounded-full bg-[#fdf2f8] border border-pink-100 flex items-center justify-center shadow-xs group-active:scale-95 transition-all">
+            <Real3DCashIcon className="w-9 h-9" />
           </div>
           <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">WITHDRAW</span>
         </button>
 
-        {/* CHANNEL */}
+        {/* TELEGRAM */}
         <button
           type="button"
           onClick={() => { openTelegramUrl(tgChannel, 'https://t.me/PropertyN_99'); }}
           className="flex flex-col items-center space-y-1.5 cursor-pointer group"
         >
-          <div className="w-13 h-13 rounded-full bg-amber-100/80 text-amber-600 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
-            <Megaphone className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-13.5 h-13.5 rounded-full bg-[#f0f9ff] border border-sky-100 flex items-center justify-center shadow-xs group-active:scale-95 transition-all">
+            <Real3DTelegramIcon className="w-9 h-9" />
           </div>
-          <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">CHANNEL</span>
+          <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">TELEGRAM</span>
         </button>
 
         {/* APP */}
@@ -370,8 +371,8 @@ export default function HomeSection({
           })}
           className="flex flex-col items-center space-y-1.5 cursor-pointer group"
         >
-          <div className="w-13 h-13 rounded-full bg-blue-100/80 text-blue-600 flex items-center justify-center shadow-2xs group-active:scale-95 transition-transform">
-            <Smartphone className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-13.5 h-13.5 rounded-full bg-[#eef2ff] border border-indigo-100 flex items-center justify-center shadow-xs group-active:scale-95 transition-all">
+            <Real3DAppIcon className="w-9 h-9" />
           </div>
           <span className="text-[10px] font-black text-slate-800 tracking-wider uppercase">APP</span>
         </button>
@@ -444,7 +445,7 @@ export default function HomeSection({
                   {/* Floating Slot status */}
                   <div className="absolute top-2.5 right-2.5 bg-white/95 text-slate-900 px-2.5 py-0.5 rounded-full text-[9.5px] font-extrabold shadow-xs border border-slate-100 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>{plan.slotsPurchased}/{plan.slotsMax} Slots Purchased</span>
+                    <span>{plan.slotsPurchased}/{plan.slotsMax} Slots Bought</span>
                   </div>
 
                   {/* Cover Title Overlay */}
@@ -505,7 +506,7 @@ export default function HomeSection({
                     className="w-full py-3 bg-gradient-to-r from-emerald-500 via-teal-600 to-teal-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md shadow-emerald-200/50 border-t border-white/20 flex items-center justify-center gap-1.5 hover:opacity-95 active:scale-95 transition-all cursor-pointer group"
                   >
                     <ShoppingBag className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    <span>Purchase Now</span>
+                    <span>Buy Now</span>
                   </button>
                 </div>
               </div>

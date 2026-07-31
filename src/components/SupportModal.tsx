@@ -23,7 +23,7 @@ interface Message {
 const FAQ_ITEMS = [
   {
     q: 'How do I start earning Daily Income?',
-    a: 'Simply browse our Real Estate Property Funds on the Home page, choose an investment tier (such as DLF Luxury Residencies or Urban Smart Studio), click "Purchase Now" and confirm. Your capital is allocated to premium real-estate purchases, and daily rental dividends are credited continuously to your account!'
+    a: 'Simply browse our Real Estate Property Funds on the Home page, choose an investment tier (such as DLF Luxury Residencies or Urban Smart Studio), click "Buy Now" and confirm. Your capital is allocated to premium real-estate purchases, and daily rental dividends are credited continuously to your account!'
   },
   {
     q: 'What is the minimum recharge and withdrawal limit?',
@@ -80,7 +80,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
       } else if (lower.includes('invite') || lower.includes('refer') || lower.includes('commission') || lower.includes('team')) {
         botText = "You earn 10% direct commission on Level 1 friend recharges, 5% on Level 2, and 2% on Level 3. Share your QR code or referral link from the Invite section to start building your passive team income!";
       } else if (lower.includes('plan') || lower.includes('buy') || lower.includes('purchase')) {
-        botText = "You can purchase multiple property investment plans to compound your daily yield! The DLF Luxury Residencies Plan yields high-returns (₹4,536 daily) and runs for 2 days. Browse other premium funds on the home page for long-term secure yields.";
+        botText = "You can buy multiple property investment plans to compound your daily yield! The DLF Luxury Residencies Plan yields high-returns (₹4,536 daily) and runs for 2 days. Browse other premium funds on the home page for long-term secure yields.";
       } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey')) {
         botText = "Hello! I am your automated PropertyN Support Assistant. How can I help you? You can ask about Recharges, Withdrawals, Real Estate Funds, or Referral Commissions.";
       }
