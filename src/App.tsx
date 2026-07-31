@@ -20,6 +20,7 @@ import TeamSection from './components/TeamSection';
 import ProfileSection from './components/ProfileSection';
 import AdminSection from './components/AdminSection';
 import OrdersSection from './components/OrdersSection';
+import { AuthPortal } from './components/AuthPortal';
 
 import RechargeModal from './components/RechargeModal';
 import WithdrawModal from './components/WithdrawModal';
@@ -27,6 +28,7 @@ import SupportModal from './components/SupportModal';
 import PurchaseModal from './components/PurchaseModal';
 import WelcomeNoticeModal from './components/WelcomeNoticeModal';
 import DownloadAppModal from './components/DownloadAppModal';
+import { SlidingAppDownloadBanner } from './components/SlidingAppDownloadBanner';
 import SupportAgentAvatar from './components/SupportAgentAvatar';
 import { formatTelegramUrl, openTelegramUrl } from './lib/telegram';
 
@@ -1499,33 +1501,32 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to sign out? Your balances are saved in this browser.')) {
-      saveStateToStorage(null);
-      setIsLoggedIn(false);
-      setActiveTab('home');
-      setIsAdminMode(false);
-      
-      // Fully clear all auth form input states to prevent session switching leaks
-      setFullName('');
-      setMobileNumber('');
-      setPassword('');
-      setCaptchaInput('');
-      generateCaptcha();
-      setInvitationCode('');
-      setShowPassword(false);
-      
-      setForgotStep(1);
-      setForgotPhone('');
-      setForgotOtpCode('');
-      setForgotOtpInput('');
-      setForgotNewPassword('');
-      setShowForgotNewPassword(false);
-      setAuthError('');
-      
-      setAuthTab('login');
-      
-      triggerToast('Signed out successfully.', 'info');
-    }
+    saveStateToStorage(null);
+    setIsLoggedIn(false);
+    setUserProfile(null);
+    setActiveTab('home');
+    setIsAdminMode(false);
+    
+    // Fully clear all auth form input states to prevent session switching leaks
+    setFullName('');
+    setMobileNumber('');
+    setPassword('');
+    setCaptchaInput('');
+    generateCaptcha();
+    setInvitationCode('');
+    setShowPassword(false);
+    
+    setForgotStep(1);
+    setForgotPhone('');
+    setForgotOtpCode('');
+    setForgotOtpInput('');
+    setForgotNewPassword('');
+    setShowForgotNewPassword(false);
+    setAuthError('');
+    
+    setAuthTab('login');
+    
+    triggerToast('Signed out successfully.', 'info');
   };
 
   // Automatic inactivity auto-logout disabled as requested by the user
@@ -2130,370 +2131,39 @@ export default function App() {
             </div>
           )
         ) : (
-          /* AUTHENTICATION PORTAL - Styled exactly like the shared screenshot, fully optimized for mobile devices */
-          <div ref={scrollContainerRef} className="flex-1 bg-gradient-to-b from-teal-700 via-teal-800 to-teal-950 text-white flex flex-col justify-between relative overflow-y-auto scrollbar-none">
-            {/* Subtle background overlay dots */}
-            <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none z-0"></div>
-            
-            {/* Elegant spacing at the top (PropertyN brand logo and name re-added as requested) */}
-            <div className="text-center pt-4 pb-2 z-10 px-5 relative flex flex-col items-center">
-              {/* Premium Logo Ring Icon */}
-              <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-lg border border-white/15 mb-1.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md">
-                  <Home className="w-4.5 h-4.5 stroke-[2.5]" />
-                </div>
-              </div>
-              <h1 className="text-xl font-black tracking-[0.15em] text-white font-sans uppercase">
-                Property<span className="text-emerald-400">N</span>
-              </h1>
-              <p className="text-[9.5px] text-teal-100 font-extrabold tracking-widest mt-0.5 uppercase opacity-90">
-                {authTab === 'login' ? 'Secure Member Login' : 'Create your account in seconds'}
-              </p>
-            </div>
-
-            {/* Main Curved White Card Container (rounded-t-[2.5rem] for luxurious compact rhythm) */}
-            <div className="bg-white text-slate-800 rounded-t-[2.5rem] px-5 pt-5 pb-5 flex-1 flex flex-col justify-start space-y-4 z-10 relative shadow-[0_-12px_40px_rgba(15,23,42,0.12)]">
-              
-              {/* Sleek Switch Toggle (Matches Screenshot 2's pill tabs) */}
-              <div className="p-1.5 bg-slate-100 border border-slate-200 rounded-2xl flex relative shrink-0 shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthTab('login');
-                    setAuthError('');
-                  }}
-                  className={`flex-1 py-2.5 text-sm font-extrabold rounded-xl transition-all duration-300 relative z-10 tracking-wide ${
-                    authTab === 'login'
-                      ? 'text-white'
-                      : 'text-slate-700 hover:text-slate-950 font-black'
-                  }`}
-                >
-                  {authTab === 'login' && (
-                    <motion.div
-                      layoutId="authActiveBg"
-                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl shadow-md shadow-emerald-200 -z-10"
-                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    />
-                  )}
-                  Login
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthTab('register');
-                    setAuthError('');
-                  }}
-                  className={`flex-1 py-2.5 text-sm font-extrabold rounded-xl transition-all duration-300 relative z-10 tracking-wide ${
-                    authTab === 'register'
-                      ? 'text-white'
-                      : 'text-slate-700 hover:text-slate-950 font-black'
-                  }`}
-                >
-                  {authTab === 'register' && (
-                    <motion.div
-                      layoutId="authActiveBg"
-                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl shadow-md shadow-emerald-200 -z-10"
-                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    />
-                  )}
-                  Register
-                </button>
-              </div>
-
-              {/* Form implementation */}
-              {authTab === 'forgot' ? (
-                /* FORGOT PASSWORD SIMULATION FORM */
-                <form 
-                  onSubmit={
-                    forgotStep === 1 
-                      ? handleForgotRequestOtp 
-                      : forgotStep === 2 
-                      ? handleForgotVerifyOtp 
-                      : handleForgotResetPassword
-                  } 
-                  className="space-y-3 text-left flex flex-col pt-1"
-                >
-                  <div className="text-center pb-0.5">
-                    <span className="text-[9.5px] bg-teal-50 text-teal-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      Step {forgotStep} of 3: {forgotStep === 1 ? "Verify Number" : forgotStep === 2 ? "Enter OTP" : "Set New Password"}
-                    </span>
-                  </div>
-
-                  {forgotStep === 1 && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest block px-1">REGISTERED MOBILE NUMBER</label>
-                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-xl p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
-                        <div className="w-10 h-8 rounded-lg bg-slate-200 text-slate-900 border border-slate-300 flex items-center justify-center font-black text-[11px] shrink-0 font-mono">
-                          +91
-                        </div>
-                        <input
-                          type="tel"
-                          required
-                          maxLength={10}
-                          value={forgotPhone}
-                          onChange={(e) => setForgotPhone(e.target.value.replace(/\D/g, ''))}
-                          placeholder="10-digit number"
-                          className="flex-1 pl-3 pr-3 py-1.5 bg-transparent text-xs font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-wider"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {forgotStep === 2 && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest block px-1">ENTER 4-DIGIT SECURITY OTP</label>
-                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-xl p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
-                          <ShieldCheck className="w-4 h-4" />
-                        </div>
-                        <input
-                          type="text"
-                          required
-                          maxLength={4}
-                          value={forgotOtpInput}
-                          onChange={(e) => setForgotOtpInput(e.target.value.replace(/\D/g, ''))}
-                          placeholder="4-digit OTP"
-                          className="flex-1 pl-3 pr-3 py-1.5 bg-transparent text-xs font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono text-center tracking-[0.25em]"
-                        />
-                      </div>
-                      <p className="text-[9.5px] text-slate-600 font-extrabold text-center mt-0.5">
-                        Simulated OTP code: <strong className="text-teal-700 font-mono text-xs">{forgotOtpCode}</strong>
-                      </p>
-                    </div>
-                  )}
-
-                  {forgotStep === 3 && (
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black text-slate-800 uppercase tracking-widest block px-1">SET NEW PASSWORD</label>
-                      <div className="relative flex items-center bg-slate-50 border border-slate-300 rounded-xl p-1 focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 focus-within:bg-white transition-all shadow-sm">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-100">
-                          <Lock className="w-4 h-4" />
-                        </div>
-                        <input
-                          type={showForgotNewPassword ? 'text' : 'password'}
-                          required
-                          value={forgotNewPassword}
-                          onChange={(e) => setForgotNewPassword(e.target.value)}
-                          placeholder="Min 6 characters"
-                          className="flex-1 pl-3 pr-8 py-1.5 bg-transparent text-xs font-extrabold text-slate-900 placeholder-slate-500 focus:outline-none font-mono tracking-widest"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
-                          className="absolute right-3 text-emerald-400 hover:text-emerald-600 transition-colors"
-                        >
-                          {showForgotNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {authError && (
-                    <motion.p
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="text-[11px] font-black text-rose-500 text-center bg-rose-50 border border-rose-100 py-2 px-2.5 rounded-lg mt-1"
-                    >
-                      ⚠️ {authError}
-                    </motion.p>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-[11px] shadow-md shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none uppercase tracking-widest mt-2"
-                  >
-                    <UserCheck className="w-4 h-4" />
-                    <span>
-                      {forgotStep === 1 
-                        ? 'Request Verification OTP' 
-                        : forgotStep === 2 
-                        ? 'Verify Code' 
-                        : 'Update New Password'}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthTab('login');
-                      setAuthError('');
-                      setForgotStep(1);
-                      setShowForgotNewPassword(false);
-                    }}
-                    className="w-full py-2.5 text-[11px] font-black text-slate-500 hover:text-slate-700 bg-slate-50 hover:bg-slate-100/80 border border-slate-200/50 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer mt-0.5"
-                  >
-                    Back to Login
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={authTab === 'login' ? handleLogin : handleRegister} className="space-y-3 text-left flex flex-col pt-1">
-                
-                {/* Full name (Register only) */}
-                {authTab === 'register' && (
-                  <div className="space-y-1">
-                    <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">Full Name</label>
-                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
-                      <input
-                        type="text"
-                        required
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Full Name"
-                        className="w-full px-3.5 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Mobile number */}
-                <div className="space-y-1">
-                  <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">Mobile Number</label>
-                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
-                    <input
-                      type="tel"
-                      required
-                      maxLength={10}
-                      value={mobileNumber}
-                      onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
-                      placeholder="Mobile Number"
-                      className="w-full px-3.5 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Password Input */}
-                <div className="space-y-1">
-                  <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">
-                    {authTab === 'register' ? 'Create Password' : 'Password'}
-                  </label>
-                  <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={authTab === 'register' ? "Create Password" : "Password"}
-                      className="flex-1 pl-3.5 pr-9 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 text-slate-500 hover:text-slate-800 transition-colors"
-                    >
-                      {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                {authTab === 'login' && (
-                  <div className="flex items-center justify-between px-1 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthTab('forgot');
-                        setAuthError('');
-                        setForgotStep(1);
-                      }}
-                      className="text-[11px] font-bold text-teal-700 hover:text-teal-950 transition-colors cursor-pointer"
-                    >
-                      Forgot Password?
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAuthTab('register');
-                        setAuthError('');
-                      }}
-                      className="text-[11px] font-bold text-emerald-600 hover:text-emerald-800 transition-colors cursor-pointer"
-                    >
-                      Register Account
-                    </button>
-                  </div>
-                )}
-
-                {/* Invitation Code (Register only) */}
-                {authTab === 'register' && (
-                  <div className="space-y-1">
-                    <label className="text-[10.5px] font-bold text-slate-800 tracking-wide block px-0.5">Invitation Code (Optional)</label>
-                    <div className="relative flex items-center bg-[#f1f5f9] border border-slate-200/80 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-600/30 rounded-xl p-0.5 focus-within:bg-white transition-all shadow-2xs">
-                      <input
-                        type="text"
-                        value={invitationCode}
-                        onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, ''))}
-                        placeholder="Invitation Code"
-                        className="w-full px-3.5 py-2 bg-transparent text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {authError && (
-                  <motion.p
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="text-[11px] font-black text-rose-500 text-center bg-rose-50 border border-rose-100 py-2 px-2.5 rounded-lg mt-1"
-                  >
-                    ⚠️ {authError}
-                  </motion.p>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-emerald-200 flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer select-none tracking-wide mt-2"
-                >
-                  <UserCheck className="w-4 h-4" />
-                  <span>{authTab === 'login' ? 'Login Now' : 'Register Now'}</span>
-                </button>
-              </form>
-            )}
-
-              {/* Official Telegram Channel & Support Links */}
-              <div className="pt-4 pb-2 flex flex-col items-center justify-center gap-2.5 mt-auto">
-                <a
-                  href={formatTelegramUrl(localStorage.getItem('adpaint_tg_channel'), 'https://t.me/PropertyN_99')}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openTelegramUrl(localStorage.getItem('adpaint_tg_channel'), 'https://t.me/PropertyN_99');
-                  }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#28a8ea] hover:bg-[#2092cc] text-white flex items-center justify-center gap-2.5 shadow-md shadow-sky-200/70 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
-                  title="Join Official Telegram Channel"
-                >
-                  <svg className="w-5 h-5 fill-current shrink-0" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .54-1.43.53-.47-.01-1.37-.26-2.05-.48-.83-.27-1.49-.42-1.43-.88.03-.24.38-.49 1.04-.75 4.08-1.77 6.81-2.94 8.18-3.51 3.9-1.62 4.71-1.9 5.24-1.91.12 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.37z"/>
-                  </svg>
-                  <span className="text-xs font-black uppercase tracking-wider">
-                    Join Telegram Channel
-                  </span>
-                </a>
-
-                <a
-                  href={formatTelegramUrl(localStorage.getItem('adpaint_tg_support'), 'https://t.me/PropertyN_Support')}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openTelegramUrl(localStorage.getItem('adpaint_tg_support'), 'https://t.me/PropertyN_Support');
-                  }}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] font-extrabold text-sky-600 hover:text-sky-800 flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Contact Official Telegram Support"
-                >
-                  <svg className="w-4 h-4 fill-current text-[#28a8ea] shrink-0" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .54-1.43.53-.47-.01-1.37-.26-2.05-.48-.83-.27-1.49-.42-1.43-.88.03-.24.38-.49 1.04-.75 4.08-1.77 6.81-2.94 8.18-3.51 3.9-1.62 4.71-1.9 5.24-1.91.12 0 .37.03.54.17.14.12.18.28.2.45-.02.07-.02.21-.04.37z"/>
-                  </svg>
-                  <span>Need help? Contact Customer Support</span>
-                </a>
-              </div>
-
-            </div>
-
-            {/* Bottom SSL Safe Protection Indicator */}
-            <div className="flex items-center justify-center gap-1.5 text-[8.5px] text-teal-200/75 font-extrabold tracking-widest uppercase z-10 relative py-1.5 select-none">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>SSL Secure Encryption Protected</span>
-            </div>
-          </div>
+          /* AUTHENTICATION PORTAL - High fidelity redesign matching UK777 style reference screen */
+          <AuthPortal
+            authTab={authTab}
+            setAuthTab={setAuthTab}
+            fullName={fullName}
+            setFullName={setFullName}
+            mobileNumber={mobileNumber}
+            setMobileNumber={setMobileNumber}
+            password={password}
+            setPassword={setPassword}
+            invitationCode={invitationCode}
+            setInvitationCode={setInvitationCode}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            authError={authError}
+            setAuthError={setAuthError}
+            handleLogin={handleLogin}
+            handleRegister={handleRegister}
+            forgotStep={forgotStep}
+            setForgotStep={setForgotStep}
+            forgotPhone={forgotPhone}
+            setForgotPhone={setForgotPhone}
+            forgotOtpInput={forgotOtpInput}
+            setForgotOtpInput={setForgotOtpInput}
+            forgotOtpCode={forgotOtpCode}
+            forgotNewPassword={forgotNewPassword}
+            setForgotNewPassword={setForgotNewPassword}
+            showForgotNewPassword={showForgotNewPassword}
+            setShowForgotNewPassword={setShowForgotNewPassword}
+            handleForgotRequestOtp={handleForgotRequestOtp}
+            handleForgotVerifyOtp={handleForgotVerifyOtp}
+            handleForgotResetPassword={handleForgotResetPassword}
+          />
         )}
 
         {/* Modal Interfaces */}
@@ -2557,7 +2227,12 @@ export default function App() {
           </>
         )}
 
-
+        {!isLoggedIn && (
+          <SlidingAppDownloadBanner
+            onOpenFullModal={() => setIsDownloadAppOpen(true)}
+            triggerToast={triggerToast}
+          />
+        )}
       </div>
     </div>
   );
