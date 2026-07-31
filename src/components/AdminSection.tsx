@@ -304,17 +304,23 @@ export default function AdminSection({
   const handleToggleDeactivatePurchase = (purchaseId: string, userId: string) => {
     let newStatus = false;
 
+    // Determine target purchase and next status
+    const targetP = (purchases || []).find(p => p.id === purchaseId);
+    if (targetP) {
+      newStatus = !targetP.completed;
+    } else {
+      newStatus = true;
+    }
+
+    const updatedPurchasesList = (purchases || []).map(p => {
+      if (p.id === purchaseId) {
+        return { ...p, completed: newStatus };
+      }
+      return p;
+    });
+
     if (setPurchases) {
-      setPurchases((prev) => {
-        const list = prev || [];
-        return list.map(p => {
-          if (p.id === purchaseId) {
-            newStatus = !p.completed;
-            return { ...p, completed: newStatus };
-          }
-          return p;
-        });
-      });
+      setPurchases(updatedPurchasesList);
     }
 
     // Update user-specific localStorage key
@@ -324,7 +330,6 @@ export default function AdminSection({
         const userP: PurchaseRecord[] = JSON.parse(raw);
         const updatedUserP = userP.map(p => {
           if (p.id === purchaseId) {
-            newStatus = !p.completed;
             return { ...p, completed: newStatus };
           }
           return p;
@@ -340,7 +345,6 @@ export default function AdminSection({
         const mainP: PurchaseRecord[] = JSON.parse(rawMain);
         const updatedMain = mainP.map(p => {
           if (p.id === purchaseId) {
-            newStatus = !p.completed;
             return { ...p, completed: newStatus };
           }
           return p;
@@ -351,20 +355,14 @@ export default function AdminSection({
 
     if (!isQuotaExceeded()) {
       try {
-        const targetP = (purchases || []).find(p => p.id === purchaseId);
         if (targetP) {
           const updatedP = { ...targetP, completed: newStatus };
-          setDoc(doc(db, "purchases", purchaseId), cleanUndefined(updatedP)).catch(() => {});
+          setDoc(doc(db, "purchases", purchaseId), cleanUndefined(updatedP), { merge: true }).catch(() => {});
+        } else {
+          setDoc(doc(db, "purchases", purchaseId), cleanUndefined({ completed: newStatus }), { merge: true }).catch(() => {});
         }
       } catch (e) {}
     }
-
-    const updatedPurchasesList = (purchases || []).map(p => {
-      if (p.id === purchaseId) {
-        return { ...p, completed: newStatus };
-      }
-      return p;
-    });
 
     onSyncConfig?.(undefined, updatedPurchasesList);
     triggerToast(newStatus ? 'User plan deactivated!' : 'User plan reactivated!', newStatus ? 'info' : 'success');
@@ -377,9 +375,10 @@ export default function AdminSection({
     }
 
     // 1. Mark in adpaint_deleted_purchases
+    let delList: string[] = [];
     try {
       const rawDel = localStorage.getItem('adpaint_deleted_purchases');
-      const delList: string[] = rawDel ? JSON.parse(rawDel) : [];
+      delList = rawDel ? JSON.parse(rawDel) : [];
       if (!delList.includes(purchaseId)) {
         delList.push(purchaseId);
       }
@@ -430,12 +429,13 @@ export default function AdminSection({
       localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTransactions));
     } catch (e) {}
 
-    // 5. Delete document from Firestore
+    // 5. Delete document from Firestore AND update global deleted_items doc
     if (!isQuotaExceeded()) {
       try {
         deleteDoc(doc(db, "purchases", purchaseId)).catch(() => {});
         deleteDoc(doc(db, "transactions", purchaseId)).catch(() => {});
         deleteDoc(doc(db, "transactions", purchaseId.replace('pur_', 'tx_pur_'))).catch(() => {});
+        setDoc(doc(db, "global", "deleted_items"), { deletedPurchases: delList }, { merge: true }).catch(() => {});
       } catch (e) {}
     }
 
@@ -1149,9 +1149,10 @@ export default function AdminSection({
   const handleDeletePlan = (planId: string) => {
     if (window.confirm('Are you sure you want to permanently delete this plan? This takes it offline.')) {
       // 1. Mark in deleted plans list
+      let delList: string[] = [];
       try {
         const rawDel = localStorage.getItem('adpaint_deleted_plans');
-        const delList: string[] = rawDel ? JSON.parse(rawDel) : [];
+        delList = rawDel ? JSON.parse(rawDel) : [];
         if (!delList.includes(planId)) {
           delList.push(planId);
           localStorage.setItem('adpaint_deleted_plans', JSON.stringify(delList));
@@ -1163,10 +1164,11 @@ export default function AdminSection({
       setPlans(updatedPlans);
       localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
 
-      // 3. Delete document from Firestore
+      // 3. Delete document from Firestore and update global deleted_items
       if (!isQuotaExceeded()) {
         try {
           deleteDoc(doc(db, "plans", planId)).catch(() => {});
+          setDoc(doc(db, "global", "deleted_items"), { deletedPlans: delList }, { merge: true }).catch(() => {});
         } catch (e) {}
       }
 

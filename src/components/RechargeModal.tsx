@@ -243,14 +243,39 @@ export default function RechargeModal({
         });
       }
 
-      // 2. Try direct Blob URL download (supported across standard mobile browsers)
+      const blob = dataURLToBlob(dataUrl);
+
+      // 2. Try Web Share API FIRST if supported (Mobile Chrome, Android APK WebView)
+      // This triggers native Android "Save Image / Share to Gallery / Drive / WhatsApp" dialog!
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'PropertyN Payment QR Code',
+              text: `Payment QR Code for ₹${amountInput}`
+            });
+            setQrNotice('✅ QR Code saved / shared to Gallery!');
+            return;
+          }
+        } catch (shareErr: any) {
+          if (shareErr?.name === 'AbortError') {
+            // User dismissed native share sheet
+            return;
+          }
+          console.warn("Web Share failed, attempting file download fallbacks:", shareErr);
+        }
+      }
+
+      // 3. Try direct Blob URL download
       let downloaded = false;
       try {
-        const blob = dataURLToBlob(dataUrl);
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
         link.download = fileName;
+        link.target = '_blank';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -260,32 +285,46 @@ export default function RechargeModal({
         console.warn("Blob URL download failed, trying data URL:", bErr);
       }
 
-      // 3. Direct Data URL anchor download fallback
+      // 4. Try Direct Data URL anchor download fallback
       if (!downloaded) {
-        const dLink = document.createElement('a');
-        dLink.href = dataUrl;
-        dLink.download = fileName;
-        document.body.appendChild(dLink);
-        dLink.click();
-        document.body.removeChild(dLink);
+        try {
+          const dLink = document.createElement('a');
+          dLink.href = dataUrl;
+          dLink.download = fileName;
+          dLink.target = '_blank';
+          document.body.appendChild(dLink);
+          dLink.click();
+          document.body.removeChild(dLink);
+          downloaded = true;
+        } catch (dErr) {
+          console.warn("Data URL download failed:", dErr);
+        }
       }
 
-      setQrNotice('✅ QR Code image saved to Gallery!');
-    } catch (err) {
-      console.error("Failed to process QR download:", err);
+      // 5. Always trigger direct server attachment download endpoint for Android APK WebViews
       try {
         const sLink = document.createElement('a');
         sLink.href = downloadApiEndpoint;
-        sLink.download = `payment_qr_${amountInput || '500'}.png`;
+        sLink.download = fileName;
+        sLink.target = '_blank';
         document.body.appendChild(sLink);
         sLink.click();
         document.body.removeChild(sLink);
       } catch (sErr) {
-        console.error("Server link download fallback failed:", sErr);
+        console.warn("Server endpoint download failed:", sErr);
       }
-      setQrNotice('✅ QR Code downloaded!');
+
+      setQrNotice('✅ QR Code saved to Gallery / Downloads!');
+    } catch (err) {
+      console.error("Failed to process QR download:", err);
+      try {
+        window.open(downloadApiEndpoint, '_blank');
+      } catch (wErr) {
+        console.error("Window open fallback failed:", wErr);
+      }
+      setQrNotice('✅ QR Code download started!');
     } finally {
-      setTimeout(() => setDownloadingQr(false), 1000);
+      setTimeout(() => setDownloadingQr(false), 800);
     }
   };
 
@@ -575,6 +614,15 @@ export default function RechargeModal({
                         <Download className="w-4 h-4 text-emerald-100" />
                         <span>{downloadingQr ? 'Saving QR...' : 'Save QR to Gallery'}</span>
                       </button>
+
+                      <a
+                        href={downloadApiEndpoint}
+                        target="_blank"
+                        download={`payment_qr_${amountInput || '500'}.png`}
+                        className="text-[10px] text-teal-700 font-black underline hover:text-teal-900 transition-colors py-0.5"
+                      >
+                        ⚡ Direct Server Download Link (If button is blocked by APK)
+                      </a>
                     </div>
 
                     {qrNotice && (
@@ -844,6 +892,16 @@ export default function RechargeModal({
                       <Download className="w-4 h-4 text-white" />
                       <span>{downloadingQr ? 'Processing...' : 'Save QR to Gallery'}</span>
                     </button>
+
+                    <a
+                      href={downloadApiEndpoint}
+                      target="_blank"
+                      download={`payment_qr_${amountInput || '500'}.png`}
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-teal-800 font-extrabold text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-teal-200"
+                    >
+                      <Download className="w-3.5 h-3.5 text-teal-600" />
+                      <span>⚡ Direct Server QR Link</span>
+                    </a>
 
                     <a
                       href={upiPayloadLink}

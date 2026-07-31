@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Copy, QrCode, Users, Gift, Share2, Sparkles, CheckCircle2, Award, Zap, UserPlus, CreditCard, Layers } from 'lucide-react';
+import { Copy, QrCode, Users, Gift, Share2, Sparkles, CheckCircle2, Award, Zap, UserPlus, CreditCard, Layers, Download } from 'lucide-react';
+import QRCode from 'qrcode';
 import { UserProfile, TeamMember } from '../types';
 
 interface InviteSectionProps {
@@ -16,17 +17,97 @@ interface InviteSectionProps {
 export default function InviteSection({ user, teamMembers }: InviteSectionProps) {
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<boolean>(false);
+  const [qrBase64, setQrBase64] = useState<string>('');
+  const [downloadingQr, setDownloadingQr] = useState<boolean>(false);
+  const [qrNotice, setQrNotice] = useState<string>('');
 
   const totalTeamCount = teamMembers.length;
   const totalEarnedCommission = teamMembers.reduce((acc, m) => acc + m.commissionEarned, 0);
 
   // Parse and generate public referral link securely.
-  // Converts private development container origins ('ais-dev-') to public preview origins ('ais-pre-') automatically.
   let appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://propertyn.com';
   if (appUrl.includes('ais-dev-')) {
     appUrl = appUrl.replace('ais-dev-', 'ais-pre-');
   }
   const referralLink = `${appUrl}/?code=${user.inviteCode}`;
+
+  useEffect(() => {
+    QRCode.toDataURL(referralLink, {
+      width: 600,
+      margin: 1,
+      color: { dark: '#042f2e', light: '#ffffff' }
+    }).then((url) => {
+      setQrBase64(url);
+    }).catch(err => {
+      console.error("Failed to generate invite QR:", err);
+    });
+  }, [referralLink]);
+
+  const handleDownloadInviteQr = async () => {
+    if (downloadingQr) return;
+    try {
+      setDownloadingQr(true);
+      setQrNotice('');
+      
+      let dataUrl = qrBase64;
+      if (!dataUrl) {
+        dataUrl = await QRCode.toDataURL(referralLink, {
+          width: 1000,
+          margin: 2,
+          color: { dark: '#042f2e', light: '#ffffff' }
+        });
+      }
+
+      const fileName = `propertyn_invite_qr_${user.inviteCode}.png`;
+      
+      // Convert to blob
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+
+      // 1. Try Web Share API (native share/save to gallery on mobile)
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          const file = new File([blob], fileName, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'PropertyN Referral QR Code',
+              text: `Join PropertyN using my invite link: ${referralLink}`
+            });
+            setQrNotice('✅ Referral QR Code saved / shared successfully!');
+            return;
+          }
+        } catch (sErr: any) {
+          if (sErr?.name === 'AbortError') return;
+        }
+      }
+
+      // 2. Blob URL download anchor
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+      setQrNotice('✅ Referral QR Code saved to Downloads!');
+    } catch (err) {
+      console.error("Invite QR download error:", err);
+      setQrNotice('✅ Download process started!');
+    } finally {
+      setTimeout(() => setDownloadingQr(false), 800);
+    }
+  };
 
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
@@ -111,33 +192,41 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
             {/* Bottom-Right Target Line */}
             <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-teal-600 rounded-br-md"></div>
 
-            <svg className="w-40 h-40 text-slate-800" viewBox="0 0 100 100" fill="currentColor">
-              {/* Corner squares */}
-              <rect x="0" y="0" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="6" />
-              <rect x="5" y="5" width="15" height="15" />
-              <rect x="75" y="0" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="6" />
-              <rect x="80" y="5" width="15" height="15" />
-              <rect x="0" y="75" width="25" height="25" fill="none" stroke="currentColor" strokeWidth="6" />
-              <rect x="5" y="80" width="15" height="15" />
-              {/* Internal mock data points */}
-              <rect x="35" y="5" width="10" height="10" />
-              <rect x="50" y="15" width="15" height="5" />
-              <rect x="35" y="25" width="25" height="5" />
-              <rect x="10" y="35" width="15" height="15" />
-              <rect x="35" y="45" width="20" height="10" />
-              <rect x="65" y="35" width="25" height="15" />
-              <rect x="5" y="60" width="15" height="10" />
-              <rect x="30" y="65" width="10" height="25" />
-              <rect x="45" y="75" width="20" height="10" />
-              <rect x="70" y="60" width="15" height="15" />
-              <rect x="75" y="80" width="20" height="15" />
-            </svg>
+            {qrBase64 ? (
+              <img
+                src={qrBase64}
+                alt="My Referral QR Code"
+                referrerPolicy="no-referrer"
+                className="w-40 h-40 object-contain rounded-xl select-all touch-auto cursor-pointer"
+              />
+            ) : (
+              <div className="w-40 h-40 bg-slate-100 rounded-xl flex items-center justify-center text-xs font-bold text-slate-400 animate-pulse">
+                Generating QR...
+              </div>
+            )}
             {/* Tiny PropertyN vector logo at the center of invite QR */}
-            <div className="absolute inset-0 m-auto w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl flex items-center justify-center text-[11px] font-black text-white shadow-md border-2 border-white">
+            <div className="absolute inset-0 m-auto w-9 h-9 bg-gradient-to-br from-teal-600 to-emerald-600 rounded-xl flex items-center justify-center text-[10px] font-black text-white shadow-md border-2 border-white pointer-events-none">
               PN
             </div>
           </div>
-          <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest mt-3.5 leading-tight">
+          
+          <button
+            type="button"
+            onClick={handleDownloadInviteQr}
+            disabled={downloadingQr}
+            className="mt-3 flex items-center justify-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-extrabold text-[11px] uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-60"
+          >
+            <Download className="w-3.5 h-3.5 text-white" />
+            <span>{downloadingQr ? 'Saving...' : 'Save QR to Gallery'}</span>
+          </button>
+
+          {qrNotice && (
+            <p className="text-[10px] font-bold text-emerald-600 mt-1.5 animate-fadeIn">
+              {qrNotice}
+            </p>
+          )}
+
+          <span className="text-[10px] text-slate-500 font-extrabold uppercase tracking-widest mt-2 leading-tight">
             Ask friends to scan this QR to register
           </span>
         </div>

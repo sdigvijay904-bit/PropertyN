@@ -1001,6 +1001,26 @@ export async function firestoreGetState(userId: string): Promise<any> {
         if (configData.customTicker) customTicker = configData.customTicker;
       }
 
+      // Fetch global deleted items list from Firestore
+      try {
+        const deletedDocSnap = await getDoc(doc(db, "global", "deleted_items"));
+        if (deletedDocSnap.exists()) {
+          const delData = deletedDocSnap.data();
+          if (Array.isArray(delData.deletedPlans)) {
+            const rawDelP = localStorage.getItem('adpaint_deleted_plans');
+            const localDelP: string[] = rawDelP ? JSON.parse(rawDelP) : [];
+            const mergedP = Array.from(new Set([...localDelP, ...delData.deletedPlans]));
+            localStorage.setItem('adpaint_deleted_plans', JSON.stringify(mergedP));
+          }
+          if (Array.isArray(delData.deletedPurchases)) {
+            const rawDelPur = localStorage.getItem('adpaint_deleted_purchases');
+            const localDelPur: string[] = rawDelPur ? JSON.parse(rawDelPur) : [];
+            const mergedPur = Array.from(new Set([...localDelPur, ...delData.deletedPurchases]));
+            localStorage.setItem('adpaint_deleted_purchases', JSON.stringify(mergedPur));
+          }
+        }
+      } catch (e) {}
+
       const plansSnap = await getDocs(collection(db, "plans"));
       const fsPlans: InvestmentPlan[] = [];
       plansSnap.forEach((doc) => fsPlans.push(doc.data() as InvestmentPlan));
@@ -1039,10 +1059,17 @@ export async function firestoreGetState(userId: string): Promise<any> {
           }
         }
       });
-      if (fsPurchases.length > 0) {
+      if (fsPurchases.length > 0 || purchasesSnap.docs.length >= 0) {
+        // Prefer Firestore server purchases list for user (authoritative for completed & deletions)
         const pMap = new Map<string, PurchaseRecord>();
-        purchases.forEach(p => pMap.set(p.id, p));
+        // First set server purchases
         fsPurchases.forEach(p => pMap.set(p.id, p));
+        // Only keep local purchases if they are not explicitly removed or superseded by server
+        purchases.forEach(p => {
+          if (!pMap.has(p.id) && userId === 'usr_admin') {
+            pMap.set(p.id, p);
+          }
+        });
         purchases = Array.from(pMap.values());
       }
 

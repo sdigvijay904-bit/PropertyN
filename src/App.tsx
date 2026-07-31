@@ -43,7 +43,7 @@ import {
   markQuotaExceeded
 } from './lib/db';
 import { db } from './lib/firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
 import { firebaseService } from './firebase/config';
 
 export default function App() {
@@ -588,30 +588,35 @@ export default function App() {
         let purchasesUpdated = false;
         let mergedPurchases = currentPurchases;
         if (userId) {
-          const localStoredPurchases = getStoredPurchases(userId, currentTransactions, finalPlans);
+          let deletedPurchasesList: string[] = [];
+          try {
+            const rawDelPur = localStorage.getItem('adpaint_deleted_purchases');
+            if (rawDelPur) deletedPurchasesList = JSON.parse(rawDelPur);
+          } catch (e) {}
+
           const serverPurchasesMap = new Map<string, PurchaseRecord>();
 
           if (Array.isArray(data.purchases)) {
-            data.purchases.forEach((p: any) => serverPurchasesMap.set(p.id, p));
+            data.purchases.forEach((p: any) => {
+              if (p && p.id && !deletedPurchasesList.includes(p.id)) {
+                serverPurchasesMap.set(p.id, p);
+              }
+            });
           }
 
           let hasMissingPurchases = false;
 
           currentPurchases.forEach((localPurchase: any) => {
+            if (deletedPurchasesList.includes(localPurchase.id)) return;
             if (!serverPurchasesMap.has(localPurchase.id)) {
-              serverPurchasesMap.set(localPurchase.id, localPurchase);
-              hasMissingPurchases = true;
+              if (userId === 'usr_admin') {
+                serverPurchasesMap.set(localPurchase.id, localPurchase);
+                hasMissingPurchases = true;
+              }
             }
           });
 
-          localStoredPurchases.forEach((storedPurchase: any) => {
-            if (!serverPurchasesMap.has(storedPurchase.id)) {
-              serverPurchasesMap.set(storedPurchase.id, storedPurchase);
-              hasMissingPurchases = true;
-            }
-          });
-
-          mergedPurchases = Array.from(serverPurchasesMap.values());
+          mergedPurchases = Array.from(serverPurchasesMap.values()).filter(p => !deletedPurchasesList.includes(p.id));
 
           const isDifferent = JSON.stringify(mergedPurchases) !== JSON.stringify(currentPurchases);
           if (isDifferent) {
@@ -897,7 +902,11 @@ export default function App() {
   useEffect(() => {
     if (!isLoggedIn || !userProfile?.id || isQuotaExceeded()) return;
     let unsubUser: (() => void) | null = null;
+    let unsubDeleted: (() => void) | null = null;
+    let unsubPurchases: (() => void) | null = null;
+
     try {
+      // User document listener
       const userDocRef = doc(db, "users", userProfile.id);
       unsubUser = onSnapshot(userDocRef, (snapshot) => {
         if (snapshot.exists()) {
@@ -914,19 +923,82 @@ export default function App() {
       }, (err) => {
         console.warn("Real-time user snapshot listener notice:", err?.message || err);
         markQuotaExceeded(err);
-        if (unsubUser) {
-          unsubUser();
-          unsubUser = null;
-        }
       });
+
+      // Deleted items listener
+      const deletedDocRef = doc(db, "global", "deleted_items");
+      unsubDeleted = onSnapshot(deletedDocRef, (snap) => {
+        if (snap.exists()) {
+          const dData = snap.data();
+          let pDel: string[] = [];
+          let purDel: string[] = [];
+          if (Array.isArray(dData.deletedPlans)) {
+            pDel = dData.deletedPlans;
+            localStorage.setItem('adpaint_deleted_plans', JSON.stringify(pDel));
+          }
+          if (Array.isArray(dData.deletedPurchases)) {
+            purDel = dData.deletedPurchases;
+            localStorage.setItem('adpaint_deleted_purchases', JSON.stringify(purDel));
+          }
+
+          if (pDel.length > 0) {
+            setPlans(prev => prev.filter(p => p && p.id && !pDel.includes(p.id)));
+          }
+          if (purDel.length > 0) {
+            setPurchases(prev => prev.filter(p => p && p.id && !purDel.includes(p.id)));
+          }
+        }
+      }, () => {});
+
+      // Live Purchases listener
+      const purColRef = collection(db, "purchases");
+      unsubPurchases = onSnapshot(purColRef, (snap) => {
+        let rawDelPur: string[] = [];
+        try {
+          const raw = localStorage.getItem('adpaint_deleted_purchases');
+          if (raw) rawDelPur = JSON.parse(raw);
+        } catch (e) {}
+
+        const currentUserId = userProfile.id;
+        const uPhoneDigits = userProfile.phone ? userProfile.phone.replace(/\D/g, "") : "";
+        const uLast10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : uPhoneDigits;
+
+        const liveUserPurchases: PurchaseRecord[] = [];
+        snap.forEach(dSnap => {
+          const pData = dSnap.data() as PurchaseRecord;
+          if (!pData || !pData.id || rawDelPur.includes(pData.id)) return;
+
+          const pPhoneDigits = (pData as any).userPhone ? String((pData as any).userPhone).replace(/\D/g, "") : "";
+          const isMatch = (
+            pData.userId === currentUserId ||
+            (pData as any).userId === currentUserId.replace('usr_', '') ||
+            (uLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(uLast10)) ||
+            pData.userId === userProfile.phone
+          );
+
+          if (isMatch || currentUserId === 'usr_admin') {
+            liveUserPurchases.push(pData);
+          }
+        });
+
+        const isDiff = JSON.stringify(liveUserPurchases) !== JSON.stringify(purchasesRef.current);
+        if (isDiff) {
+          setPurchases(liveUserPurchases);
+          purchasesRef.current = liveUserPurchases;
+          localStorage.setItem(`adpaint_purchases_${currentUserId}`, JSON.stringify(liveUserPurchases));
+          localStorage.setItem(`adpaint_backup_purchases_${currentUserId}`, JSON.stringify(liveUserPurchases));
+        }
+      }, () => {});
     } catch (err) {
       markQuotaExceeded(err);
     }
 
     return () => {
       if (unsubUser) unsubUser();
+      if (unsubDeleted) unsubDeleted();
+      if (unsubPurchases) unsubPurchases();
     };
-  }, [isLoggedIn, userProfile?.id]);
+  }, [isLoggedIn, userProfile?.id, userProfile?.phone]);
 
   // Set up periodic real-time background sync loop and foreground listener
   useEffect(() => {
