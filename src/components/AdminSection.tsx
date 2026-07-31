@@ -337,6 +337,16 @@ export default function AdminSection({
       }
     } catch (e) {}
 
+    if (!isQuotaExceeded()) {
+      try {
+        const targetP = (purchases || []).find(p => p.id === purchaseId);
+        if (targetP) {
+          const updatedP = { ...targetP, completed: newStatus };
+          setDoc(doc(db, "purchases", purchaseId), cleanUndefined(updatedP)).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
     onSyncConfig?.();
     triggerToast(newStatus ? 'User plan deactivated!' : 'User plan reactivated!', newStatus ? 'info' : 'success');
   };
@@ -368,6 +378,12 @@ export default function AdminSection({
         localStorage.setItem('adpaint_purchases', JSON.stringify(updatedMain));
       }
     } catch (e) {}
+
+    if (!isQuotaExceeded()) {
+      try {
+        deleteDoc(doc(db, "purchases", purchaseId)).catch(() => {});
+      } catch (e) {}
+    }
 
     onSyncConfig?.();
     triggerToast('User plan deleted successfully!', 'success');
@@ -785,6 +801,17 @@ export default function AdminSection({
     localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
 
+    if (!isQuotaExceeded()) {
+      try {
+        const uObj = updatedUsers.find(u => u.id === editingUser.id);
+        if (uObj) {
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+        }
+        setDoc(doc(db, "transactions", adjustTx.id), cleanUndefined(adjustTx)).catch(() => {});
+      } catch (e) {}
+    }
+
+    onSyncConfig?.();
     triggerToast(`Successfully ${adjustType === 'add' ? 'added' : 'deducted'} ₹${amt} from user balance`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
     setAmountAdjust('');
@@ -817,6 +844,16 @@ export default function AdminSection({
     setUsersList(updatedUsers);
     localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
 
+    if (!isQuotaExceeded()) {
+      try {
+        const uObj = updatedUsers.find(u => u.id === editingUser.id);
+        if (uObj) {
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    onSyncConfig?.();
     triggerToast('Bank credentials overridden successfully!', 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -881,6 +918,16 @@ export default function AdminSection({
     setUsersList(updatedUsers);
     localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
 
+    if (!isQuotaExceeded()) {
+      try {
+        const uObj = updatedUsers.find(u => u.id === editingUser.id);
+        if (uObj) {
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    onSyncConfig?.();
     triggerToast('User credentials updated successfully!', 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -907,6 +954,16 @@ export default function AdminSection({
     setUsersList(updatedUsers);
     localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
 
+    if (!isQuotaExceeded()) {
+      try {
+        const uObj = updatedUsers.find(u => u.id === editingUser.id);
+        if (uObj) {
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    onSyncConfig?.();
     triggerToast(`User account status updated to ${nextStatus.toUpperCase()}!`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -1014,6 +1071,8 @@ export default function AdminSection({
       triggerToast('New Advertisement Plan published live!', 'success');
     }
 
+    onSyncConfig?.();
+
     // Reset states
     setIsCreatingPlan(false);
     setEditingPlan(null);
@@ -1031,6 +1090,7 @@ export default function AdminSection({
       const updatedPlans = plans.filter(p => p.id !== planId);
       setPlans(updatedPlans);
       localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
+      onSyncConfig?.();
       triggerToast('Advertisement plan deleted.', 'info');
     }
   };

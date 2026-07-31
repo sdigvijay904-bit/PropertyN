@@ -1136,7 +1136,10 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
 
-    if (!mobileNumber || mobileNumber.length < 10) {
+    const targetPhone = mobileNumber.trim();
+    const isAdminInput = targetPhone.toLowerCase() === 'admin' || targetPhone === 'usr_admin' || targetPhone.includes('9999999999');
+
+    if (!isAdminInput && (!mobileNumber || mobileNumber.replace(/\D/g, '').length < 10)) {
       setAuthError('Please enter a valid mobile number');
       return;
     }
@@ -1144,8 +1147,6 @@ export default function App() {
       setAuthError('Password must be at least 6 characters');
       return;
     }
-
-    const targetPhone = mobileNumber.trim();
 
     try {
       const loginData = await firestoreLogin({ phone: targetPhone, password_entered: password });

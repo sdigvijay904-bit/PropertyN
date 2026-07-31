@@ -507,6 +507,11 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
   const cleanedPhone = cleanPhoneNumber(phone);
   const rawDigits = phone.replace(/\D/g, "");
   const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
+  const isAdminInput = phone.trim().toLowerCase() === 'admin' || phone.trim() === 'usr_admin' || last10.endsWith('9999999999');
+
+  if (isAdminInput) {
+    return { exists: true };
+  }
 
   if (!isQuotaExceeded()) {
     try {
@@ -532,7 +537,7 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
       }
 
       if (last10.length >= 10) {
-        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
+        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10, 'usr_admin'];
         for (const dId of docIds) {
           const userDocRef = doc(db, "users", dId);
           const userSnap = await getDoc(userDocRef);
@@ -586,6 +591,7 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
   const cleanedPhone = cleanPhoneNumber(phone);
   const rawDigits = phone.replace(/\D/g, "");
   const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
+  const isAdminInput = phone.trim().toLowerCase() === 'admin' || phone.trim() === 'usr_admin' || last10.endsWith('9999999999');
 
   let user: UserProfile | null = null;
   let purchases: PurchaseRecord[] = [];
@@ -596,27 +602,37 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
       await seedDatabaseIfEmpty();
       const usersColl = collection(db, "users");
 
-      const phoneCandidates = Array.from(new Set([
-        cleanedPhone,
-        phone.trim(),
-        rawDigits,
-        last10,
-        `+91${last10}`,
-        `+91 ${last10}`,
-        `91${last10}`
-      ])).filter(Boolean);
-
-      for (const cand of phoneCandidates) {
-        if (user) break;
-        const q = query(usersColl, where("phone", "==", cand));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          user = querySnapshot.docs[0].data() as UserProfile;
+      if (isAdminInput) {
+        const adminDocRef = doc(db, "users", "usr_admin");
+        const adminSnap = await getDoc(adminDocRef);
+        if (adminSnap.exists()) {
+          user = adminSnap.data() as UserProfile;
         }
       }
 
-      if (!user && last10.length >= 10) {
-        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
+      if (!user) {
+        const phoneCandidates = Array.from(new Set([
+          cleanedPhone,
+          phone.trim(),
+          rawDigits,
+          last10,
+          `+91${last10}`,
+          `+91 ${last10}`,
+          `91${last10}`
+        ])).filter(Boolean);
+
+        for (const cand of phoneCandidates) {
+          if (user) break;
+          const q = query(usersColl, where("phone", "==", cand));
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            user = querySnapshot.docs[0].data() as UserProfile;
+          }
+        }
+      }
+
+      if (!user && (last10.length >= 10 || isAdminInput)) {
+        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10, 'usr_admin'];
         for (const dId of docIds) {
           if (user) break;
           const userDocRef = doc(db, "users", dId);
@@ -638,7 +654,8 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
             (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
             (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
             uData.phone === cleanedPhone ||
-            uData.phone === phone.trim()
+            uData.phone === phone.trim() ||
+            (isAdminInput && uData.role === 'admin')
           ) {
             user = uData;
           }
@@ -653,16 +670,21 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
   // Local fallback lookup if Firestore failed or returned empty
   if (!user) {
     const localUsers = getStoredUsers();
-    user = localUsers.find(u => {
-      const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
-      const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
-      return (
-        (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
-        (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
-        u.phone === cleanedPhone ||
-        u.phone === phone.trim()
-      );
-    }) || null;
+    if (isAdminInput) {
+      user = localUsers.find(u => u.role === 'admin' || u.id === 'usr_admin') || null;
+    }
+    if (!user) {
+      user = localUsers.find(u => {
+        const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
+        const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
+        return (
+          (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+          (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+          u.phone === cleanedPhone ||
+          u.phone === phone.trim()
+        );
+      }) || null;
+    }
   }
 
   if (!user) {
