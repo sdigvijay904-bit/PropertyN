@@ -1819,6 +1819,31 @@ export default function App() {
   const handleWithdrawRequest = async (amount: number, pin: string) => {
     if (!userProfile) return;
 
+    // Verify limit: only plan income earned can be withdrawn
+    const totalClaimedFromPurchases = purchases ? purchases.reduce((sum, p) => sum + (p.totalClaimed || 0), 0) : 0;
+    const totalClaimedFromTx = transactions
+      .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalPlanEarnings = Math.max(
+      userProfile.totalEarnings || 0,
+      totalClaimedFromPurchases,
+      totalClaimedFromTx
+    );
+
+    const totalWithdrawnAmount = transactions
+      .filter((t) => t.type === 'withdraw' && (t.status === 'success' || t.status === 'pending'))
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
+    const withdrawableLimit = Math.min(userProfile.balance, maxWithdrawablePlanEarnings);
+
+    if (amount > withdrawableLimit) {
+      const fmtMax = maxWithdrawablePlanEarnings % 1 === 0 ? maxWithdrawablePlanEarnings.toLocaleString('en-IN') : maxWithdrawablePlanEarnings.toFixed(2);
+      triggerToast(`निकासी अस्वीकृत: आप केवल प्लान से प्राप्त कुल आय (₹${fmtMax}) ही विड्रॉल कर सकते हैं।`, 'error');
+      return;
+    }
+
     // Deduct immediately and log as PENDING. Admin manually approves/settles it from the Admin Control Panel.
     const updatedUser = {
       ...userProfile,
@@ -2191,6 +2216,7 @@ export default function App() {
               }}
               hasPurchasedPlan={purchases.length > 0}
               transactions={transactions}
+              purchases={purchases}
             />
 
             <SupportModal

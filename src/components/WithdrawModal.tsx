@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Landmark, Lock, HelpCircle, CheckCircle2, RefreshCw, Eye, EyeOff } from 'lucide-react';
-import { UserProfile, BankAccount, TransactionRecord } from '../types';
+import { UserProfile, BankAccount, TransactionRecord, PurchaseRecord } from '../types';
 
 interface WithdrawModalProps {
   user: UserProfile;
@@ -16,6 +16,7 @@ interface WithdrawModalProps {
   onOpenBankConfig: () => void;
   hasPurchasedPlan: boolean;
   transactions: TransactionRecord[];
+  purchases?: PurchaseRecord[];
 }
 
 export default function WithdrawModal({
@@ -25,7 +26,8 @@ export default function WithdrawModal({
   onWithdrawRequest,
   onOpenBankConfig,
   hasPurchasedPlan,
-  transactions
+  transactions,
+  purchases = []
 }: WithdrawModalProps) {
   const [amountInput, setAmountInput] = useState<string>('');
   const [withdrawPassword, setWithdrawPassword] = useState<string>('');
@@ -35,10 +37,17 @@ export default function WithdrawModal({
 
   const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '120');
 
-  // Sum successful claim transactions (only plan earnings!)
-  const totalPlanEarnings = transactions
-    .filter((t) => t.type === 'claim' && t.status === 'success')
+  // Sum total plan income earned (from purchases totalClaimed, claim/checkin/commission transactions, or user.totalEarnings)
+  const totalClaimedFromPurchases = purchases ? purchases.reduce((sum, p) => sum + (p.totalClaimed || 0), 0) : 0;
+  const totalClaimedFromTx = transactions
+    .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalPlanEarnings = Math.max(
+    user.totalEarnings || 0,
+    totalClaimedFromPurchases,
+    totalClaimedFromTx
+  );
 
   // Sum successful/pending withdraw transactions
   const totalWithdrawnAmount = transactions
@@ -68,7 +77,7 @@ export default function WithdrawModal({
         setError(`Insufficient wallet balance. Available: ₹${user.balance % 1 === 0 ? user.balance.toLocaleString('en-IN') : user.balance.toFixed(2)}`);
       } else {
         const fmtMax = maxWithdrawablePlanEarnings % 1 === 0 ? maxWithdrawablePlanEarnings.toLocaleString('en-IN') : maxWithdrawablePlanEarnings.toFixed(2);
-        setError(`निकासी सीमा पार: आप केवल अपने प्लान की दैनिक कमाई ही निकाल सकते हैं। आपकी उपलब्ध निकासी योग्य सीमा ₹${fmtMax} है। (Withdrawal limit exceeded: You can only withdraw your daily plan earnings. Your current withdrawable limit is ₹${fmtMax}.)`);
+        setError(`निकासी सीमा पार: प्लान लेने के बाद प्लान से जो कुल आय होगी, वही निकासी होगी। आपकी उपलब्ध निकासी योग्य सीमा ₹${fmtMax} है। (Withdrawal limit exceeded: Only income earned from plans can be withdrawn. Your current withdrawable limit is ₹${fmtMax}.)`);
       }
       return;
     }
@@ -160,7 +169,7 @@ export default function WithdrawModal({
                 </div>
               </div>
               <p className="text-[9.5px] text-emerald-700 font-bold text-center mt-1">
-                * Note: आप केवल प्लान की दैनिक आय ही निकाल सकते हैं (Only Daily Plan earnings can be withdrawn)
+                * Note: प्लान लेने के बाद प्लान से जो कुल आय होगी वही विड्रॉल होगी (Only total income earned from plans can be withdrawn)
               </p>
             </div>
 
