@@ -471,54 +471,52 @@ export default function App() {
             if (last10) phoneToUserMap.set(last10, u);
           });
 
-          // If forced (e.g. Admin fetch/sync), server users strictly override local cache
-          if (!force) {
-            currentUsersList.forEach((localUser: any) => {
-              if (!localUser || !localUser.id) return;
-              const localRawP = localUser.phone ? localUser.phone.replace(/\D/g, '') : '';
-              const localLast10 = localRawP.length >= 10 ? localRawP.slice(-10) : localRawP;
-              const existingServerUser = serverUserMap.get(localUser.id) || (localLast10 ? phoneToUserMap.get(localLast10) : null);
+          // Merge local users: if a user exists locally but not on server, preserve and push to Firestore
+          currentUsersList.forEach((localUser: any) => {
+            if (!localUser || !localUser.id) return;
+            const localRawP = localUser.phone ? localUser.phone.replace(/\D/g, '') : '';
+            const localLast10 = localRawP.length >= 10 ? localRawP.slice(-10) : localRawP;
+            const existingServerUser = serverUserMap.get(localUser.id) || (localLast10 ? phoneToUserMap.get(localLast10) : null);
 
-              if (existingServerUser) {
-                let updatedField = false;
-                // Preserve highest local balance and totalEarnings to prevent stale server data from reverting user claims
-                const mergedObj = {
-                  ...existingServerUser,
-                  ...localUser,
-                  balance: Math.max(localUser.balance ?? 0, existingServerUser.balance ?? 0),
-                  totalEarnings: Math.max(localUser.totalEarnings ?? 0, existingServerUser.totalEarnings ?? 0)
-                };
+            if (existingServerUser) {
+              let updatedField = false;
+              // Preserve highest local balance and totalEarnings to prevent stale server data from reverting user claims
+              const mergedObj = {
+                ...existingServerUser,
+                ...localUser,
+                balance: Math.max(localUser.balance ?? 0, existingServerUser.balance ?? 0),
+                totalEarnings: Math.max(localUser.totalEarnings ?? 0, existingServerUser.totalEarnings ?? 0)
+              };
 
-                // Validate and deep-merge inviterCode if local has it but server is empty
-                if (!mergedObj.inviterCode && localUser.inviterCode) {
-                  mergedObj.inviterCode = localUser.inviterCode;
-                  updatedField = true;
-                }
-                // Deep-merge bank details if local has it but server is empty
-                if (!mergedObj.bankAccount && localUser.bankAccount) {
-                  mergedObj.bankAccount = localUser.bankAccount;
-                  updatedField = true;
-                }
-                // Preserve password if missing on server
-                if (!mergedObj.password && localUser.password) {
-                  mergedObj.password = localUser.password;
-                  updatedField = true;
-                }
-
-                serverUserMap.set(mergedObj.id, mergedObj);
-
-                if (updatedField && !isQuotaExceeded()) {
-                  setDoc(doc(db, "users", mergedObj.id), cleanUndefined(mergedObj)).catch(markQuotaExceeded);
-                }
-              } else {
-                // Local user not on server yet — preserve and push to Firestore
-                serverUserMap.set(localUser.id, localUser);
-                if (!isQuotaExceeded()) {
-                  setDoc(doc(db, "users", localUser.id), cleanUndefined(localUser)).catch(markQuotaExceeded);
-                }
+              // Validate and deep-merge inviterCode if local has it but server is empty
+              if (!mergedObj.inviterCode && localUser.inviterCode) {
+                mergedObj.inviterCode = localUser.inviterCode;
+                updatedField = true;
               }
-            });
-          }
+              // Deep-merge bank details if local has it but server is empty
+              if (!mergedObj.bankAccount && localUser.bankAccount) {
+                mergedObj.bankAccount = localUser.bankAccount;
+                updatedField = true;
+              }
+              // Preserve password if missing on server
+              if (!mergedObj.password && localUser.password) {
+                mergedObj.password = localUser.password;
+                updatedField = true;
+              }
+
+              serverUserMap.set(mergedObj.id, mergedObj);
+
+              if (updatedField && !isQuotaExceeded()) {
+                setDoc(doc(db, "users", mergedObj.id), cleanUndefined(mergedObj)).catch(markQuotaExceeded);
+              }
+            } else {
+              // Local user not on server yet — preserve and push to Firestore
+              serverUserMap.set(localUser.id, localUser);
+              if (!isQuotaExceeded()) {
+                setDoc(doc(db, "users", localUser.id), cleanUndefined(localUser)).catch(markQuotaExceeded);
+              }
+            }
+          });
 
           mergedUsers = Array.from(serverUserMap.values());
           

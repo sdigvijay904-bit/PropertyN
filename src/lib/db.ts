@@ -892,14 +892,11 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     const userDocRef = doc(db, "users", newUserId);
     const txDocRef = doc(db, "transactions", signupTx.id);
 
-    const saveToFirestore = Promise.all([
-      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
-      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
-    ]);
-    const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
-    await Promise.race([saveToFirestore, timeout]);
+    await setDoc(userDocRef, cleanUndefined(newUser), { merge: true });
+    await setDoc(txDocRef, cleanUndefined(signupTx), { merge: true });
+    console.log("Successfully created user account in Firestore:", newUserId);
   } catch (err) {
-    console.warn("Firestore write notice during registration (saved locally):", err);
+    console.error("Error saving new user to Firestore during registration:", err);
   }
 
   // Update local storage so user is registered & saved locally
