@@ -1304,12 +1304,9 @@ export default function App() {
         const planExpiryTime = purchaseTime + totalDurationMs;
 
         if (now >= planExpiryTime) {
-          const actualElapsed = Math.max(0, (planExpiryTime - lastClaim) / 1000);
-          const finalEarn = actualElapsed * earningRatePerSec;
           hasUpdates = true;
           return {
             ...p,
-            totalClaimed: p.totalClaimed + finalEarn,
             completed: true,
             lastClaimedAt: new Date(planExpiryTime).toISOString()
           };
@@ -1916,14 +1913,11 @@ export default function App() {
     }
 
     // Verify limit: only plan income earned can be withdrawn
-    const totalClaimedFromPurchases = purchases ? purchases.reduce((sum, p) => sum + (p.totalClaimed || 0), 0) : 0;
     const totalClaimedFromTx = transactions
       .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalPlanEarnings = hasPurchased
-      ? Math.max(totalClaimedFromPurchases, totalClaimedFromTx)
-      : 0;
+    const totalPlanEarnings = hasPurchased ? totalClaimedFromTx : 0;
 
     const totalWithdrawnAmount = transactions
       .filter((t) => t.type === 'withdraw' && (t.status === 'success' || t.status === 'pending'))

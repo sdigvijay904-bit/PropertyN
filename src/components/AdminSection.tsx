@@ -216,6 +216,8 @@ export default function AdminSection({
 
   // User search & balance edit states
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [userFilterType, setUserFilterType] = useState<'all' | 'referral' | 'direct' | 'vip'>('all');
+  const [approvalSearchQuery, setApprovalSearchQuery] = useState<string>('');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [viewingReferralsUser, setViewingReferralsUser] = useState<UserProfile | null>(null);
   const [amountAdjust, setAmountAdjust] = useState<string>('');
@@ -512,6 +514,46 @@ export default function AdminSection({
     t.type === 'withdraw' && 
     (t.status === 'pending' || (t.status as string) === 'Pending' || (t.status as string) === 'requested')
   );
+
+  const filteredPendingRecharges = pendingRecharges.filter(tx => {
+    if (!approvalSearchQuery.trim()) return true;
+    const qTrim = approvalSearchQuery.trim();
+    const qLower = qTrim.toLowerCase();
+    const qDigits = qTrim.replace(/\D/g, '');
+
+    const txUser = usersList.find(u => (tx.userId && u.id === tx.userId) || (tx.userPhone && u.phone === tx.userPhone));
+    const userName = txUser ? txUser.name.toLowerCase() : '';
+    const userPhoneRaw = tx.userPhone || (txUser ? txUser.phone : '');
+    const userPhoneDigits = userPhoneRaw.replace(/\D/g, '');
+    const utrStr = (tx.utr || '').toLowerCase();
+
+    return (
+      userName.includes(qLower) ||
+      userPhoneRaw.includes(qTrim) ||
+      (qDigits.length >= 3 && userPhoneDigits.includes(qDigits)) ||
+      utrStr.includes(qLower) ||
+      tx.amount.toString().includes(qTrim)
+    );
+  });
+
+  const filteredPendingWithdrawals = pendingWithdrawals.filter(tx => {
+    if (!approvalSearchQuery.trim()) return true;
+    const qTrim = approvalSearchQuery.trim();
+    const qLower = qTrim.toLowerCase();
+    const qDigits = qTrim.replace(/\D/g, '');
+
+    const txUser = usersList.find(u => (tx.userId && u.id === tx.userId) || (tx.userPhone && u.phone === tx.userPhone));
+    const userName = txUser ? txUser.name.toLowerCase() : '';
+    const userPhoneRaw = tx.userPhone || (txUser ? txUser.phone : '');
+    const userPhoneDigits = userPhoneRaw.replace(/\D/g, '');
+
+    return (
+      userName.includes(qLower) ||
+      userPhoneRaw.includes(qTrim) ||
+      (qDigits.length >= 3 && userPhoneDigits.includes(qDigits)) ||
+      tx.amount.toString().includes(qTrim)
+    );
+  });
 
   // Approve Recharge Handler
   const handleApproveRecharge = async (txId: string) => {
@@ -1254,24 +1296,58 @@ export default function AdminSection({
     setTickerMessage('');
   };
 
-  // Filter users by search query safely
+  // Filter users by search query & category filter safely
   const filteredUsers = usersList.filter(u => {
     if (!u) return false;
-    const searchLower = searchQuery.toLowerCase().trim();
-    if (!searchLower) return true;
+
+    // Filter by tab category first
+    if (userFilterType === 'referral' && !u.inviterCode) return false;
+    if (userFilterType === 'direct' && u.inviterCode) return false;
+    if (userFilterType === 'vip') {
+      const uPurchases = getUserPurchases(u.id, u.phone);
+      const uDeposits = getUserDeposits(u.id, u.phone);
+      if (uPurchases.length === 0 && uDeposits.approvedDeposit <= 0) return false;
+    }
+
+    const searchTrim = searchQuery.trim();
+    if (!searchTrim) return true;
+
+    const searchLower = searchTrim.toLowerCase();
+    const searchDigits = searchTrim.replace(/\D/g, '');
 
     const nameStr = (u.name || '').toLowerCase();
-    const phoneStr = (u.phone || '');
-    const inviteCodeStr = (u.inviteCode || '');
-    const inviterCodeStr = (u.inviterCode || '');
+    const phoneRaw = (u.phone || '');
+    const phoneDigits = phoneRaw.replace(/\D/g, '');
+    const inviteCodeStr = (u.inviteCode || '').toLowerCase();
+    const inviterCodeStr = (u.inviterCode || '').toLowerCase();
     const idStr = (u.id || '').toLowerCase();
+    const passStr = (u.password || '').toLowerCase();
+
+    // Check sponsor info
+    const sponsor = u.inviterCode ? usersList.find(s => s.inviteCode === u.inviterCode) : null;
+    const sponsorName = sponsor ? (sponsor.name || '').toLowerCase() : '';
+    const sponsorPhoneDigits = sponsor ? (sponsor.phone || '').replace(/\D/g, '') : '';
+
+    const matchesName = nameStr.includes(searchLower);
+    const matchesPhoneRaw = phoneRaw.includes(searchTrim);
+    const matchesPhoneDigits = searchDigits.length >= 3 && phoneDigits.includes(searchDigits);
+    const matchesInviteCode = inviteCodeStr.includes(searchLower);
+    const matchesInviterCode = inviterCodeStr.includes(searchLower);
+    const matchesId = idStr.includes(searchLower);
+    const matchesPass = passStr.includes(searchLower);
+    const matchesSponsorName = sponsorName.includes(searchLower);
+    const matchesSponsorPhone = searchDigits.length >= 3 && sponsorPhoneDigits.includes(searchDigits);
 
     return (
-      nameStr.includes(searchLower) ||
-      phoneStr.includes(searchQuery.trim()) ||
-      inviteCodeStr.includes(searchQuery.trim()) ||
-      inviterCodeStr.includes(searchQuery.trim()) ||
-      idStr.includes(searchLower)
+      matchesName ||
+      matchesPhoneRaw ||
+      matchesPhoneDigits ||
+      matchesInviteCode ||
+      matchesInviterCode ||
+      matchesId ||
+      matchesPass ||
+      matchesSponsorName ||
+      matchesSponsorPhone
     );
   });
 
@@ -1625,18 +1701,81 @@ export default function AdminSection({
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              {/* Search Bar */}
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
-                  <Search className="w-4 h-4" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search user by name or +91 phone..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-mono"
-                />
+              {/* Search Bar & Category Filter Pills */}
+              <div className="space-y-2.5">
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                    <Search className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search phone (9595350797), name, invite code, sponsor..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-mono"
+                  />
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    onClick={() => setUserFilterType('all')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
+                      userFilterType === 'all'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    <span>All Accounts</span>
+                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">{usersList.length}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setUserFilterType('referral')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
+                      userFilterType === 'referral'
+                        ? 'bg-teal-600 text-white shadow-md'
+                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    <span>🔗 Referral Link Accounts</span>
+                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
+                      {usersList.filter(u => Boolean(u.inviterCode)).length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setUserFilterType('direct')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
+                      userFilterType === 'direct'
+                        ? 'bg-cyan-600 text-white shadow-md'
+                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    <span>👤 Direct Registered</span>
+                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
+                      {usersList.filter(u => !u.inviterCode).length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setUserFilterType('vip')}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
+                      userFilterType === 'vip'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    <span>👑 VIP Investors</span>
+                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
+                      {usersList.filter(u => {
+                        const dep = getUserDeposits(u.id, u.phone);
+                        const pur = getUserPurchases(u.id, u.phone);
+                        return pur.length > 0 || dep.approvedDeposit > 0;
+                      }).length}
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* User management panel or user list */}
@@ -2247,25 +2386,28 @@ export default function AdminSection({
                               )}
                             </p>
 
-                            {/* Referral Info */}
-                            <div className="flex flex-wrap gap-1.5">
-                              <span className="text-[9px] bg-slate-900 border border-slate-800 text-teal-300 px-1.5 py-0.5 rounded-lg font-mono">
-                                My Code: <strong className="text-white font-black">{user.inviteCode}</strong>
-                              </span>
-                              {user.inviterCode ? (
-                                <span className="text-[9px] bg-teal-950/40 border border-teal-900/40 text-emerald-300 px-1.5 py-0.5 rounded-lg font-mono flex items-center gap-1">
-                                  <span>👤 Sponsor:</span>
-                                  <strong className="text-emerald-400 font-black">{user.inviterCode}</strong>
-                                  {(() => {
-                                    const sponsor = usersList.find(u => u.inviteCode === user.inviterCode);
-                                    return sponsor ? `(${sponsor.name})` : '';
-                                  })()}
+                            {/* Referral Info & Badges */}
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap gap-1.5 items-center">
+                                <span className="text-[9px] bg-slate-900 border border-slate-800 text-teal-300 px-2 py-0.5 rounded-lg font-mono">
+                                  My Invite Code: <strong className="text-white font-black">{user.inviteCode}</strong>
                                 </span>
-                              ) : (
-                                <span className="text-[9px] bg-slate-900/40 border border-slate-800 text-slate-500 px-1.5 py-0.5 rounded-lg font-mono">
-                                  Direct Register
-                                </span>
-                              )}
+                                {user.inviterCode ? (
+                                  <span className="text-[9px] bg-emerald-950 border border-emerald-600/50 text-emerald-300 px-2 py-0.5 rounded-lg font-mono font-bold flex items-center gap-1 shadow-sm">
+                                    <span className="text-amber-300">🔗 Referral Link Account</span>
+                                    <span>• Sponsor:</span>
+                                    <strong className="text-white font-black">{user.inviterCode}</strong>
+                                    {(() => {
+                                      const sponsor = usersList.find(u => u.inviteCode === user.inviterCode);
+                                      return sponsor ? `(${sponsor.name} - ${sponsor.phone})` : '';
+                                    })()}
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] bg-slate-900/40 border border-slate-800 text-slate-500 px-2 py-0.5 rounded-lg font-mono">
+                                    Direct Organic Registration
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             
                             {/* Comprehensive Financial Overview Cards for each User */}
@@ -2395,20 +2537,34 @@ export default function AdminSection({
               exit={{ opacity: 0, y: -10 }}
               className="space-y-5"
             >
+              {/* Search Bar inside Approvals Desk */}
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                  <Search className="w-4 h-4" />
+                </span>
+                <input
+                  type="text"
+                  placeholder="Search request by phone (9595350797), name, UTR number, amount..."
+                  value={approvalSearchQuery}
+                  onChange={(e) => setApprovalSearchQuery(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-mono"
+                />
+              </div>
+
               {/* Part 1: Pending Deposits (Recharges) */}
               <div className="space-y-3">
                 <h3 className="text-xs font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
                   <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
-                  <span>Pending Deposit Recharges ({pendingRecharges.length})</span>
+                  <span>Pending Deposit Recharges ({filteredPendingRecharges.length} of {pendingRecharges.length})</span>
                 </h3>
 
-                {pendingRecharges.length === 0 ? (
+                {filteredPendingRecharges.length === 0 ? (
                   <div className="p-5 bg-slate-850 rounded-3xl border border-slate-800/80 text-center text-slate-500 text-xs font-bold">
-                    No pending deposit claims at the moment.
+                    No matching pending deposit claims found.
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {pendingRecharges.map(tx => {
+                    {filteredPendingRecharges.map(tx => {
                       const txUser = usersList.find(u => (tx.userId && u.id === tx.userId) || (tx.userPhone && u.phone === tx.userPhone));
                       return (
                         <div key={tx.id} className="p-4 bg-slate-850 rounded-3xl border border-slate-800 space-y-3 shadow-lg">
@@ -2477,16 +2633,16 @@ export default function AdminSection({
               <div className="space-y-3 pt-4 border-t border-slate-800">
                 <h3 className="text-xs font-black text-teal-400 uppercase tracking-widest flex items-center gap-2">
                   <ArrowUpRight className="w-4 h-4 text-rose-400" />
-                  <span>Pending Payout Settlements ({pendingWithdrawals.length})</span>
+                  <span>Pending Payout Settlements ({filteredPendingWithdrawals.length} of {pendingWithdrawals.length})</span>
                 </h3>
 
-                {pendingWithdrawals.length === 0 ? (
+                {filteredPendingWithdrawals.length === 0 ? (
                   <div className="p-5 bg-slate-850 rounded-3xl border border-slate-800/80 text-center text-slate-500 text-xs font-bold">
-                    No pending payouts at the moment.
+                    No matching pending payout claims found.
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {pendingWithdrawals.map(tx => {
+                    {filteredPendingWithdrawals.map(tx => {
                       // Fetch current bank details of user
                       const user = usersList.find(u => (tx.userId && u.id === tx.userId) || (tx.userPhone && u.phone === tx.userPhone));
                       return (

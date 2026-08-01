@@ -56,16 +56,13 @@ export default function WithdrawModal({
 
   const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '120');
 
-  // Sum total plan income earned (from purchases totalClaimed or claim/checkin/commission transactions)
-  const totalClaimedFromPurchases = purchases ? purchases.reduce((sum, p) => sum + (p.totalClaimed || 0), 0) : 0;
+  // Sum actual claimed income from successful claim/commission/checkin transactions
   const totalClaimedFromTx = transactions
     .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Plan Yield is strictly the actual earned income from plan claims and bonuses (0 if no plans purchased)
-  const totalPlanEarnings = hasPurchasedPlan
-    ? Math.max(totalClaimedFromPurchases, totalClaimedFromTx)
-    : 0;
+  // Plan Yield is strictly the actual claimed income from plan claims and bonuses
+  const totalPlanEarnings = hasPurchasedPlan ? totalClaimedFromTx : 0;
 
   // Sum successful/pending withdraw transactions
   const totalWithdrawnAmount = transactions
@@ -73,8 +70,8 @@ export default function WithdrawModal({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-  // Withdrawable limit shows total remaining plan income earned
-  const withdrawableLimit = hasPurchasedPlan ? maxWithdrawablePlanEarnings : 0;
+  // Withdrawable limit is capped by actual claimed plan earnings available AND current wallet balance
+  const withdrawableLimit = hasPurchasedPlan ? Math.min(user.balance, maxWithdrawablePlanEarnings) : 0;
 
   const handleSaveBankInline = (e?: React.FormEvent) => {
     if (e) e.preventDefault();

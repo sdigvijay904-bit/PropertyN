@@ -62,6 +62,20 @@ const SEED_USERS: UserProfile[] = [
     totalInvested: 0
   },
   {
+    id: "usr_9595350797",
+    name: "VIP Member (+91 9595350797)",
+    phone: "+91 9595350797",
+    balance: 110,
+    totalEarnings: 110,
+    dailyEarned: 10,
+    checkedInToday: true,
+    inviteCode: "95953",
+    inviterCode: "47523",
+    role: "user",
+    password: "password123",
+    totalInvested: 0
+  },
+  {
     id: "usr_admin",
     name: "System Admin",
     phone: "+91 9999999999",
@@ -180,6 +194,27 @@ const SEED_CONFIG: Record<string, string> = {
 const SEED_CUSTOM_TICKER = "Kiran***290\n\nRecharged ₹490";
 
 const SEED_TRANSACTIONS: TransactionRecord[] = [
+  {
+    id: "tx_signup_9595350797",
+    type: "checkin",
+    amount: 100,
+    date: "7/18/2026, 9:15:00 AM",
+    status: "success",
+    description: "Signup Registration Bonus credited",
+    userId: "usr_9595350797",
+    userPhone: "+91 9595350797"
+  },
+  {
+    id: "tx_rec_9595350797_dep",
+    type: "recharge",
+    amount: 250,
+    date: "7/18/2026, 9:18:00 AM",
+    status: "pending",
+    description: "Recharge request (UTR: 959535079799201) submitted",
+    utr: "959535079799201",
+    userId: "usr_9595350797",
+    userPhone: "+91 9595350797"
+  },
   {
     id: "tx_1783942951139",
     type: "checkin",
