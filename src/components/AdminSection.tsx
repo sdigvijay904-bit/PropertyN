@@ -230,6 +230,7 @@ export default function AdminSection({
   const [editPhone, setEditPhone] = useState<string>('');
   const [editPassword, setEditPassword] = useState<string>('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
+  const [editTotalEarnings, setEditTotalEarnings] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -1021,6 +1022,49 @@ export default function AdminSection({
     setEditPhone(user.phone?.replace('+91 ', '') || '');
     setEditPassword(user.password || 'password123');
     setEditRole(user.role || 'user');
+    setEditTotalEarnings(user.totalEarnings !== undefined ? user.totalEarnings.toString() : '0');
+  };
+
+  // Override Total Income / Plan Yield Handler
+  const handleSaveTotalEarnings = () => {
+    if (!editingUser) return;
+
+    const newEarnings = parseFloat(editTotalEarnings);
+    if (isNaN(newEarnings) || newEarnings < 0) {
+      triggerToast('Please enter a valid total income amount', 'error');
+      return;
+    }
+
+    const updatedUsers = usersList.map(u => {
+      if (u.id === editingUser.id) {
+        const updated = {
+          ...u,
+          totalEarnings: newEarnings
+        };
+
+        if (currentProfile && u.id === currentProfile.id) {
+          onUpdateCurrentUserProfile(updated);
+        }
+        return updated;
+      }
+      return u;
+    });
+
+    setUsersList(updatedUsers);
+    localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+
+    if (!isQuotaExceeded()) {
+      try {
+        const uObj = updatedUsers.find(u => u.id === editingUser.id);
+        if (uObj) {
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    onSyncConfig?.(undefined, undefined, updatedUsers);
+    triggerToast(`Total Income updated to ₹${newEarnings.toLocaleString('en-IN')}`, 'success');
+    setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
 
   // Credentials Override Handler
@@ -1990,6 +2034,41 @@ export default function AdminSection({
                       </button>
                     </div>
                   </form>
+
+                  {/* Total Income / Plan Yield Override Form */}
+                  <div className="space-y-3 pt-4 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Total Income / Plan Yield Override (कुल आय)</span>
+                      </h5>
+                      <span className="text-[9px] font-mono text-slate-400">
+                        Current: <strong className="text-teal-300">₹{editingUser.totalEarnings % 1 === 0 ? editingUser.totalEarnings.toLocaleString('en-IN') : editingUser.totalEarnings.toFixed(2)}</strong>
+                      </span>
+                    </div>
+                    <p className="text-[9.5px] text-slate-400 leading-tight">
+                      This value controls the user's Total Plan Income displayed on the Home screen, Profile, and Withdrawal limit (Plan Yield).
+                    </p>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-slate-400">₹</span>
+                        <input
+                          type="number"
+                          value={editTotalEarnings}
+                          onChange={(e) => setEditTotalEarnings(e.target.value)}
+                          placeholder="Set Total Income in Rupees"
+                          className="w-full pl-8 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveTotalEarnings}
+                        className="px-4 bg-gradient-to-r from-amber-600 to-teal-600 hover:from-amber-700 hover:to-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer shadow-md"
+                      >
+                        Update Income
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Bank Details Config Form (Override channel) */}
                   <div className="space-y-3.5 pt-4 border-t border-slate-800">
