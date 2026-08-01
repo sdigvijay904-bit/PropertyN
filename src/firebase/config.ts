@@ -15,6 +15,7 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
+  setLogLevel,
   collection, 
   doc, 
   setDoc, 
@@ -55,6 +56,7 @@ try {
   // CRITICAL: Load from firestoreDatabaseId if configured in the applet config json
   const customDbId = "ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769-c63579d84978";
   db = getFirestore(app, customDbId);
+  try { setLogLevel('silent'); } catch (e) {}
   isRealFirebaseActive = true;
   console.log("Firebase successfully initialized inside PropertyN!");
 } catch (error) {

@@ -1400,7 +1400,7 @@ export async function firestoreSaveState(payload: {
       // Clean up deleted plans from Firestore
       if (deletedPlans.length > 0) {
         for (const delId of deletedPlans) {
-          deleteDoc(doc(db, "plans", delId)).catch(() => {});
+          deleteDoc(doc(db, "plans", delId)).catch(markQuotaExceeded);
         }
       }
 

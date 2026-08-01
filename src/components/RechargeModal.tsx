@@ -672,43 +672,10 @@ export default function RechargeModal({
                 </div>
 
 
-                {/* Dedicated Payment Button Box */}
-                <div className="bg-gradient-to-b from-teal-50/70 to-white rounded-2xl border-2 border-teal-100 p-3.5 space-y-2.5 shadow-sm mt-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5.5 h-5.5 rounded-lg bg-teal-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">2</span>
-                      <h4 className="text-[11px] font-black text-teal-900 uppercase tracking-wider">Pay Directly (App Launcher)</h4>
-                    </div>
-                    <span className="text-[9px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">UPI Auto-Detect</span>
-                  </div>
-                  
-                  {/* Universal UPI App Button */}
-                  <a
-                    href={getAppUpiUri()}
-                    onClick={() => handleLaunchUpi()}
-                    target="_self"
-                    className="w-full py-3 px-3.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl transition-all shadow-md shadow-teal-600/10 flex items-center justify-between active:scale-98 cursor-pointer border border-teal-500/10"
-                  >
-                    <div className="flex items-center gap-2.5 text-left">
-                      <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-                        <Smartphone className="w-5 h-5 text-teal-100 animate-pulse" />
-                      </div>
-                      <div>
-                        <p className="font-black text-[11px] tracking-wider text-white uppercase">PAY VIA ANY UPI APP</p>
-                        <p className="text-[8.5px] text-teal-100 font-medium tracking-normal normal-case">Pay with Paytm, PhonePe, GPay, or any UPI app</p>
-                      </div>
-                    </div>
-                    <span className="text-[8.5px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md font-black shrink-0 tracking-wider">RECOMMENDED</span>
-                  </a>
-
-
-                </div>
-
-
                 {/* Verification block */}
                 <div className="bg-gradient-to-b from-emerald-50/70 to-white rounded-[2rem] border-2 border-emerald-100 p-5 space-y-4 shadow-sm">
                   <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">3</span>
+                    <span className="w-6 h-6 rounded-lg bg-emerald-600 text-white font-black text-xs flex items-center justify-center shrink-0">2</span>
                     <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider">Submit 12-Digit UTR & Proof</h4>
                   </div>
 

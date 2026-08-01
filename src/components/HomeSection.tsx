@@ -313,17 +313,24 @@ export default function HomeSection({
       {/* Voice / Live Details Ticker Bar */}
       <div 
         onClick={handleBellClick}
-        className="mx-4 px-3.5 py-2.5 bg-slate-100/90 hover:bg-slate-200/80 rounded-full flex items-center justify-between text-xs font-medium text-slate-700 cursor-pointer transition-colors border border-slate-200/60 shadow-2xs"
+        className="mx-4 px-3.5 py-2.5 bg-slate-100/90 hover:bg-slate-200/80 rounded-full flex items-center justify-between text-xs font-medium text-slate-700 cursor-pointer transition-colors border border-slate-200/60 shadow-2xs overflow-hidden"
       >
-        <div className="flex items-center gap-2 overflow-hidden">
-          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+        <div className="flex items-center gap-2 overflow-hidden w-full">
+          <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs z-10">
             <Megaphone className="w-3.5 h-3.5" />
           </div>
-          <span className="truncate text-slate-800 font-bold text-[11px] leading-none">
-            {liveNotification ? `Voice details: ${liveNotification}` : 'Voice details can ₹442288 credited to online sponsors'}
-          </span>
+          <div className="overflow-hidden whitespace-nowrap flex-1 relative flex items-center">
+            <div className="animate-marquee-rtl">
+              <span className="text-slate-800 font-bold text-[11px] leading-none whitespace-nowrap pr-12">
+                {liveNotification ? `Voice details: ${liveNotification}` : 'Voice details: 🔥 Limited Offer: 12% bonus credited to online sponsors'}
+              </span>
+              <span className="text-slate-800 font-bold text-[11px] leading-none whitespace-nowrap pr-12">
+                {liveNotification ? `Voice details: ${liveNotification}` : 'Voice details: 🔥 Limited Offer: 12% bonus credited to online sponsors'}
+              </span>
+            </div>
+          </div>
         </div>
-        <ChevronRight className="w-4 h-4 text-slate-500 shrink-0 ml-1" />
+        <ChevronRight className="w-4 h-4 text-slate-500 shrink-0 ml-1 z-10" />
       </div>
 
       {/* Quick Action Navigation Grid (Real 3D Icons) */}

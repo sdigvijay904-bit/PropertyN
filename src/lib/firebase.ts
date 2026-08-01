@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, setLogLevel } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCFrLoVD9mJnwxhdV7AlCGxojWfGpYdpAk",
@@ -11,4 +11,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+setLogLevel('silent');
 export const db = getFirestore(app, "ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769-c63579d84978");
+

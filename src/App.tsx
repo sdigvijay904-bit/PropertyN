@@ -1867,7 +1867,6 @@ export default function App() {
 
     const updatedUser = {
       ...userProfile,
-      balance: userProfile.balance + accrued,
       totalEarnings: userProfile.totalEarnings + accrued
     };
 
