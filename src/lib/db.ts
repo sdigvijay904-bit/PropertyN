@@ -610,15 +610,14 @@ export function cleanPhoneNumber(phone: string): string {
 export async function firestoreCheckPhone(phone: string): Promise<{ exists: boolean }> {
   const cleanedPhone = cleanPhoneNumber(phone);
   const rawDigits = phone.replace(/\D/g, "");
-  const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
+  if (rawDigits.length < 10) {
+    return { exists: false };
+  }
+  const last10 = rawDigits.slice(-10);
   const isAdminInput = phone.trim().toLowerCase() === 'admin' || phone.trim() === 'usr_admin' || (last10.length >= 10 && last10.endsWith('9999999999'));
 
   if (isAdminInput) {
     return { exists: true };
-  }
-
-  if (last10.length < 10) {
-    return { exists: false };
   }
 
   if (!isQuotaExceeded()) {
@@ -640,7 +639,12 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
         const q = query(usersColl, where("phone", "==", cand));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-          return { exists: true };
+          // Verify at least one match is not admin
+          const foundUser = querySnapshot.docs.some(docSnap => {
+            const data = docSnap.data() as UserProfile;
+            return docSnap.id !== 'usr_admin' && data.role !== 'admin';
+          });
+          if (foundUser) return { exists: true };
         }
       }
 
@@ -650,7 +654,13 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
           const userDocRef = doc(db, "users", dId);
           const userSnap = await getDoc(userDocRef);
           if (userSnap.exists()) {
-            return { exists: true };
+            const uData = userSnap.data() as UserProfile;
+            if (uData && uData.role !== 'admin' && dId !== 'usr_admin') {
+              const uDigits = (uData.phone || "").replace(/\D/g, "");
+              if (uDigits.length >= 10 && uDigits.slice(-10) === last10) {
+                return { exists: true };
+              }
+            }
           }
         }
       }
@@ -663,13 +673,7 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
         const uData = docSnap.data() as UserProfile;
         if (uData.role === 'admin') return;
         const uDigits = uData.phone ? uData.phone.replace(/\D/g, "") : "";
-        const uIdDigits = docSnap.id ? docSnap.id.replace(/\D/g, "") : "";
-        if (
-          (last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
-          (last10 && last10.length >= 10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
-          (uData.phone && cleanedPhone && uData.phone === cleanedPhone) ||
-          (uData.phone && uData.phone === phone.trim())
-        ) {
+        if (last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.slice(-10) === last10) {
           found = true;
         }
       });
@@ -684,12 +688,8 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
   const exists = localUsers.some(u => {
     if (u.role === 'admin' || u.id === 'usr_admin') return false;
     const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
-    const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
     return (
-      (last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
-      (last10 && last10.length >= 10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
-      (u.phone && cleanedPhone && u.phone === cleanedPhone) ||
-      (u.phone && u.phone === phone.trim())
+      last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.slice(-10) === last10
     );
   });
 

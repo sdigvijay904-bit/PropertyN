@@ -1391,7 +1391,8 @@ export default function App() {
       setAuthError('Please enter your full name');
       return;
     }
-    if (!mobileNumber || mobileNumber.length < 10) {
+    const rawDigits = mobileNumber.replace(/\D/g, '');
+    if (rawDigits.length < 10) {
       setAuthError('Please enter a valid 10-digit mobile number');
       return;
     }
@@ -1400,7 +1401,8 @@ export default function App() {
       return;
     }
 
-    const targetPhone = `+91 ${mobileNumber}`;
+    const clean10Digits = rawDigits.slice(-10);
+    const targetPhone = `+91 ${clean10Digits}`;
     
     try {
       const checkData = await firestoreCheckPhone(targetPhone);
