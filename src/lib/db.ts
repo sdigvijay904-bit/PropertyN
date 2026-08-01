@@ -317,9 +317,18 @@ export function isQuotaExceeded(): boolean {
 }
 
 export function markQuotaExceeded(err: any): boolean {
-  const msg = String(err?.message || err || '');
-  const code = String(err?.code || '');
-  if (code === 'resource-exhausted' || msg.includes('Quota limit') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+  if (!err) return false;
+  const msg = String(err?.message || err?.details || err || '').toLowerCase();
+  const code = String(err?.code || '').toLowerCase();
+  if (
+    code.includes('resource-exhausted') ||
+    code.includes('quota') ||
+    msg.includes('quota limit') ||
+    msg.includes('quota') ||
+    msg.includes('resource_exhausted') ||
+    msg.includes('resource-exhausted') ||
+    msg.includes('exceeded')
+  ) {
     if (!firestoreQuotaExceeded) {
       console.warn("[Firestore Quota Exceeded] Circuit breaker activated. App will seamlessly operate on LocalStorage.");
     }

@@ -394,11 +394,13 @@ export default function AdminSection({
       try {
         if (targetP) {
           const updatedP = { ...targetP, completed: newStatus };
-          setDoc(doc(db, "purchases", purchaseId), cleanUndefined(updatedP), { merge: true }).catch(() => {});
+          setDoc(doc(db, "purchases", purchaseId), cleanUndefined(updatedP), { merge: true }).catch(markQuotaExceeded);
         } else {
-          setDoc(doc(db, "purchases", purchaseId), cleanUndefined({ completed: newStatus }), { merge: true }).catch(() => {});
+          setDoc(doc(db, "purchases", purchaseId), cleanUndefined({ completed: newStatus }), { merge: true }).catch(markQuotaExceeded);
         }
-      } catch (e) {}
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     onSyncConfig?.(undefined, updatedPurchasesList);
@@ -469,11 +471,13 @@ export default function AdminSection({
     // 5. Delete document from Firestore AND update global deleted_items doc
     if (!isQuotaExceeded()) {
       try {
-        deleteDoc(doc(db, "purchases", purchaseId)).catch(() => {});
-        deleteDoc(doc(db, "transactions", purchaseId)).catch(() => {});
-        deleteDoc(doc(db, "transactions", purchaseId.replace('pur_', 'tx_pur_'))).catch(() => {});
-        setDoc(doc(db, "global", "deleted_items"), { deletedPurchases: delList }, { merge: true }).catch(() => {});
-      } catch (e) {}
+        deleteDoc(doc(db, "purchases", purchaseId)).catch(markQuotaExceeded);
+        deleteDoc(doc(db, "transactions", purchaseId)).catch(markQuotaExceeded);
+        deleteDoc(doc(db, "transactions", purchaseId.replace('pur_', 'tx_pur_'))).catch(markQuotaExceeded);
+        setDoc(doc(db, "global", "deleted_items"), { deletedPurchases: delList }, { merge: true }).catch(markQuotaExceeded);
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     onSyncConfig?.(undefined, updatedPurchases, undefined, updatedTransactions);
@@ -958,10 +962,12 @@ export default function AdminSection({
       try {
         const uObj = updatedUsers.find(u => u.id === editingUser.id);
         if (uObj) {
-          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(markQuotaExceeded);
         }
-        setDoc(doc(db, "transactions", adjustTx.id), cleanUndefined(adjustTx)).catch(() => {});
-      } catch (e) {}
+        setDoc(doc(db, "transactions", adjustTx.id), cleanUndefined(adjustTx)).catch(markQuotaExceeded);
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers, updatedTx);
@@ -1001,9 +1007,11 @@ export default function AdminSection({
       try {
         const uObj = updatedUsers.find(u => u.id === editingUser.id);
         if (uObj) {
-          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(markQuotaExceeded);
         }
-      } catch (e) {}
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
@@ -1057,9 +1065,11 @@ export default function AdminSection({
       try {
         const uObj = updatedUsers.find(u => u.id === editingUser.id);
         if (uObj) {
-          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(markQuotaExceeded);
         }
-      } catch (e) {}
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
@@ -1118,9 +1128,11 @@ export default function AdminSection({
       try {
         const uObj = updatedUsers.find(u => u.id === editingUser.id);
         if (uObj) {
-          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(markQuotaExceeded);
         }
-      } catch (e) {}
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
@@ -1154,9 +1166,11 @@ export default function AdminSection({
       try {
         const uObj = updatedUsers.find(u => u.id === editingUser.id);
         if (uObj) {
-          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(() => {});
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(markQuotaExceeded);
         }
-      } catch (e) {}
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
@@ -1276,9 +1290,10 @@ export default function AdminSection({
           ? updatedPlansList.find(p => p.id === editingPlan.id)
           : updatedPlansList[updatedPlansList.length - 1];
         if (savedPlanObj) {
-          setDoc(doc(db, "plans", savedPlanObj.id), cleanUndefined(savedPlanObj), { merge: true }).catch(() => {});
+          setDoc(doc(db, "plans", savedPlanObj.id), cleanUndefined(savedPlanObj), { merge: true }).catch(markQuotaExceeded);
         }
       } catch (e) {
+        markQuotaExceeded(e);
         console.warn("Notice saving plan to firestore:", e);
       }
     }
@@ -1318,9 +1333,11 @@ export default function AdminSection({
       // 3. Delete document from Firestore and update global deleted_items
       if (!isQuotaExceeded()) {
         try {
-          deleteDoc(doc(db, "plans", planId)).catch(() => {});
-          setDoc(doc(db, "global", "deleted_items"), { deletedPlans: delList }, { merge: true }).catch(() => {});
-        } catch (e) {}
+          deleteDoc(doc(db, "plans", planId)).catch(markQuotaExceeded);
+          setDoc(doc(db, "global", "deleted_items"), { deletedPlans: delList }, { merge: true }).catch(markQuotaExceeded);
+        } catch (e) {
+          markQuotaExceeded(e);
+        }
       }
 
       onSyncConfig?.(updatedPlans);

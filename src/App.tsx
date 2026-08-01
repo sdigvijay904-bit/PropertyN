@@ -279,10 +279,23 @@ export default function App() {
     if (storedUser && !skipAutoLogin) {
       const parsedUser = JSON.parse(storedUser);
       const latestFromList = loadedUsersList.find(u => u.id === parsedUser.id);
-      const rawUser = latestFromList || parsedUser;
+      const rawUser = parsedUser ? {
+        ...latestFromList,
+        ...parsedUser,
+        balance: Math.max(parsedUser.balance ?? 0, latestFromList?.balance ?? 0),
+        totalEarnings: Math.max(parsedUser.totalEarnings ?? 0, latestFromList?.totalEarnings ?? 0)
+      } : (latestFromList || parsedUser);
       const finalUser = sanitizeUserCheckIn(rawUser)!;
       setUserProfile(finalUser);
       localStorage.setItem('adpaint_user', JSON.stringify(finalUser));
+
+      // Ensure loadedUsersList contains updated finalUser
+      loadedUsersList = loadedUsersList.map(u => u.id === finalUser.id ? finalUser : u);
+      if (!loadedUsersList.some(u => u.id === finalUser.id)) {
+        loadedUsersList.push(finalUser);
+      }
+      localStorage.setItem('adpaint_users_list', JSON.stringify(loadedUsersList));
+      setUsersList(loadedUsersList);
       setIsLoggedIn(true);
       if (finalUser.role !== 'admin' && !localStorage.getItem(`adpaint_notice_shown_${finalUser.id}`)) {
         setIsWelcomeNoticeOpen(true);
@@ -466,8 +479,13 @@ export default function App() {
 
               if (existingServerUser) {
                 let updatedField = false;
-                // Server user is authoritative base! Local user fields only fill in missing server gaps
-                const mergedObj = { ...localUser, ...existingServerUser };
+                // Preserve highest local balance and totalEarnings to prevent stale server data from reverting user claims
+                const mergedObj = {
+                  ...existingServerUser,
+                  ...localUser,
+                  balance: Math.max(localUser.balance ?? 0, existingServerUser.balance ?? 0),
+                  totalEarnings: Math.max(localUser.totalEarnings ?? 0, existingServerUser.totalEarnings ?? 0)
+                };
 
                 // Validate and deep-merge inviterCode if local has it but server is empty
                 if (!mergedObj.inviterCode && localUser.inviterCode) {
@@ -488,13 +506,13 @@ export default function App() {
                 serverUserMap.set(mergedObj.id, mergedObj);
 
                 if (updatedField && !isQuotaExceeded()) {
-                  setDoc(doc(db, "users", mergedObj.id), cleanUndefined(mergedObj)).catch(console.warn);
+                  setDoc(doc(db, "users", mergedObj.id), cleanUndefined(mergedObj)).catch(markQuotaExceeded);
                 }
               } else {
                 // Local user not on server yet — preserve and push to Firestore
                 serverUserMap.set(localUser.id, localUser);
                 if (!isQuotaExceeded()) {
-                  setDoc(doc(db, "users", localUser.id), cleanUndefined(localUser)).catch(console.warn);
+                  setDoc(doc(db, "users", localUser.id), cleanUndefined(localUser)).catch(markQuotaExceeded);
                 }
               }
             });
@@ -525,10 +543,16 @@ export default function App() {
 
             if (latestMe) {
               const sanitizedMe = sanitizeUserCheckIn(latestMe)!;
-              if (JSON.stringify(sanitizedMe) !== JSON.stringify(activeUser)) {
-                setUserProfile(sanitizedMe);
-                localStorage.setItem('adpaint_user', JSON.stringify(sanitizedMe));
-                userProfileRef.current = sanitizedMe;
+              const currentLocal = userProfileRef.current || activeUser;
+              const finalMe = {
+                ...sanitizedMe,
+                balance: Math.max(sanitizedMe.balance ?? 0, currentLocal?.balance ?? 0),
+                totalEarnings: Math.max(sanitizedMe.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0)
+              };
+              if (JSON.stringify(finalMe) !== JSON.stringify(activeUser)) {
+                setUserProfile(finalMe);
+                localStorage.setItem('adpaint_user', JSON.stringify(finalMe));
+                userProfileRef.current = finalMe;
               }
             }
           }
@@ -934,6 +958,7 @@ export default function App() {
         }
       }, (err) => {
         console.warn("Real-time plans snapshot listener notice:", err?.message || err);
+        markQuotaExceeded(err);
       });
     } catch (err) {
       markQuotaExceeded(err);
@@ -962,10 +987,18 @@ export default function App() {
           const liveUser = snapshot.data() as UserProfile;
           if (liveUser && liveUser.id === userProfile.id) {
             const sanitized = sanitizeUserCheckIn(liveUser);
-            if (sanitized && JSON.stringify(sanitized) !== JSON.stringify(userProfileRef.current)) {
-              setUserProfile(sanitized);
-              localStorage.setItem('adpaint_user', JSON.stringify(sanitized));
-              userProfileRef.current = sanitized;
+            if (sanitized) {
+              const currentLocal = userProfileRef.current;
+              const mergedMe = {
+                ...sanitized,
+                balance: Math.max(sanitized.balance ?? 0, currentLocal?.balance ?? 0),
+                totalEarnings: Math.max(sanitized.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0)
+              };
+              if (JSON.stringify(mergedMe) !== JSON.stringify(userProfileRef.current)) {
+                setUserProfile(mergedMe);
+                localStorage.setItem('adpaint_user', JSON.stringify(mergedMe));
+                userProfileRef.current = mergedMe;
+              }
             }
           }
         }
@@ -997,7 +1030,9 @@ export default function App() {
             setPurchases(prev => prev.filter(p => p && p.id && !purDel.includes(p.id)));
           }
         }
-      }, () => {});
+      }, (err) => {
+        markQuotaExceeded(err);
+      });
 
       // Live Purchases listener
       const purColRef = collection(db, "purchases");
@@ -1026,7 +1061,17 @@ export default function App() {
           );
 
           if (isMatch || currentUserId === 'usr_admin') {
-            liveUserPurchases.push(pData);
+            const localP = purchasesRef.current.find(p => p.id === pData.id);
+            const mergedP = localP ? {
+              ...pData,
+              ...localP,
+              totalClaimed: Math.max(pData.totalClaimed ?? 0, localP.totalClaimed ?? 0),
+              lastClaimedAt: (new Date(localP.lastClaimedAt || 0).getTime() > new Date(pData.lastClaimedAt || 0).getTime())
+                ? localP.lastClaimedAt
+                : pData.lastClaimedAt,
+              completed: localP.completed || pData.completed
+            } : pData;
+            liveUserPurchases.push(mergedP);
           }
         });
 
@@ -1037,7 +1082,9 @@ export default function App() {
           localStorage.setItem(`adpaint_purchases_${currentUserId}`, JSON.stringify(liveUserPurchases));
           localStorage.setItem(`adpaint_backup_purchases_${currentUserId}`, JSON.stringify(liveUserPurchases));
         }
-      }, () => {});
+      }, (err) => {
+        markQuotaExceeded(err);
+      });
 
       // Live Users collection listener for Admin real-time panel & team updates
       const usersColRef = collection(db, "users");
@@ -1051,9 +1098,19 @@ export default function App() {
         });
         if (liveUsers.length > 0) {
           const uMap = new Map<string, UserProfile>();
-          // Server snapshot is authoritative
+          // Server snapshot is authoritative, but preserve higher local claimed balance/earnings
           liveUsers.forEach(u => {
-            uMap.set(u.id, u);
+            const local = usersListRef.current.find(l => l.id === u.id);
+            if (local) {
+              uMap.set(u.id, {
+                ...u,
+                ...local,
+                balance: Math.max(u.balance ?? 0, local.balance ?? 0),
+                totalEarnings: Math.max(u.totalEarnings ?? 0, local.totalEarnings ?? 0)
+              });
+            } else {
+              uMap.set(u.id, u);
+            }
           });
 
           // Index server users by phone number (last 10 digits)
@@ -1083,6 +1140,7 @@ export default function App() {
         }
       }, (err) => {
         console.warn("Notice reading live users snapshot:", err);
+        markQuotaExceeded(err);
       });
 
       // Live Transactions collection listener for Admin real-time panel
@@ -1110,6 +1168,7 @@ export default function App() {
         }
       }, (err) => {
         console.warn("Notice reading live transactions snapshot:", err);
+        markQuotaExceeded(err);
       });
 
       return () => {
@@ -1755,10 +1814,12 @@ export default function App() {
     // Immediate direct Firestore write for purchases
     if (!isQuotaExceeded()) {
       try {
-        setDoc(doc(db, "purchases", newPurchase.id), cleanUndefined(newPurchase)).catch(() => {});
-        setDoc(doc(db, "transactions", purchaseTx.id), cleanUndefined(purchaseTx)).catch(() => {});
-        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser)).catch(() => {});
-      } catch (e) {}
+        setDoc(doc(db, "purchases", newPurchase.id), cleanUndefined(newPurchase)).catch(markQuotaExceeded);
+        setDoc(doc(db, "transactions", purchaseTx.id), cleanUndefined(purchaseTx)).catch(markQuotaExceeded);
+        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser)).catch(markQuotaExceeded);
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     // Update remaining slots on plan
@@ -1838,10 +1899,12 @@ export default function App() {
 
     if (!isQuotaExceeded() && targetUpdatedPurchase) {
       try {
-        setDoc(doc(db, "purchases", (targetUpdatedPurchase as PurchaseRecord).id), cleanUndefined(targetUpdatedPurchase)).catch(() => {});
-        setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx)).catch(() => {});
-        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser)).catch(() => {});
-      } catch (e) {}
+        setDoc(doc(db, "purchases", (targetUpdatedPurchase as PurchaseRecord).id), cleanUndefined(targetUpdatedPurchase)).catch(markQuotaExceeded);
+        setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx)).catch(markQuotaExceeded);
+        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser)).catch(markQuotaExceeded);
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
     }
 
     saveStateToStorage(updatedUser, plans, updatedPurchases, [...transactions, claimTx], teamMembers);
@@ -1922,7 +1985,7 @@ export default function App() {
       .reduce((sum, t) => sum + t.amount, 0);
 
     const totalPlanEarnings = hasPurchased
-      ? ((userProfile.totalEarnings !== undefined && userProfile.totalEarnings > 0) ? userProfile.totalEarnings : totalClaimedFromTx)
+      ? ((userProfile.totalEarnings !== undefined && userProfile.totalEarnings >= 0) ? userProfile.totalEarnings : totalClaimedFromTx)
       : 0;
 
     const totalWithdrawnAmount = userTx

@@ -68,7 +68,7 @@ export default function WithdrawModal({
 
   // Plan Yield is strictly the actual claimed plan earnings matching Total Income on Home/Profile
   const totalPlanEarnings = hasPurchasedPlan
-    ? ((user.totalEarnings !== undefined && user.totalEarnings > 0) ? user.totalEarnings : totalClaimedFromTx)
+    ? ((user.totalEarnings !== undefined && user.totalEarnings >= 0) ? user.totalEarnings : totalClaimedFromTx)
     : 0;
 
   // Sum successful/pending withdraw transactions for THIS user

@@ -119,7 +119,7 @@ export default function HomeSection({
     .reduce((sum, t) => sum + t.amount, 0);
 
   // Sum successful claim transactions (only plan earnings!)
-  const totalPlanEarnings = (user.totalEarnings !== undefined && user.totalEarnings > 0)
+  const totalPlanEarnings = (user.totalEarnings !== undefined && user.totalEarnings >= 0)
     ? user.totalEarnings
     : transactions
       .filter((t) => t.type === 'claim' && t.status === 'success')
