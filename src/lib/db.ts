@@ -878,7 +878,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     name,
     phone: cleanedPhone,
     balance: 100, // free signup bonus
-    totalEarnings: 100,
+    totalEarnings: 0,
     dailyEarned: 0,
     checkedInToday: false,
     inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
@@ -909,9 +909,10 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   };
 
   try {
+    firestoreQuotaExceeded = false;
     const userDocRef = doc(db, "users", newUserId);
-    await setDoc(userDocRef, cleanUndefined(newUser));
-    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
+    await setDoc(userDocRef, cleanUndefined(newUser), { merge: true });
+    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx), { merge: true });
     firestoreQuotaExceeded = false;
   } catch (err) {
     console.warn("Firestore write notice during registration (saved locally):", err);

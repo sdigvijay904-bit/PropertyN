@@ -889,10 +889,11 @@ export default function App() {
     }
   };
 
-  // Set up Firestore real-time listener for global configs & plans for instant Mobile APK & Web updates
+  // Set up Firestore real-time listener for global configs, plans, users & transactions for instant Mobile APK & Web updates
   useEffect(() => {
     let unsub: (() => void) | null = null;
     let unsubPlans: (() => void) | null = null;
+    let unsubUsers: (() => void) | null = null;
 
     try {
       const configDocRef = doc(db, "global", "config");
@@ -930,7 +931,6 @@ export default function App() {
         }
       }, (err) => {
         console.warn("Real-time config snapshot listener notice:", err?.message || err);
-        markQuotaExceeded(err);
         if (unsub) {
           unsub();
           unsub = null;
@@ -964,15 +964,68 @@ export default function App() {
         }
       }, (err) => {
         console.warn("Real-time plans snapshot listener notice:", err?.message || err);
-        markQuotaExceeded(err);
+      });
+
+      // Live Users collection listener at top level so ALL registrations (Meta Ads, Socials, APK, Web) reflect immediately in Admin Panel
+      const usersColRef = collection(db, "users");
+      unsubUsers = onSnapshot(usersColRef, (snapshot) => {
+        const liveUsers: UserProfile[] = [];
+        snapshot.forEach(d => {
+          const u = d.data() as UserProfile;
+          if (u) {
+            liveUsers.push({ ...u, id: u.id || d.id });
+          }
+        });
+        if (liveUsers.length > 0) {
+          const uMap = new Map<string, UserProfile>();
+          liveUsers.forEach(u => {
+            const local = usersListRef.current.find(l => l.id === u.id);
+            if (local) {
+              uMap.set(u.id, {
+                ...u,
+                ...local,
+                balance: Math.max(u.balance ?? 0, local.balance ?? 0),
+                totalEarnings: Math.max(u.totalEarnings ?? 0, local.totalEarnings ?? 0)
+              });
+            } else {
+              uMap.set(u.id, u);
+            }
+          });
+
+          // Also merge local memory users if not yet on server
+          const phoneMap = new Map<string, UserProfile>();
+          liveUsers.forEach(u => {
+            const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+            if (digits) phoneMap.set(digits, u);
+          });
+
+          usersListRef.current.forEach(localU => {
+            if (!localU || !localU.id) return;
+            const digits = localU.phone ? localU.phone.replace(/\D/g, '').slice(-10) : '';
+            if (!uMap.has(localU.id) && (!digits || !phoneMap.has(digits))) {
+              uMap.set(localU.id, localU);
+            }
+          });
+
+          const merged = Array.from(uMap.values());
+          const isDiff = JSON.stringify(merged) !== JSON.stringify(usersListRef.current);
+          if (isDiff) {
+            setUsersList(merged);
+            usersListRef.current = merged;
+            localStorage.setItem('adpaint_users_list', JSON.stringify(merged));
+          }
+        }
+      }, (err) => {
+        console.warn("Top-level users snapshot notice:", err?.message || err);
       });
     } catch (err) {
-      markQuotaExceeded(err);
+      console.warn("Top-level snapshot setup notice:", err);
     }
 
     return () => {
       if (unsub) unsub();
       if (unsubPlans) unsubPlans();
+      if (unsubUsers) unsubUsers();
     };
   }, []);
 
@@ -1755,8 +1808,6 @@ export default function App() {
     const updatedUser: UserProfile = {
       ...userProfile,
       balance: (userProfile.balance || 0) + reward,
-      totalEarnings: (userProfile.totalEarnings || 0) + reward,
-      dailyEarned: (userProfile.dailyEarned || 0) + reward,
       checkedInToday: true,
       lastCheckInDate: todayStr
     };
