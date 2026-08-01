@@ -73,6 +73,7 @@ export default function App() {
   const [invitationCode, setInvitationCode] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>('');
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState<boolean>(false);
 
   // Forgot Password flow states
   const [forgotStep, setForgotStep] = useState<number>(1);
@@ -1463,20 +1464,19 @@ export default function App() {
     const clean10Digits = rawDigits.slice(-10);
     const targetPhone = `+91 ${clean10Digits}`;
     
+    setIsSubmittingAuth(true);
+
     try {
       const checkData = await firestoreCheckPhone(targetPhone);
       if (checkData.exists) {
         setAuthError('Mobile number already registered! Please log in.');
+        setIsSubmittingAuth(false);
         return;
       }
-    } catch (err) {
-      console.warn("Check phone error:", err);
-    }
 
-    // Success registration
-    const finalInviterCode = invitationCode || localStorage.getItem('adpaint_pending_invite_code') || undefined;
+      // Success registration
+      const finalInviterCode = invitationCode || localStorage.getItem('adpaint_pending_invite_code') || undefined;
 
-    try {
       const regData = await firestoreRegister({
         name: fullName,
         phone: targetPhone,
@@ -1523,6 +1523,8 @@ export default function App() {
     } catch (err: any) {
       console.error("Registration error:", err);
       setAuthError(err?.message || 'Server communication error. Please try again.');
+    } finally {
+      setIsSubmittingAuth(false);
     }
   };
 
@@ -1543,6 +1545,8 @@ export default function App() {
       setAuthError('Password must be at least 6 characters');
       return;
     }
+
+    setIsSubmittingAuth(true);
 
     try {
       const loginData = await firestoreLogin({ phone: targetPhone, password_entered: password });
@@ -1584,6 +1588,8 @@ export default function App() {
       } else {
         setAuthError(rawMsg || 'Server communication error. Please try again.');
       }
+    } finally {
+      setIsSubmittingAuth(false);
     }
   };
 
@@ -2409,6 +2415,7 @@ export default function App() {
             handleForgotRequestOtp={handleForgotRequestOtp}
             handleForgotVerifyOtp={handleForgotVerifyOtp}
             handleForgotResetPassword={handleForgotResetPassword}
+            isSubmitting={isSubmittingAuth}
           />
         )}
 

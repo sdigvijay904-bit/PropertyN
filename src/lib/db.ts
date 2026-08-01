@@ -620,64 +620,43 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
     return { exists: true };
   }
 
-  // Always attempt Firestore check first
-  try {
-    const usersColl = collection(db, "users");
-
-    const phoneCandidates = Array.from(new Set([
-      cleanedPhone,
-      phone.trim(),
-      rawDigits,
-      last10,
-      `+91${last10}`,
-      `+91 ${last10}`,
-      `91${last10}`
-    ])).filter(Boolean);
-
-    for (const cand of phoneCandidates) {
-      const q = query(usersColl, where("phone", "==", cand));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        // Verify at least one match is not admin or demo seed
-        const foundUser = querySnapshot.docs.some(docSnap => {
-          const data = docSnap.data() as UserProfile;
-          return docSnap.id !== 'usr_admin' && docSnap.id !== 'usr_demo' && docSnap.id !== 'usr_sandeep' && data.role !== 'admin';
-        });
-        if (foundUser) return { exists: true };
-      }
-    }
-
-    if (last10.length >= 10) {
-      const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
-      for (const dId of docIds) {
-        const userDocRef = doc(db, "users", dId);
-        const userSnap = await getDoc(userDocRef);
-        if (userSnap.exists()) {
-          const uData = userSnap.data() as UserProfile;
-          if (uData && uData.role !== 'admin' && dId !== 'usr_admin' && dId !== 'usr_demo' && dId !== 'usr_sandeep') {
-            const uDigits = (uData.phone || "").replace(/\D/g, "");
-            if (uDigits.length >= 10 && uDigits.slice(-10) === last10) {
-              return { exists: true };
-            }
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("firestoreCheckPhone firestore read notice (checking local storage):", err);
-  }
-
-  // Local storage check excluding seed demo users
+  // 1. Check local storage first (instant 0ms)
   const localUsers = getStoredUsers();
-  const exists = localUsers.some(u => {
+  const existsLocally = localUsers.some(u => {
     if (u.role === 'admin' || u.id === 'usr_admin' || u.id === 'usr_demo' || u.id === 'usr_sandeep') return false;
     const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
     return (
       last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.slice(-10) === last10
     );
   });
+  if (existsLocally) {
+    return { exists: true };
+  }
 
-  return { exists };
+  // 2. Fast Firestore check with a 1.5s Promise.race timeout
+  try {
+    const fetchDoc = async () => {
+      const userDocRef = doc(db, "users", `usr_${last10}`);
+      const userSnap = await getDoc(userDocRef);
+      if (userSnap.exists()) {
+        const uData = userSnap.data() as UserProfile;
+        if (uData && uData.role !== 'admin' && uData.id !== 'usr_admin' && uData.id !== 'usr_demo' && uData.id !== 'usr_sandeep') {
+          return { exists: true };
+        }
+      }
+      return { exists: false };
+    };
+
+    const timeout = new Promise<{ exists: boolean }>((resolve) =>
+      setTimeout(() => resolve({ exists: false }), 1500)
+    );
+
+    return await Promise.race([fetchDoc(), timeout]);
+  } catch (err) {
+    console.warn("firestoreCheckPhone firestore read notice (checking local storage):", err);
+  }
+
+  return { exists: false };
 }
 
 // User login
@@ -911,9 +890,14 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   try {
     firestoreQuotaExceeded = false;
     const userDocRef = doc(db, "users", newUserId);
-    await setDoc(userDocRef, cleanUndefined(newUser), { merge: true });
-    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx), { merge: true });
-    firestoreQuotaExceeded = false;
+    const txDocRef = doc(db, "transactions", signupTx.id);
+
+    const saveToFirestore = Promise.all([
+      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
+      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
+    ]);
+    const timeout = new Promise((resolve) => setTimeout(resolve, 2000));
+    await Promise.race([saveToFirestore, timeout]);
   } catch (err) {
     console.warn("Firestore write notice during registration (saved locally):", err);
   }

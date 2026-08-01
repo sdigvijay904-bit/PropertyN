@@ -11,7 +11,8 @@ import {
   Check,
   ChevronRight,
   Home,
-  Building2
+  Building2,
+  Loader2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { openTelegramUrl } from '../lib/telegram';
@@ -50,6 +51,7 @@ interface AuthPortalProps {
   handleForgotRequestOtp: (e: React.FormEvent) => void;
   handleForgotVerifyOtp: (e: React.FormEvent) => void;
   handleForgotResetPassword: (e: React.FormEvent) => void;
+  isSubmitting?: boolean;
 }
 
 export const AuthPortal: React.FC<AuthPortalProps> = ({
@@ -82,7 +84,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   setShowForgotNewPassword,
   handleForgotRequestOtp,
   handleForgotVerifyOtp,
-  handleForgotResetPassword
+  handleForgotResetPassword,
+  isSubmitting = false
 }) => {
   const [agreedTerms, setAgreedTerms] = useState(true);
 
@@ -425,10 +428,20 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
               {/* Primary Yellow Register / Login Button */}
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-400 hover:from-yellow-200 hover:to-amber-300 text-slate-950 font-black text-base shadow-[0_8px_25px_rgba(250,204,21,0.3)] active:scale-[0.98] transition-all cursor-pointer uppercase tracking-wider flex items-center justify-center gap-2 mt-2"
+                disabled={isSubmitting}
+                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-400 hover:from-yellow-200 hover:to-amber-300 disabled:opacity-70 disabled:cursor-not-allowed text-slate-950 font-black text-base shadow-[0_8px_25px_rgba(250,204,21,0.3)] active:scale-[0.98] transition-all cursor-pointer uppercase tracking-wider flex items-center justify-center gap-2 mt-2"
               >
-                <span>{authTab === 'login' ? 'Login' : 'Register'}</span>
-                <ChevronRight className="w-5 h-5 stroke-[3]" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin text-slate-950" />
+                    <span>Please wait...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{authTab === 'login' ? 'Login' : 'Register'}</span>
+                    <ChevronRight className="w-5 h-5 stroke-[3]" />
+                  </>
+                )}
               </button>
             </form>
           )}
