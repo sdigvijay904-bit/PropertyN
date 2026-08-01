@@ -1168,25 +1168,27 @@ export async function firestoreGetState(userId: string): Promise<any> {
       });
       if (fsUsers.length > 0) {
         const uMap = new Map<string, UserProfile>();
-        // Add local users
-        usersList.forEach(u => {
+        // Index server users first as authoritative records
+        fsUsers.forEach(u => {
           if (u && u.id) uMap.set(u.id, u);
         });
-        // Server users take priority & deduplicate by phone last 10 digits
+
+        // Index server phone numbers (last 10 digits)
+        const serverPhones = new Set<string>();
         fsUsers.forEach(u => {
-          if (u && u.id) {
-            const uDigits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
-            if (uDigits) {
-              for (const [existingId, existingUser] of uMap.entries()) {
-                const existingDigits = existingUser.phone ? existingUser.phone.replace(/\D/g, '').slice(-10) : '';
-                if (existingDigits && existingDigits === uDigits && existingId !== u.id) {
-                  uMap.delete(existingId);
-                }
-              }
-            }
+          const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+          if (digits) serverPhones.add(digits);
+        });
+
+        // Only add local users if they don't exist on server and don't share a phone number with any server user
+        usersList.forEach(u => {
+          if (!u || !u.id) return;
+          const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+          if (!uMap.has(u.id) && (!digits || !serverPhones.has(digits))) {
             uMap.set(u.id, u);
           }
         });
+
         usersList = Array.from(uMap.values());
       }
     } catch (err) {
@@ -1195,11 +1197,30 @@ export async function firestoreGetState(userId: string): Promise<any> {
     }
   }
 
-  // Always merge local stored users first, so Firestore server users data take precedence!
+  // Merge local stored users with phone deduplication, ensuring server users retain total precedence
   const localUsers = getStoredUsers();
   const userMap = new Map<string, UserProfile>();
-  localUsers.forEach(u => userMap.set(u.id, u));
-  usersList.forEach(u => userMap.set(u.id, u));
+  
+  // 1. Add current server/merged users first
+  usersList.forEach(u => {
+    if (u && u.id) userMap.set(u.id, u);
+  });
+
+  const activePhones = new Set<string>();
+  usersList.forEach(u => {
+    const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+    if (digits) activePhones.add(digits);
+  });
+
+  // 2. Add stored local users only if not on server & no phone overlap
+  localUsers.forEach(u => {
+    if (!u || !u.id) return;
+    const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+    if (!userMap.has(u.id) && (!digits || !activePhones.has(digits))) {
+      userMap.set(u.id, u);
+    }
+  });
+
   usersList = Array.from(userMap.values());
 
   // Clean out any deleted plans or deleted purchases

@@ -231,6 +231,37 @@ export default function AdminSection({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  const syncConfigDirectToFirestore = async (overrides?: Record<string, string>) => {
+    const keysToSync = [
+      'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
+      'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
+      'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
+      'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
+    ];
+    const configMap: Record<string, string> = {};
+    keysToSync.forEach(key => {
+      const val = overrides?.[key] ?? localStorage.getItem(key);
+      if (val) configMap[key] = val;
+    });
+
+    if (!isQuotaExceeded()) {
+      try {
+        const configDocRef = doc(db, "global", "config");
+        await setDoc(configDocRef, {
+          config: configMap,
+          customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+        }, { merge: true });
+      } catch (err) {
+        markQuotaExceeded(err);
+        console.error("Direct Firestore config sync error:", err);
+      }
+    }
+
+    if (onSyncConfig) {
+      onSyncConfig();
+    }
+  };
+
   const handleCopyText = (text: string, labelKey: string, successMessage?: string) => {
     if (!text || text === 'N/A') return;
     navigator.clipboard.writeText(text);
@@ -1216,11 +1247,10 @@ export default function AdminSection({
     e.preventDefault();
     if (!tickerMessage.trim()) return;
 
-    // We can simulate updating the live ticker in the host component by adding it
     localStorage.setItem('adpaint_custom_ticker', tickerMessage.trim());
     window.dispatchEvent(new Event('adpaint_notice_updated'));
-    onSyncConfig?.();
-    triggerToast('Custom alert injected! It will show up on client screens.', 'success');
+    syncConfigDirectToFirestore();
+    triggerToast('Custom alert published live!', 'success');
     setTickerMessage('');
   };
 
@@ -2934,8 +2964,12 @@ export default function AdminSection({
                   setSavedUpiId(upiIdInput.trim());
                   setSavedUpiName(upiNameInput.trim());
                   setSavedCashierUrl('');
-                  onSyncConfig?.();
-                  triggerToast('UPI settings updated successfully!', 'success');
+                  syncConfigDirectToFirestore({
+                    'adpaint_upi_id': upiIdInput.trim(),
+                    'adpaint_upi_name': upiNameInput.trim(),
+                    'adpaint_cashier_url': ''
+                  });
+                  triggerToast('UPI settings saved & published live!', 'success');
                 }} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Merchant UPI ID (e.g. upi@bank)</label>
@@ -3008,8 +3042,11 @@ export default function AdminSection({
                   localStorage.setItem('adpaint_tg_support', cleanSupport);
                   setSavedTgChannel(cleanChannel);
                   setSavedTgSupport(cleanSupport);
-                  onSyncConfig?.();
-                  triggerToast('Telegram settings updated successfully!', 'success');
+                  syncConfigDirectToFirestore({
+                    'adpaint_tg_channel': cleanChannel,
+                    'adpaint_tg_support': cleanSupport
+                  });
+                  triggerToast('Telegram settings saved & published live!', 'success');
                 }} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Telegram Channel Link (e.g. https://t.me/channel)</label>
@@ -3077,8 +3114,10 @@ export default function AdminSection({
                   }
                   localStorage.setItem('adpaint_apk_url', apkUrlInput.trim());
                   setSavedApkUrl(apkUrlInput.trim());
-                  onSyncConfig?.();
-                  triggerToast('APK Download Link updated successfully!', 'success');
+                  syncConfigDirectToFirestore({
+                    'adpaint_apk_url': apkUrlInput.trim()
+                  });
+                  triggerToast('APK Download Link saved & published live!', 'success');
                 }} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">APK Download URL (e.g. https://domain.com/app.apk)</label>
@@ -3327,9 +3366,16 @@ export default function AdminSection({
                   setSavedMinRecharge(minRechargeInput.trim());
                   setSavedRechargePresets(presetValues.join(', '));
 
-                  onSyncConfig?.();
+                  syncConfigDirectToFirestore({
+                    'adpaint_platform_name': platformNameInput.trim(),
+                    'adpaint_daily_bonus': dailyBonusInput.trim(),
+                    'adpaint_min_withdrawal': minWithdrawalInput.trim(),
+                    'adpaint_min_recharge': minRechargeInput.trim(),
+                    'adpaint_recharge_presets': presetValues.join(', '),
+                    'adpaint_withdraw_time': withdrawTimeInput.trim()
+                  });
 
-                  triggerToast('System thresholds & presets saved successfully!', 'success');
+                  triggerToast('System thresholds & presets saved and published live!', 'success');
                 }} className="space-y-4">
                   {/* Platform Name */}
                   <div className="space-y-1.5">

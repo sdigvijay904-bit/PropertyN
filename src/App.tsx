@@ -402,7 +402,10 @@ export default function App() {
     currentUser: UserProfile | null = userProfileRef.current,
     force: boolean = false
   ) => {
-    // If quota exceeded or local state updated recently, defer syncing
+    if (force) {
+      lastLocalUpdateRef.current = 0; // Force sync resets local debounce timer so server state takes precedence immediately
+    }
+    // If quota exceeded or local state updated recently, defer syncing unless forced
     if (!force && isQuotaExceeded()) {
       return;
     }
@@ -436,37 +439,71 @@ export default function App() {
           plansUpdated = true;
         }
 
-        // 2. Sync global users list
+        // 2. Sync global users list (Server's authoritative state takes precedence)
         let mergedUsers = currentUsersList;
         let usersUpdated = false;
         if (data.usersList && data.usersList.length > 0) {
-          const serverUserMap = new Map(data.usersList.map((u: any) => [u.id, u]));
-          
+          const serverUserMap = new Map<string, any>();
           const phoneToUserMap = new Map<string, any>();
+          let hasMissingUser = false;
+
+          // Index server users and map by last 10 digits
           data.usersList.forEach((u: any) => {
+            if (!u || !u.id) return;
+            serverUserMap.set(u.id, u);
             const rawP = u.phone ? u.phone.replace(/\D/g, '') : '';
             const last10 = rawP.length >= 10 ? rawP.slice(-10) : rawP;
             if (last10) phoneToUserMap.set(last10, u);
           });
 
-          let hasMissingUser = false;
-          
-          // Find any users in local memory that aren't on the server yet
-          currentUsersList.forEach((localUser: any) => {
-            const localRawP = localUser.phone ? localUser.phone.replace(/\D/g, '') : '';
-            const localLast10 = localRawP.length >= 10 ? localRawP.slice(-10) : localRawP;
-            const serverByPhone = localLast10 ? phoneToUserMap.get(localLast10) : null;
+          // If forced (e.g. Admin fetch/sync), server users strictly override local cache
+          if (!force) {
+            currentUsersList.forEach((localUser: any) => {
+              if (!localUser || !localUser.id) return;
+              const localRawP = localUser.phone ? localUser.phone.replace(/\D/g, '') : '';
+              const localLast10 = localRawP.length >= 10 ? localRawP.slice(-10) : localRawP;
+              const existingServerUser = serverUserMap.get(localUser.id) || (localLast10 ? phoneToUserMap.get(localLast10) : null);
 
-            if (!serverUserMap.has(localUser.id) && !serverByPhone) {
-              serverUserMap.set(localUser.id, localUser);
-              hasMissingUser = true;
-            }
-          });
-          
+              if (existingServerUser) {
+                let updatedField = false;
+                // Server user is authoritative base! Local user fields only fill in missing server gaps
+                const mergedObj = { ...localUser, ...existingServerUser };
+
+                // Validate and deep-merge inviterCode if local has it but server is empty
+                if (!mergedObj.inviterCode && localUser.inviterCode) {
+                  mergedObj.inviterCode = localUser.inviterCode;
+                  updatedField = true;
+                }
+                // Deep-merge bank details if local has it but server is empty
+                if (!mergedObj.bankAccount && localUser.bankAccount) {
+                  mergedObj.bankAccount = localUser.bankAccount;
+                  updatedField = true;
+                }
+                // Preserve password if missing on server
+                if (!mergedObj.password && localUser.password) {
+                  mergedObj.password = localUser.password;
+                  updatedField = true;
+                }
+
+                serverUserMap.set(mergedObj.id, mergedObj);
+
+                if (updatedField && !isQuotaExceeded()) {
+                  setDoc(doc(db, "users", mergedObj.id), cleanUndefined(mergedObj)).catch(console.warn);
+                }
+              } else {
+                // Local user not on server yet — preserve and push to Firestore
+                serverUserMap.set(localUser.id, localUser);
+                if (!isQuotaExceeded()) {
+                  setDoc(doc(db, "users", localUser.id), cleanUndefined(localUser)).catch(console.warn);
+                }
+              }
+            });
+          }
+
           mergedUsers = Array.from(serverUserMap.values());
           
           const isDifferent = JSON.stringify(mergedUsers) !== JSON.stringify(currentUsersList);
-          if (isDifferent) {
+          if (isDifferent || force) {
             setUsersList(mergedUsers);
             localStorage.setItem('adpaint_users_list', JSON.stringify(mergedUsers));
             usersListRef.current = mergedUsers;
@@ -1014,8 +1051,27 @@ export default function App() {
         });
         if (liveUsers.length > 0) {
           const uMap = new Map<string, UserProfile>();
-          usersListRef.current.forEach(u => uMap.set(u.id, u));
-          liveUsers.forEach(u => uMap.set(u.id, u));
+          // Server snapshot is authoritative
+          liveUsers.forEach(u => {
+            uMap.set(u.id, u);
+          });
+
+          // Index server users by phone number (last 10 digits)
+          const phoneMap = new Map<string, UserProfile>();
+          liveUsers.forEach(u => {
+            const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+            if (digits) phoneMap.set(digits, u);
+          });
+
+          // Only keep local memory users if they aren't on server and don't share a phone number with any server user
+          usersListRef.current.forEach(localU => {
+            if (!localU || !localU.id) return;
+            const digits = localU.phone ? localU.phone.replace(/\D/g, '').slice(-10) : '';
+            if (!uMap.has(localU.id) && (!digits || !phoneMap.has(digits))) {
+              uMap.set(localU.id, localU);
+            }
+          });
+
           const merged = Array.from(uMap.values());
 
           const isDiff = JSON.stringify(merged) !== JSON.stringify(usersListRef.current);
@@ -1316,6 +1372,13 @@ export default function App() {
       setUserProfile(serverUser);
       setPurchases([]);
       setTransactions(regData.transactions);
+
+      // Append new user to global usersList immediately so Admin panel and referral links reflect instantly
+      const updatedUsersList = [...usersListRef.current.filter(u => u.id !== serverUser.id), serverUser];
+      setUsersList(updatedUsersList);
+      usersListRef.current = updatedUsersList;
+      localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
+
       localStorage.setItem('adpaint_user', JSON.stringify(serverUser));
       localStorage.setItem('adpaint_transactions', JSON.stringify(regData.transactions));
       localStorage.setItem(`adpaint_purchases_${serverUser.id}`, JSON.stringify([]));
@@ -1325,8 +1388,8 @@ export default function App() {
       triggerToast('Account Registered Successfully! Enjoy ₹100 Welcome Bonus.', 'success');
       localStorage.removeItem('adpaint_pending_invite_code');
 
-      // Sync users List in background
-      syncWithServer(serverUser);
+      // Force instant sync with server
+      syncWithServer(serverUser, true);
 
       // Reset fields
       setFullName('');
@@ -1981,9 +2044,11 @@ export default function App() {
                 saveStateToStorage(profile);
               }}
               onSyncConfig={(updatedPlans, updatedPurchases, updatedUsers, updatedTx) => {
+                lastLocalUpdateRef.current = Date.now();
                 if (updatedPlans) {
                   setPlans(updatedPlans);
                   plansRef.current = updatedPlans;
+                  localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
                 }
                 if (updatedPurchases) {
                   setPurchases(updatedPurchases);
@@ -1992,10 +2057,12 @@ export default function App() {
                 if (updatedUsers) {
                   setUsersList(updatedUsers);
                   usersListRef.current = updatedUsers;
+                  localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
                 }
                 if (updatedTx) {
                   setTransactions(updatedTx);
                   transactionsRef.current = updatedTx;
+                  localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
                 }
 
                 pushStateToServer(
