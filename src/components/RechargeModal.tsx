@@ -701,38 +701,7 @@ export default function RechargeModal({
                     <span className="text-[8.5px] bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md font-black shrink-0 tracking-wider">RECOMMENDED</span>
                   </a>
 
-                  {/* Direct Dedicated App Launchers */}
-                  <div className="grid grid-cols-3 gap-2 pt-1">
-                    <a
-                      href={getAppUpiUri('phonepe')}
-                      onClick={() => handleLaunchUpi('phonepe')}
-                      target="_self"
-                      className="py-2.5 px-2 bg-indigo-50/80 hover:bg-indigo-100 border border-indigo-150 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all cursor-pointer group shadow-2xs"
-                    >
-                      <span className="text-[11px] font-black text-indigo-900 group-hover:scale-105 transition-transform">PhonePe</span>
-                      <span className="text-[8px] text-indigo-600 font-extrabold uppercase">Open App</span>
-                    </a>
 
-                    <a
-                      href={getAppUpiUri('paytm')}
-                      onClick={() => handleLaunchUpi('paytm')}
-                      target="_self"
-                      className="py-2.5 px-2 bg-sky-50/80 hover:bg-sky-100 border border-sky-150 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all cursor-pointer group shadow-2xs"
-                    >
-                      <span className="text-[11px] font-black text-sky-900 group-hover:scale-105 transition-transform">Paytm</span>
-                      <span className="text-[8px] text-sky-600 font-extrabold uppercase">Open App</span>
-                    </a>
-
-                    <a
-                      href={getAppUpiUri('gpay')}
-                      onClick={() => handleLaunchUpi('gpay')}
-                      target="_self"
-                      className="py-2.5 px-2 bg-emerald-50/80 hover:bg-emerald-100 border border-emerald-150 rounded-xl text-center flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-all cursor-pointer group shadow-2xs"
-                    >
-                      <span className="text-[11px] font-black text-emerald-900 group-hover:scale-105 transition-transform">Google Pay</span>
-                      <span className="text-[8px] text-emerald-600 font-extrabold uppercase">Open App</span>
-                    </a>
-                  </div>
                 </div>
 
 

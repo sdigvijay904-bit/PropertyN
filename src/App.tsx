@@ -1909,23 +1909,28 @@ export default function App() {
   const handleWithdrawRequest = async (amount: number, pin: string) => {
     if (!userProfile) return;
 
+    const hasPurchased = purchases && purchases.length > 0;
+    if (!hasPurchased) {
+      triggerToast('निकासी अस्वीकृत: पैसे निकालने के लिए आपके पास कम से कम एक खरीदा हुआ प्लान होना आवश्यक है।', 'error');
+      return;
+    }
+
     // Verify limit: only plan income earned can be withdrawn
     const totalClaimedFromPurchases = purchases ? purchases.reduce((sum, p) => sum + (p.totalClaimed || 0), 0) : 0;
     const totalClaimedFromTx = transactions
       .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalPlanEarnings = Math.max(
-      totalClaimedFromPurchases,
-      totalClaimedFromTx
-    );
+    const totalPlanEarnings = hasPurchased
+      ? Math.max(totalClaimedFromPurchases, totalClaimedFromTx)
+      : 0;
 
     const totalWithdrawnAmount = transactions
       .filter((t) => t.type === 'withdraw' && (t.status === 'success' || t.status === 'pending'))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-    const withdrawableLimit = Math.min(userProfile.balance, maxWithdrawablePlanEarnings);
+    const withdrawableLimit = hasPurchased ? Math.min(userProfile.balance, maxWithdrawablePlanEarnings) : 0;
 
     if (amount > withdrawableLimit) {
       const fmtMax = maxWithdrawablePlanEarnings % 1 === 0 ? maxWithdrawablePlanEarnings.toLocaleString('en-IN') : maxWithdrawablePlanEarnings.toFixed(2);

@@ -136,7 +136,7 @@ export default function InviteSection({ user, teamMembers }: InviteSectionProps)
           </div>
           <div>
             <h2 className="text-xl font-black tracking-tight">Invite Friends</h2>
-            <p className="text-xs text-teal-100 mt-1 font-medium">Earn lifetime commissions on every property investment referral</p>
+            <p className="text-xs text-teal-100 mt-1 font-medium">Earn lifetime 3-level commissions on every friend's recharge</p>
           </div>
         </div>
       </div>

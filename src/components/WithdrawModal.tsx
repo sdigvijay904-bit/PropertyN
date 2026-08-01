@@ -43,11 +43,10 @@ export default function WithdrawModal({
     .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Plan Yield is strictly the actual earned income from plan claims and bonuses
-  const totalPlanEarnings = Math.max(
-    totalClaimedFromPurchases,
-    totalClaimedFromTx
-  );
+  // Plan Yield is strictly the actual earned income from plan claims and bonuses (0 if no plans purchased)
+  const totalPlanEarnings = hasPurchasedPlan
+    ? Math.max(totalClaimedFromPurchases, totalClaimedFromTx)
+    : 0;
 
   // Sum successful/pending withdraw transactions
   const totalWithdrawnAmount = transactions
@@ -55,7 +54,7 @@ export default function WithdrawModal({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-  const withdrawableLimit = Math.min(user.balance, maxWithdrawablePlanEarnings);
+  const withdrawableLimit = hasPurchasedPlan ? Math.min(user.balance, maxWithdrawablePlanEarnings) : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

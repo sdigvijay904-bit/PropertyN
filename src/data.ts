@@ -196,7 +196,7 @@ export const GENERATE_RANDOM_LIVE_NOTIF = (): string => {
     { text: `recharged ₹${[500, 750, 1000, 2200, 4840][Math.floor(Math.random() * 5)]}`, weight: 0.35 },
     { text: `withdrew ₹${[300, 1200, 2500, 4500][Math.floor(Math.random() * 4)]} successfully`, weight: 0.25 },
     { text: `purchased Special Offer Plan & earned ₹4,536 today`, weight: 0.20 },
-    { text: `registered a new friend & earned Lvl 1 commission`, weight: 0.20 },
+    { text: `referred a friend who recharged & earned Lvl 1 commission`, weight: 0.20 },
   ];
   
   // pick weighted event
