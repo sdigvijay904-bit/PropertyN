@@ -567,10 +567,14 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
   const cleanedPhone = cleanPhoneNumber(phone);
   const rawDigits = phone.replace(/\D/g, "");
   const last10 = rawDigits.length >= 10 ? rawDigits.slice(-10) : rawDigits;
-  const isAdminInput = phone.trim().toLowerCase() === 'admin' || phone.trim() === 'usr_admin' || last10.endsWith('9999999999');
+  const isAdminInput = phone.trim().toLowerCase() === 'admin' || phone.trim() === 'usr_admin' || (last10.length >= 10 && last10.endsWith('9999999999'));
 
   if (isAdminInput) {
     return { exists: true };
+  }
+
+  if (last10.length < 10) {
+    return { exists: false };
   }
 
   if (!isQuotaExceeded()) {
@@ -597,7 +601,7 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
       }
 
       if (last10.length >= 10) {
-        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10, 'usr_admin'];
+        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
         for (const dId of docIds) {
           const userDocRef = doc(db, "users", dId);
           const userSnap = await getDoc(userDocRef);
@@ -611,14 +615,16 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
       let found = false;
       allUsersSnap.forEach((docSnap) => {
         if (found) return;
+        if (docSnap.id === 'usr_admin') return;
         const uData = docSnap.data() as UserProfile;
+        if (uData.role === 'admin') return;
         const uDigits = uData.phone ? uData.phone.replace(/\D/g, "") : "";
         const uIdDigits = docSnap.id ? docSnap.id.replace(/\D/g, "") : "";
         if (
-          (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
-          (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
-          uData.phone === cleanedPhone ||
-          uData.phone === phone.trim()
+          (last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+          (last10 && last10.length >= 10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+          (uData.phone && cleanedPhone && uData.phone === cleanedPhone) ||
+          (uData.phone && uData.phone === phone.trim())
         ) {
           found = true;
         }
@@ -632,13 +638,14 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
 
   const localUsers = getStoredUsers();
   const exists = localUsers.some(u => {
+    if (u.role === 'admin' || u.id === 'usr_admin') return false;
     const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
     const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
     return (
-      (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
-      (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
-      u.phone === cleanedPhone ||
-      u.phone === phone.trim()
+      (last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+      (last10 && last10.length >= 10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+      (u.phone && cleanedPhone && u.phone === cleanedPhone) ||
+      (u.phone && u.phone === phone.trim())
     );
   });
 
@@ -692,7 +699,7 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
       }
 
       if (!user && (last10.length >= 10 || isAdminInput)) {
-        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10, 'usr_admin'];
+        const docIds = isAdminInput ? ['usr_admin'] : [`usr_${last10}`, `usr_91${last10}`, last10];
         for (const dId of docIds) {
           if (user) break;
           const userDocRef = doc(db, "users", dId);
