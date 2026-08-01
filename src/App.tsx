@@ -1913,21 +1913,27 @@ export default function App() {
     }
 
     // Verify limit: only plan income earned can be withdrawn
-    const totalClaimedFromTx = transactions
-      .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
+    const userTx = transactions.filter(
+      (t) => (t.userId && t.userId === userProfile.id) || (t.userPhone && t.userPhone === userProfile.phone)
+    );
+
+    const totalClaimedFromTx = userTx
+      .filter((t) => t.type === 'claim' && t.status === 'success')
       .reduce((sum, t) => sum + t.amount, 0);
 
-    const totalPlanEarnings = hasPurchased ? totalClaimedFromTx : 0;
+    const totalPlanEarnings = hasPurchased
+      ? ((userProfile.totalEarnings !== undefined && userProfile.totalEarnings > 0) ? userProfile.totalEarnings : totalClaimedFromTx)
+      : 0;
 
-    const totalWithdrawnAmount = transactions
+    const totalWithdrawnAmount = userTx
       .filter((t) => t.type === 'withdraw' && (t.status === 'success' || t.status === 'pending'))
       .reduce((sum, t) => sum + t.amount, 0);
 
     const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-    const withdrawableLimit = hasPurchased ? Math.min(userProfile.balance, maxWithdrawablePlanEarnings) : 0;
+    const withdrawableLimit = hasPurchased ? maxWithdrawablePlanEarnings : 0;
 
     if (amount > withdrawableLimit) {
-      const fmtMax = maxWithdrawablePlanEarnings % 1 === 0 ? maxWithdrawablePlanEarnings.toLocaleString('en-IN') : maxWithdrawablePlanEarnings.toFixed(2);
+      const fmtMax = Math.floor(withdrawableLimit).toLocaleString('en-IN');
       triggerToast(`निकासी अस्वीकृत: आप केवल प्लान से प्राप्त कुल आय (₹${fmtMax}) ही विड्रॉल कर सकते हैं।`, 'error');
       return;
     }
@@ -2308,7 +2314,7 @@ export default function App() {
               }}
               onUpdateBank={handleUpdateBank}
               hasPurchasedPlan={purchases.length > 0}
-              transactions={transactions}
+              transactions={transactions.filter(t => t.userId === userProfile.id || t.userPhone === userProfile.phone)}
               purchases={purchases}
             />
 

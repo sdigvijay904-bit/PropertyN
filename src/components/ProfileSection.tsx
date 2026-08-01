@@ -57,9 +57,11 @@ export default function ProfileSection({
     .reduce((sum, t) => sum + t.amount, 0);
 
   // Sum successful claim transactions (only plan earnings!)
-  const totalPlanEarnings = transactions
-    .filter((t) => t.type === 'claim' && t.status === 'success')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalPlanEarnings = (user.totalEarnings !== undefined && user.totalEarnings > 0)
+    ? user.totalEarnings
+    : transactions
+      .filter((t) => t.type === 'claim' && t.status === 'success')
+      .reduce((sum, t) => sum + t.amount, 0);
 
   // Bank Form State
   const [bankName, setBankName] = useState<string>(user.bankAccount?.bankName || '');

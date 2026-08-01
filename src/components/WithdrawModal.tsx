@@ -56,22 +56,29 @@ export default function WithdrawModal({
 
   const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '120');
 
-  // Sum actual claimed income from successful claim/commission/checkin transactions
-  const totalClaimedFromTx = transactions
-    .filter((t) => (t.type === 'claim' || t.type === 'commission' || t.type === 'checkin') && t.status === 'success')
+  // Filter user-specific transactions
+  const userTx = transactions.filter(
+    (t) => (t.userId && t.userId === user.id) || (t.userPhone && t.userPhone === user.phone)
+  );
+
+  // Sum actual claimed income from successful claim transactions for THIS user
+  const totalClaimedFromTx = userTx
+    .filter((t) => t.type === 'claim' && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Plan Yield is strictly the actual claimed income from plan claims and bonuses
-  const totalPlanEarnings = hasPurchasedPlan ? totalClaimedFromTx : 0;
+  // Plan Yield is strictly the actual claimed plan earnings matching Total Income on Home/Profile
+  const totalPlanEarnings = hasPurchasedPlan
+    ? ((user.totalEarnings !== undefined && user.totalEarnings > 0) ? user.totalEarnings : totalClaimedFromTx)
+    : 0;
 
-  // Sum successful/pending withdraw transactions
-  const totalWithdrawnAmount = transactions
+  // Sum successful/pending withdraw transactions for THIS user
+  const totalWithdrawnAmount = userTx
     .filter((t) => t.type === 'withdraw' && (t.status === 'success' || t.status === 'pending'))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-  // Withdrawable limit is capped by actual claimed plan earnings available AND current wallet balance
-  const withdrawableLimit = hasPurchasedPlan ? Math.min(user.balance, maxWithdrawablePlanEarnings) : 0;
+  // Withdrawable limit is strictly the plan earnings earned minus withdrawn amount (only plan income can be withdrawn)
+  const withdrawableLimit = hasPurchasedPlan ? maxWithdrawablePlanEarnings : 0;
 
   const handleSaveBankInline = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -122,12 +129,8 @@ export default function WithdrawModal({
     }
 
     if (amount > withdrawableLimit) {
-      if (amount > user.balance) {
-        setError(`Insufficient wallet balance. Available: ₹${user.balance % 1 === 0 ? user.balance.toLocaleString('en-IN') : user.balance.toFixed(2)}`);
-      } else {
-        const fmtMax = maxWithdrawablePlanEarnings % 1 === 0 ? maxWithdrawablePlanEarnings.toLocaleString('en-IN') : maxWithdrawablePlanEarnings.toFixed(2);
-        setError(`निकासी सीमा पार: प्लान लेने के बाद प्लान से जो कुल आय होगी, वही निकासी होगी। आपकी उपलब्ध निकासी योग्य सीमा ₹${fmtMax} है। (Withdrawal limit exceeded: Only income earned from plans can be withdrawn. Your current withdrawable limit is ₹${fmtMax}.)`);
-      }
+      const fmtMax = Math.floor(withdrawableLimit).toLocaleString('en-IN');
+      setError(`निकासी सीमा पार: प्लान लेने के बाद प्लान से जो कुल आय होगी, वही निकासी होगी। आपकी उपलब्ध निकासी योग्य सीमा ₹${fmtMax} है। (Withdrawal limit exceeded: Only income earned from plans can be withdrawn. Your current withdrawable limit is ₹${fmtMax}.)`);
       return;
     }
 
@@ -195,7 +198,7 @@ export default function WithdrawModal({
               <div className="flex justify-between items-center pb-2.5 border-b border-emerald-100/50">
                 <div>
                   <span className="text-[10px] font-black text-emerald-600 block uppercase tracking-widest">Withdrawable Limit / निकासी योग्य दैनिक आय</span>
-                  <span className="text-2xl font-black text-emerald-950 font-sans">₹{withdrawableLimit % 1 === 0 ? withdrawableLimit.toLocaleString('en-IN') : withdrawableLimit.toFixed(2)}</span>
+                  <span className="text-2xl font-black text-emerald-950 font-sans">₹{Math.floor(withdrawableLimit).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="bg-emerald-100/80 px-3 py-1 rounded-full flex items-center gap-1.5">
                   <Landmark className="w-3.5 h-3.5 text-emerald-700" />
@@ -206,15 +209,15 @@ export default function WithdrawModal({
               <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                 <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Wallet Balance</span>
-                  <span className="text-xs font-extrabold text-slate-800 block mt-0.5">₹{user.balance % 1 === 0 ? user.balance.toLocaleString('en-IN') : user.balance.toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-slate-800 block mt-0.5">₹{Math.floor(user.balance).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Plan Yield</span>
-                  <span className="text-xs font-extrabold text-teal-700 block mt-0.5">₹{totalPlanEarnings % 1 === 0 ? totalPlanEarnings.toLocaleString('en-IN') : totalPlanEarnings.toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-teal-700 block mt-0.5">₹{Math.floor(totalPlanEarnings).toLocaleString('en-IN')}</span>
                 </div>
                 <div className="bg-white/75 p-2 rounded-2xl border border-emerald-100/30">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Withdrawn</span>
-                  <span className="text-xs font-extrabold text-rose-600 block mt-0.5">₹{totalWithdrawnAmount % 1 === 0 ? totalWithdrawnAmount.toLocaleString('en-IN') : totalWithdrawnAmount.toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-rose-600 block mt-0.5">₹{Math.floor(totalWithdrawnAmount).toLocaleString('en-IN')}</span>
                 </div>
               </div>
               <p className="text-[9.5px] text-emerald-700 font-bold text-center mt-1">
