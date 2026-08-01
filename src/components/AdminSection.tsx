@@ -101,22 +101,19 @@ export default function AdminSection({
     window.dispatchEvent(new Event('adpaint_avatar_updated'));
 
     // Instantly write to Firebase Firestore global/config so Mobile APK updates live in real time
-    if (!isQuotaExceeded()) {
-      try {
-        const configDocRef = doc(db, "global", "config");
-        const snap = await getDoc(configDocRef);
-        const existingConfig = snap.exists() && snap.data().config ? snap.data().config : {};
-        existingConfig['adpaint_support_avatar'] = url;
+    try {
+      const configDocRef = doc(db, "global", "config");
+      const snap = await getDoc(configDocRef);
+      const existingConfig = snap.exists() && snap.data().config ? snap.data().config : {};
+      existingConfig['adpaint_support_avatar'] = url;
 
-        await setDoc(configDocRef, {
-          config: existingConfig,
-          customTicker: localStorage.getItem('adpaint_custom_ticker') || null
-        }, { merge: true });
-        console.log("Avatar synced directly to Firestore global/config!");
-      } catch (err) {
-        markQuotaExceeded(err);
-        console.error("Direct Firestore config sync error:", err);
-      }
+      await setDoc(configDocRef, {
+        config: existingConfig,
+        customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+      }, { merge: true });
+      console.log("Avatar synced directly to Firestore global/config!");
+    } catch (err) {
+      console.error("Direct Firestore config sync error:", err);
     }
 
     if (onSyncConfig) {
@@ -3444,22 +3441,19 @@ export default function AdminSection({
                       setSupportAvatarInput('');
                       window.dispatchEvent(new Event('adpaint_avatar_updated'));
 
-                      if (!isQuotaExceeded()) {
-                        try {
-                          const configDocRef = doc(db, "global", "config");
-                          const snap = await getDoc(configDocRef);
-                          if (snap.exists() && snap.data().config) {
-                            const existingConfig = { ...snap.data().config };
-                            delete existingConfig['adpaint_support_avatar'];
-                            await setDoc(configDocRef, {
-                              config: existingConfig,
-                              customTicker: localStorage.getItem('adpaint_custom_ticker') || null
-                            }, { merge: true });
-                          }
-                        } catch (err) {
-                          markQuotaExceeded(err);
-                          console.error("Direct Firestore reset error:", err);
+                      try {
+                        const configDocRef = doc(db, "global", "config");
+                        const snap = await getDoc(configDocRef);
+                        if (snap.exists() && snap.data().config) {
+                          const existingConfig = { ...snap.data().config };
+                          delete existingConfig['adpaint_support_avatar'];
+                          await setDoc(configDocRef, {
+                            config: existingConfig,
+                            customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+                          }, { merge: true });
                         }
+                      } catch (err) {
+                        console.error("Direct Firestore reset error:", err);
                       }
 
                       if (onSyncConfig) {

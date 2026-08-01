@@ -362,12 +362,13 @@ export default function App() {
     };
   }, []);
 
-  // Handle referral links (e.g. ?code=12345 or /register?code=12345)
+  // Handle referral links & social media ad clicks (e.g. ?code=12345, ?fbclid=..., or /register)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code') || params.get('ref') || params.get('invite');
       const isRegisterPath = window.location.pathname.toLowerCase().includes('register');
+      const isSocialMediaAd = params.has('fbclid') || params.has('utm_source') || params.has('ttclid') || params.get('mode') === 'register' || window.location.hash.toLowerCase().includes('register');
 
       let finalCode = '';
       const hasReferralInUrl = !!code;
@@ -386,7 +387,7 @@ export default function App() {
       if (finalCode) {
         setInvitationCode(finalCode);
         if (hasReferralInUrl) {
-          // Force logout / clear session of previous user to open registration page cleanly
+          // Clear previous stored session to ensure clean registration
           localStorage.removeItem('adpaint_user');
           setUserProfile(null);
           setPurchases([]);
@@ -401,7 +402,7 @@ export default function App() {
             setAuthTab('register');
           }
         }
-      } else if (isRegisterPath) {
+      } else if (isRegisterPath || isSocialMediaAd) {
         const storedUser = localStorage.getItem('adpaint_user');
         if (!storedUser) {
           setAuthTab('register');
@@ -890,7 +891,6 @@ export default function App() {
 
   // Set up Firestore real-time listener for global configs & plans for instant Mobile APK & Web updates
   useEffect(() => {
-    if (isQuotaExceeded()) return;
     let unsub: (() => void) | null = null;
     let unsubPlans: (() => void) | null = null;
 
@@ -908,13 +908,19 @@ export default function App() {
           ];
           keysToSync.forEach(key => {
             const serverVal = serverConfig[key];
-            if (serverVal) {
+            if (serverVal !== undefined && serverVal !== null && serverVal !== '') {
               const localVal = localStorage.getItem(key);
               if (localVal !== serverVal) {
                 localStorage.setItem(key, serverVal);
                 if (key === 'adpaint_support_avatar') {
                   window.dispatchEvent(new Event('adpaint_avatar_updated'));
                 }
+              }
+            } else if (key === 'adpaint_support_avatar') {
+              const localVal = localStorage.getItem(key);
+              if (localVal) {
+                localStorage.removeItem(key);
+                window.dispatchEvent(new Event('adpaint_avatar_updated'));
               }
             }
           });
@@ -1461,8 +1467,9 @@ export default function App() {
       setPendingNewUser(null);
       setRegisterOtpInput('');
       setRegisterOtpCode('');
-    } catch (err) {
-      setAuthError('Server communication error. Please try again.');
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      setAuthError(err?.message || 'Server communication error. Please try again.');
     }
   };
 

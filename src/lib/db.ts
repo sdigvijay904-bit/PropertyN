@@ -620,73 +620,57 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
     return { exists: true };
   }
 
-  if (!isQuotaExceeded()) {
-    try {
-      await seedDatabaseIfEmpty();
-      const usersColl = collection(db, "users");
+  // Always attempt Firestore check first
+  try {
+    const usersColl = collection(db, "users");
 
-      const phoneCandidates = Array.from(new Set([
-        cleanedPhone,
-        phone.trim(),
-        rawDigits,
-        last10,
-        `+91${last10}`,
-        `+91 ${last10}`,
-        `91${last10}`
-      ])).filter(Boolean);
+    const phoneCandidates = Array.from(new Set([
+      cleanedPhone,
+      phone.trim(),
+      rawDigits,
+      last10,
+      `+91${last10}`,
+      `+91 ${last10}`,
+      `91${last10}`
+    ])).filter(Boolean);
 
-      for (const cand of phoneCandidates) {
-        const q = query(usersColl, where("phone", "==", cand));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          // Verify at least one match is not admin
-          const foundUser = querySnapshot.docs.some(docSnap => {
-            const data = docSnap.data() as UserProfile;
-            return docSnap.id !== 'usr_admin' && data.role !== 'admin';
-          });
-          if (foundUser) return { exists: true };
-        }
+    for (const cand of phoneCandidates) {
+      const q = query(usersColl, where("phone", "==", cand));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        // Verify at least one match is not admin or demo seed
+        const foundUser = querySnapshot.docs.some(docSnap => {
+          const data = docSnap.data() as UserProfile;
+          return docSnap.id !== 'usr_admin' && docSnap.id !== 'usr_demo' && docSnap.id !== 'usr_sandeep' && data.role !== 'admin';
+        });
+        if (foundUser) return { exists: true };
       }
+    }
 
-      if (last10.length >= 10) {
-        const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
-        for (const dId of docIds) {
-          const userDocRef = doc(db, "users", dId);
-          const userSnap = await getDoc(userDocRef);
-          if (userSnap.exists()) {
-            const uData = userSnap.data() as UserProfile;
-            if (uData && uData.role !== 'admin' && dId !== 'usr_admin') {
-              const uDigits = (uData.phone || "").replace(/\D/g, "");
-              if (uDigits.length >= 10 && uDigits.slice(-10) === last10) {
-                return { exists: true };
-              }
+    if (last10.length >= 10) {
+      const docIds = [`usr_${last10}`, `usr_91${last10}`, last10];
+      for (const dId of docIds) {
+        const userDocRef = doc(db, "users", dId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          const uData = userSnap.data() as UserProfile;
+          if (uData && uData.role !== 'admin' && dId !== 'usr_admin' && dId !== 'usr_demo' && dId !== 'usr_sandeep') {
+            const uDigits = (uData.phone || "").replace(/\D/g, "");
+            if (uDigits.length >= 10 && uDigits.slice(-10) === last10) {
+              return { exists: true };
             }
           }
         }
       }
-
-      const allUsersSnap = await getDocs(usersColl);
-      let found = false;
-      allUsersSnap.forEach((docSnap) => {
-        if (found) return;
-        if (docSnap.id === 'usr_admin') return;
-        const uData = docSnap.data() as UserProfile;
-        if (uData.role === 'admin') return;
-        const uDigits = uData.phone ? uData.phone.replace(/\D/g, "") : "";
-        if (last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.slice(-10) === last10) {
-          found = true;
-        }
-      });
-      if (found) return { exists: true };
-    } catch (err) {
-      markQuotaExceeded(err);
-      console.warn("firestoreCheckPhone firestore read failed (using local check):", err);
     }
+  } catch (err) {
+    console.warn("firestoreCheckPhone firestore read notice (checking local storage):", err);
   }
 
+  // Local storage check excluding seed demo users
   const localUsers = getStoredUsers();
   const exists = localUsers.some(u => {
-    if (u.role === 'admin' || u.id === 'usr_admin') return false;
+    if (u.role === 'admin' || u.id === 'usr_admin' || u.id === 'usr_demo' || u.id === 'usr_sandeep') return false;
     const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
     return (
       last10 && last10.length >= 10 && uDigits.length >= 10 && uDigits.slice(-10) === last10
@@ -924,16 +908,13 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     userPhone: newUser.phone
   };
 
-  if (!isQuotaExceeded()) {
-    try {
-      await seedDatabaseIfEmpty();
-      const userDocRef = doc(db, "users", newUserId);
-      await setDoc(userDocRef, cleanUndefined(newUser));
-      await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
-    } catch (err) {
-      markQuotaExceeded(err);
-      console.warn("Firestore write failed during registration (saving locally):", err);
-    }
+  try {
+    const userDocRef = doc(db, "users", newUserId);
+    await setDoc(userDocRef, cleanUndefined(newUser));
+    await setDoc(doc(db, "transactions", signupTx.id), cleanUndefined(signupTx));
+    firestoreQuotaExceeded = false;
+  } catch (err) {
+    console.warn("Firestore write notice during registration (saved locally):", err);
   }
 
   // Update local storage so user is registered & saved locally
