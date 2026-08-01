@@ -14,6 +14,7 @@ interface WithdrawModalProps {
   onClose: () => void;
   onWithdrawRequest: (amount: number, withdrawPass: string) => void;
   onOpenBankConfig: () => void;
+  onUpdateBank?: (bank: BankAccount) => void;
   hasPurchasedPlan: boolean;
   transactions: TransactionRecord[];
   purchases?: PurchaseRecord[];
@@ -25,6 +26,7 @@ export default function WithdrawModal({
   onClose,
   onWithdrawRequest,
   onOpenBankConfig,
+  onUpdateBank,
   hasPurchasedPlan,
   transactions,
   purchases = []
@@ -34,6 +36,23 @@ export default function WithdrawModal({
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Bank Binding Inline State
+  const [isBindingBank, setIsBindingBank] = useState<boolean>(false);
+  const [bankNameInput, setBankNameInput] = useState<string>(user.bankAccount?.bankName || '');
+  const [holderNameInput, setHolderNameInput] = useState<string>(user.bankAccount?.accountHolder || '');
+  const [accountNoInput, setAccountNoInput] = useState<string>(user.bankAccount?.accountNumber || '');
+  const [ifscInput, setIfscInput] = useState<string>(user.bankAccount?.ifscCode || '');
+  const [bankError, setBankError] = useState<string>('');
+
+  React.useEffect(() => {
+    if (user.bankAccount) {
+      setBankNameInput(user.bankAccount.bankName || '');
+      setHolderNameInput(user.bankAccount.accountHolder || '');
+      setAccountNoInput(user.bankAccount.accountNumber || '');
+      setIfscInput(user.bankAccount.ifscCode || '');
+    }
+  }, [user.bankAccount]);
 
   const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '120');
 
@@ -54,7 +73,41 @@ export default function WithdrawModal({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-  const withdrawableLimit = hasPurchasedPlan ? Math.min(user.balance, maxWithdrawablePlanEarnings) : 0;
+  // Withdrawable limit shows total remaining plan income earned
+  const withdrawableLimit = hasPurchasedPlan ? maxWithdrawablePlanEarnings : 0;
+
+  const handleSaveBankInline = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setBankError('');
+    if (!bankNameInput.trim()) {
+      setBankError('Bank name is required');
+      return;
+    }
+    if (!holderNameInput.trim()) {
+      setBankError('Account holder name is required');
+      return;
+    }
+    if (!accountNoInput.trim()) {
+      setBankError('Account number is required');
+      return;
+    }
+    if (!ifscInput.trim()) {
+      setBankError('IFSC code is required');
+      return;
+    }
+
+    const bankObj: BankAccount = {
+      bankName: bankNameInput.trim(),
+      accountHolder: holderNameInput.trim(),
+      accountNumber: accountNoInput.trim(),
+      ifscCode: ifscInput.trim().toUpperCase()
+    };
+
+    if (onUpdateBank) {
+      onUpdateBank(bankObj);
+    }
+    setIsBindingBank(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,21 +244,97 @@ export default function WithdrawModal({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Destination Bank Account</label>
-                {!user.bankAccount && (
+                {!isBindingBank && (
                   <button
                     type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenBankConfig();
-                    }}
-                    className="text-xs font-bold text-emerald-600 hover:underline"
+                    onClick={() => setIsBindingBank(true)}
+                    className="text-xs font-bold text-emerald-600 hover:underline cursor-pointer"
                   >
-                    + Bind Bank Card
+                    {user.bankAccount ? 'Change Card' : '+ Bind Bank Card'}
                   </button>
                 )}
               </div>
 
-              {user.bankAccount ? (
+              {isBindingBank ? (
+                <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 space-y-3 text-left">
+                  <div className="flex justify-between items-center pb-2 border-b border-emerald-200/60">
+                    <span className="text-xs font-black text-emerald-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Landmark className="w-3.5 h-3.5 text-emerald-600" />
+                      Bind Bank Account Card
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsBindingBank(false);
+                        setBankError('');
+                      }}
+                      className="text-[11px] font-bold text-slate-500 hover:text-slate-800"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {bankError && (
+                    <p className="text-[11px] font-extrabold text-rose-600 bg-rose-50 p-2 rounded-lg border border-rose-100">
+                      ⚠️ {bankError}
+                    </p>
+                  )}
+
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Bank Name</label>
+                    <input
+                      type="text"
+                      value={bankNameInput}
+                      onChange={(e) => setBankNameInput(e.target.value)}
+                      placeholder="e.g. State Bank of India, HDFC, ICICI, PNB"
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none mt-0.5"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Account Holder Name</label>
+                    <input
+                      type="text"
+                      value={holderNameInput}
+                      onChange={(e) => setHolderNameInput(e.target.value)}
+                      placeholder="Name as printed on Bank Passbook"
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none mt-0.5"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">Account Number</label>
+                      <input
+                        type="text"
+                        value={accountNoInput}
+                        onChange={(e) => setAccountNoInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Bank A/C Number"
+                        className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none mt-0.5 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider">IFSC Code</label>
+                      <input
+                        type="text"
+                        value={ifscInput}
+                        onChange={(e) => setIfscInput(e.target.value.toUpperCase())}
+                        placeholder="e.g. SBIN0001234"
+                        className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 outline-none mt-0.5 font-mono uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveBankInline}
+                    className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer mt-1"
+                  >
+                    Save & Bind Bank Card
+                  </button>
+                </div>
+              ) : user.bankAccount ? (
                 <div className="p-4 rounded-2xl border border-gray-150 bg-gray-50/50 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
@@ -220,11 +349,8 @@ export default function WithdrawModal({
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenBankConfig();
-                    }}
-                    className="text-xs font-bold text-gray-500 hover:text-emerald-600"
+                    onClick={() => setIsBindingBank(true)}
+                    className="text-xs font-bold text-gray-500 hover:text-emerald-600 cursor-pointer"
                   >
                     Change
                   </button>
@@ -237,11 +363,8 @@ export default function WithdrawModal({
                   </p>
                   <button
                     type="button"
-                    onClick={() => {
-                      onClose();
-                      onOpenBankConfig();
-                    }}
-                    className="mt-1 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-extrabold text-xs rounded-xl shadow-sm"
+                    onClick={() => setIsBindingBank(true)}
+                    className="mt-1 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-sm cursor-pointer transition-all active:scale-95"
                   >
                     Bind Bank Card Now
                   </button>

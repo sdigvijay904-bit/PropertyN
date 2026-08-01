@@ -2311,8 +2311,8 @@ export default function App() {
               onWithdrawRequest={handleWithdrawRequest}
               onOpenBankConfig={() => {
                 setActiveTab('profile');
-                triggerToast('Go to "Bank Account" to bind your payout card.', 'info');
               }}
+              onUpdateBank={handleUpdateBank}
               hasPurchasedPlan={purchases.length > 0}
               transactions={transactions}
               purchases={purchases}
