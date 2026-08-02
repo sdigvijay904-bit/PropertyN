@@ -785,6 +785,23 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
   return result;
 }
 
+export function getStoredConfig(): Record<string, string> {
+  const localConfig: Record<string, string> = { ...SEED_CONFIG };
+  const keysToSync = [
+    'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
+    'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
+    'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
+    'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
+  ];
+  keysToSync.forEach(key => {
+    const val = localStorage.getItem(key);
+    if (val !== null && val !== undefined && val !== '') {
+      localConfig[key] = val;
+    }
+  });
+  return localConfig;
+}
+
 function getStoredPlans(): InvestmentPlan[] {
   let deletedPlans: string[] = [];
   try {
@@ -1278,8 +1295,9 @@ export async function firestoreResetPassword(payload: { phone: string; password_
 
 // Get state (replaces /api/get-state)
 export async function firestoreGetState(userId: string): Promise<any> {
-  let config = SEED_CONFIG;
-  let customTicker = null;
+  const localConfig = getStoredConfig();
+  let config: Record<string, string> = { ...SEED_CONFIG, ...localConfig };
+  let customTicker = localStorage.getItem('adpaint_custom_ticker') || null;
   let plans: InvestmentPlan[] = getStoredPlans();
   let transactions: TransactionRecord[] = getStoredTransactions();
   let purchases: PurchaseRecord[] = userId ? getStoredPurchases(userId, transactions, plans) : [];
@@ -1292,7 +1310,9 @@ export async function firestoreGetState(userId: string): Promise<any> {
       const configSnap = await getDoc(doc(db, "global", "config"));
       if (configSnap.exists()) {
         const configData = configSnap.data();
-        if (configData.config) config = configData.config;
+        if (configData.config && typeof configData.config === 'object') {
+          config = { ...config, ...configData.config, ...localConfig };
+        }
         if (configData.customTicker) customTicker = configData.customTicker;
       }
 
@@ -1319,7 +1339,30 @@ export async function firestoreGetState(userId: string): Promise<any> {
       const plansSnap = await getDocs(collection(db, "plans"));
       const fsPlans: InvestmentPlan[] = [];
       plansSnap.forEach((doc) => fsPlans.push(doc.data() as InvestmentPlan));
-      if (fsPlans.length > 0) plans = fsPlans;
+      let rawDelP: string[] = [];
+      try {
+        const raw = localStorage.getItem('adpaint_deleted_plans');
+        if (raw) rawDelP = JSON.parse(raw);
+      } catch (e) {}
+
+      if (fsPlans.length > 0) {
+        const pMap = new Map<string, InvestmentPlan>();
+        const localPlans = getStoredPlans();
+        fsPlans.forEach(p => {
+          if (p && p.id && !rawDelP.includes(p.id)) pMap.set(p.id, p);
+        });
+        localPlans.forEach(p => {
+          if (p && p.id && !rawDelP.includes(p.id)) {
+            const existing = pMap.get(p.id);
+            if (existing) {
+              pMap.set(p.id, { ...existing, ...p });
+            } else {
+              pMap.set(p.id, p);
+            }
+          }
+        });
+        plans = Array.from(pMap.values());
+      }
 
       const transactionsSnap = await getDocs(collection(db, "transactions"));
       const fsTransactions: TransactionRecord[] = [];
@@ -1677,5 +1720,12 @@ export async function firestoreSaveState(payload: {
     }
   }
 
-  return await firestoreGetState(userId);
+  return {
+    usersList,
+    plans,
+    transactions,
+    purchases,
+    config,
+    customTicker
+  };
 }

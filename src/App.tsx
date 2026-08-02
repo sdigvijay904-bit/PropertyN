@@ -722,6 +722,7 @@ export default function App() {
     const targetUsersList = currentUsersList || usersListRef.current;
 
     pushTimeoutRef.current = setTimeout(async () => {
+      lastLocalUpdateRef.current = Date.now();
       try {
         const userId = targetUser ? targetUser.id : '';
         const targetPurchases = rawPurchases.map(p => {
@@ -740,7 +741,7 @@ export default function App() {
         ];
         keysToSync.forEach(key => {
           const val = localStorage.getItem(key);
-          if (val) localConfig[key] = val;
+          if (val !== null && val !== undefined && val !== '') localConfig[key] = val;
         });
 
         const payload = {
@@ -754,6 +755,7 @@ export default function App() {
         };
 
         const data = await firestoreSaveState(payload);
+        lastLocalUpdateRef.current = Date.now();
         if (data) {
           if (data.plans && data.plans.length > 0) {
             setPlans(data.plans);
@@ -920,6 +922,7 @@ export default function App() {
         if (snapshot.exists()) {
           const data = snapshot.data();
           const serverConfig = data.config || {};
+          const isRecentlyEditedLocally = Date.now() - lastLocalUpdateRef.current < 10000;
           const keysToSync = [
             'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
             'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
@@ -930,21 +933,23 @@ export default function App() {
             const serverVal = serverConfig[key];
             if (serverVal !== undefined && serverVal !== null && serverVal !== '') {
               const localVal = localStorage.getItem(key);
-              if (localVal !== serverVal) {
-                localStorage.setItem(key, serverVal);
-                if (key === 'adpaint_support_avatar') {
-                  window.dispatchEvent(new Event('adpaint_avatar_updated'));
+              if (!isRecentlyEditedLocally || !localVal) {
+                if (localVal !== serverVal) {
+                  localStorage.setItem(key, serverVal);
+                  if (key === 'adpaint_support_avatar') {
+                    window.dispatchEvent(new Event('adpaint_avatar_updated'));
+                  }
                 }
               }
             } else if (key === 'adpaint_support_avatar') {
               const localVal = localStorage.getItem(key);
-              if (localVal) {
+              if (localVal && !isRecentlyEditedLocally) {
                 localStorage.removeItem(key);
                 window.dispatchEvent(new Event('adpaint_avatar_updated'));
               }
             }
           });
-          if (data.customTicker) {
+          if (data.customTicker && (!isRecentlyEditedLocally || !localStorage.getItem('adpaint_custom_ticker'))) {
             localStorage.setItem('adpaint_custom_ticker', data.customTicker);
           }
         }
@@ -974,11 +979,29 @@ export default function App() {
         });
 
         if (livePlans.length > 0) {
-          const isDiff = JSON.stringify(livePlans) !== JSON.stringify(plansRef.current);
+          const isRecentlyEditedLocally = Date.now() - lastLocalUpdateRef.current < 10000;
+          const pMap = new Map<string, InvestmentPlan>();
+          livePlans.forEach(p => { if (p && p.id) pMap.set(p.id, p); });
+          plansRef.current.forEach(p => {
+            if (p && p.id && !rawDelP.includes(p.id)) {
+              const existing = pMap.get(p.id);
+              if (existing) {
+                if (isRecentlyEditedLocally) {
+                  pMap.set(p.id, { ...existing, ...p });
+                } else {
+                  pMap.set(p.id, existing);
+                }
+              } else {
+                pMap.set(p.id, p);
+              }
+            }
+          });
+          const mergedPlans = Array.from(pMap.values());
+          const isDiff = JSON.stringify(mergedPlans) !== JSON.stringify(plansRef.current);
           if (isDiff) {
-            setPlans(livePlans);
-            plansRef.current = livePlans;
-            localStorage.setItem('adpaint_plans', JSON.stringify(livePlans));
+            setPlans(mergedPlans);
+            plansRef.current = mergedPlans;
+            localStorage.setItem('adpaint_plans', JSON.stringify(mergedPlans));
           }
         }
       }, (err) => {

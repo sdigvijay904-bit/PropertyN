@@ -262,10 +262,18 @@ export default function AdminSection({
       'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
       'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
     ];
+    if (overrides) {
+      Object.entries(overrides).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) {
+          localStorage.setItem(k, v);
+        }
+      });
+    }
+
     const configMap: Record<string, string> = {};
     keysToSync.forEach(key => {
-      const val = overrides?.[key] ?? localStorage.getItem(key);
-      if (val) configMap[key] = val;
+      const val = localStorage.getItem(key);
+      if (val !== null && val !== undefined) configMap[key] = val;
     });
 
     if (!isQuotaExceeded()) {
