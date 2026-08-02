@@ -763,9 +763,22 @@ export default function App() {
             plansRef.current = data.plans;
           }
           if (data.usersList && data.usersList.length > 0) {
-            setUsersList(data.usersList);
-            localStorage.setItem('adpaint_users_list', JSON.stringify(data.usersList));
-            usersListRef.current = data.usersList;
+            const uMap = new Map<string, UserProfile>();
+            usersListRef.current.forEach(u => { if (u && u.id) uMap.set(u.id, u); });
+            data.usersList.forEach((u: UserProfile) => {
+              if (u && u.id) {
+                const existing = uMap.get(u.id);
+                if (existing) {
+                  uMap.set(u.id, { ...existing, ...u });
+                } else {
+                  uMap.set(u.id, u);
+                }
+              }
+            });
+            const mergedUsersList = Array.from(uMap.values());
+            setUsersList(mergedUsersList);
+            localStorage.setItem('adpaint_users_list', JSON.stringify(mergedUsersList));
+            usersListRef.current = mergedUsersList;
             if (targetUser) {
               const targetPhone = targetUser.phone ? targetUser.phone.replace(/\D/g, '') : '';
               const targetLast10 = targetPhone.length >= 10 ? targetPhone.slice(-10) : targetPhone;

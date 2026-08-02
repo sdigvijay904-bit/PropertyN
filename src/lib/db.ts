@@ -600,6 +600,28 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         });
       } catch (e) {}
 
+      // 7. Firestore `purchases` collection (reconstruct missing users if any)
+      try {
+        const purSnap = await getDocs(collection(db, "purchases"));
+        purSnap.forEach(d => {
+          const pur = d.data();
+          if (pur) {
+            const rawPhone = pur.userPhone || pur.phone || '';
+            const digits = rawPhone.replace(/\D/g, '').slice(-10);
+            const userId = pur.userId || (digits ? `usr_${digits}` : '');
+            if (userId && !userMap.has(userId)) {
+              addUserToMap({
+                id: userId,
+                name: pur.userName || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
+                phone: rawPhone || (digits ? `+91 ${digits}` : ''),
+                balance: 100,
+                totalEarnings: 0
+              });
+            }
+          }
+        });
+      } catch (e) {}
+
       // Batch write all discovered users to Firestore
       const finalUsers = Array.from(userMap.values());
       for (let i = 0; i < finalUsers.length; i += 400) {
@@ -1158,14 +1180,14 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     const userDocRef = doc(db, "users", newUserId);
     const txDocRef = doc(db, "transactions", signupTx.id);
 
-    setDoc(userDocRef, cleanUndefined(newUser), { merge: true })
+    await setDoc(userDocRef, cleanUndefined(newUser), { merge: true })
       .then(() => console.log("Successfully created and saved new user account in Firestore:", newUserId))
       .catch((err) => {
         markQuotaExceeded(err);
         console.warn("Notice saving user to Firestore (saved locally):", err);
       });
 
-    setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
+    await setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
       .catch((err) => console.warn("Notice saving signup tx to Firestore (saved locally):", err));
   } catch (err) {
     console.warn("Notice saving new user to Firestore during registration (saved locally):", err);
@@ -1718,6 +1740,27 @@ export async function firestoreSaveState(payload: {
       markQuotaExceeded(err);
       console.warn("firestoreSaveState error (saved locally):", err);
     }
+  }
+
+  if (isAdmin && !isQuotaExceeded()) {
+    try {
+      const fullUsers = await scanAndMergeAllUsers(usersList);
+      if (fullUsers && fullUsers.length > 0) {
+        usersList = fullUsers;
+      }
+    } catch (e) {}
+  } else {
+    const localUsers = getStoredUsers();
+    const userMap = new Map<string, UserProfile>();
+    if (Array.isArray(usersList)) {
+      usersList.forEach(u => { if (u && u.id) userMap.set(u.id, u); });
+    }
+    localUsers.forEach(u => {
+      if (u && u.id && !userMap.has(u.id)) {
+        userMap.set(u.id, u);
+      }
+    });
+    usersList = Array.from(userMap.values());
   }
 
   return {

@@ -81,24 +81,32 @@ export default function AdminSection({
 
   React.useEffect(() => {
     let isMounted = true;
-    scanAndMergeAllUsers(usersList).then(scanned => {
-      if (isMounted && scanned && scanned.length > 0) {
-        setUsersList(scanned);
-        onSyncConfig?.(undefined, undefined, scanned, undefined);
+    const doScan = async () => {
+      try {
+        const scanned = await scanAndMergeAllUsers(usersList);
+        if (isMounted && scanned && scanned.length > 0) {
+          setUsersList(scanned);
+          onSyncConfig?.(undefined, undefined, scanned, undefined);
+        }
+      } catch (e) {}
+    };
+
+    doScan();
+
+    const interval = setInterval(() => {
+      if (isMounted) {
+        doScan();
       }
-    });
+    }, 5000);
 
     const handleUsersUpdated = async () => {
-      const scanned = await scanAndMergeAllUsers(usersList);
-      if (isMounted && scanned && scanned.length > 0) {
-        setUsersList(scanned);
-        onSyncConfig?.(undefined, undefined, scanned, undefined);
-      }
+      doScan();
     };
 
     window.addEventListener('adpaint_users_updated', handleUsersUpdated);
     return () => {
       isMounted = false;
+      clearInterval(interval);
       window.removeEventListener('adpaint_users_updated', handleUsersUpdated);
     };
   }, []);
