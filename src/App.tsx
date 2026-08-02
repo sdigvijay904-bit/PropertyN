@@ -1596,11 +1596,9 @@ export default function App() {
       setRegisterOtpInput('');
       setRegisterOtpCode('');
 
-      // Background non-blocking sync with server
-      setTimeout(() => {
-        pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
-        syncWithServer(serverUser, true);
-      }, 50);
+      // Directly push state to server so Firestore gets new user record updated immediately
+      pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
+      syncWithServer(serverUser, true);
     } catch (err: any) {
       console.error("Registration error:", err);
       setAuthError(err?.message || 'Server communication error. Please try again.');

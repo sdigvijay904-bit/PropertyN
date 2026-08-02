@@ -910,7 +910,7 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
     };
 
     const timeout = new Promise<{ exists: boolean }>((resolve) =>
-      setTimeout(() => resolve({ exists: false }), 400)
+      setTimeout(() => resolve({ exists: false }), 1200)
     );
 
     return await Promise.race([fetchDoc(), timeout]);
@@ -1175,21 +1175,19 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   // Save to master backup snapshot
   saveMasterSnapshotBackup({ usersList: storedUsers, transactions: storedTxs });
 
-  // Direct write to Firestore users & transactions collection asynchronously (NON-BLOCKING for 0ms delay)
+  // Direct write to Firestore users & transactions collection
   try {
     const userDocRef = doc(db, "users", newUserId);
     const txDocRef = doc(db, "transactions", signupTx.id);
 
-    setDoc(userDocRef, cleanUndefined(newUser), { merge: true })
-      .then(() => console.log("Successfully created and saved new user account in Firestore:", newUserId))
-      .catch((err) => {
-        markQuotaExceeded(err);
-        console.warn("Notice saving user to Firestore (saved locally):", err);
-      });
-
-    setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
-      .catch((err) => console.warn("Notice saving signup tx to Firestore (saved locally):", err));
-  } catch (err) {
+    // Guarantee Firestore user document creation so Meta Ads webview & mobile browsers persist new user to Cloud
+    await Promise.all([
+      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
+      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
+    ]);
+    console.log("Successfully created and saved new user account in Firestore:", newUserId);
+  } catch (err: any) {
+    markQuotaExceeded(err);
     console.warn("Notice saving new user to Firestore during registration (saved locally):", err);
   }
 
