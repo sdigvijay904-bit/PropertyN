@@ -1530,6 +1530,16 @@ export default function App() {
     const clean10Digits = rawDigits.slice(-10);
     const targetPhone = `+91 ${clean10Digits}`;
     
+    // Instant local memory check (0ms)
+    const existsLocally = usersListRef.current.some(u => {
+      const uDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+      return uDigits.length >= 10 && uDigits.endsWith(clean10Digits);
+    });
+    if (existsLocally) {
+      setAuthError('Mobile number already registered! Please log in.');
+      return;
+    }
+
     setIsSubmittingAuth(true);
 
     try {
@@ -1573,12 +1583,6 @@ export default function App() {
       triggerToast('Account Registered Successfully! Enjoy ₹100 Welcome Bonus.', 'success');
       localStorage.removeItem('adpaint_pending_invite_code');
 
-      // Directly push state to server so server receives the new user document immediately
-      pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
-
-      // Force instant sync with server
-      syncWithServer(serverUser, true);
-
       // Reset fields
       setFullName('');
       setMobileNumber('');
@@ -1591,6 +1595,12 @@ export default function App() {
       setPendingNewUser(null);
       setRegisterOtpInput('');
       setRegisterOtpCode('');
+
+      // Background non-blocking sync with server
+      setTimeout(() => {
+        pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
+        syncWithServer(serverUser, true);
+      }, 50);
     } catch (err: any) {
       console.error("Registration error:", err);
       setAuthError(err?.message || 'Server communication error. Please try again.');
