@@ -1761,17 +1761,38 @@ export default function AdminSection({
             >
               {/* Search Bar & Category Filter Pills */}
               <div className="space-y-2.5">
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
-                    <Search className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Search phone (9595350797), name, invite code, sponsor..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-mono"
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                      <Search className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Search phone (9595350797), name, invite code, sponsor..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (onRefreshData) {
+                        setIsRefreshing(true);
+                        await onRefreshData();
+                        setIsRefreshing(false);
+                        triggerToast('User list re-synced with Firestore!', 'success');
+                      } else {
+                        onSyncConfig?.();
+                        triggerToast('User list updated.', 'info');
+                      }
+                    }}
+                    disabled={isRefreshing}
+                    className="px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Sync Users</span>
+                  </button>
                 </div>
 
                 {/* Filter Pills */}

@@ -1031,7 +1031,28 @@ export default function App() {
       console.warn("Top-level snapshot setup notice:", err);
     }
 
+    const handleStorageUsersUpdate = () => {
+      try {
+        const stored = getStoredUsers();
+        if (stored && stored.length > 0) {
+          const uMap = new Map<string, UserProfile>();
+          usersListRef.current.forEach(u => { if (u && u.id) uMap.set(u.id, u); });
+          stored.forEach(u => { if (u && u.id) uMap.set(u.id, u); });
+          const merged = Array.from(uMap.values());
+          if (JSON.stringify(merged) !== JSON.stringify(usersListRef.current)) {
+            setUsersList(merged);
+            usersListRef.current = merged;
+          }
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('storage', handleStorageUsersUpdate);
+    window.addEventListener('adpaint_users_updated', handleStorageUsersUpdate);
+
     return () => {
+      window.removeEventListener('storage', handleStorageUsersUpdate);
+      window.removeEventListener('adpaint_users_updated', handleStorageUsersUpdate);
       if (unsub) unsub();
       if (unsubPlans) unsubPlans();
       if (unsubUsers) unsubUsers();
@@ -1504,6 +1525,7 @@ export default function App() {
       usersListRef.current = updatedUsersList;
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
       saveMasterSnapshotBackup({ usersList: updatedUsersList, transactions: regData.transactions });
+      window.dispatchEvent(new Event('adpaint_users_updated'));
 
       localStorage.setItem('adpaint_user', JSON.stringify(serverUser));
       localStorage.setItem('adpaint_transactions', JSON.stringify(regData.transactions));

@@ -308,8 +308,8 @@ let quotaExceededTime = 0;
 
 export function isQuotaExceeded(): boolean {
   if (!firestoreQuotaExceeded) return false;
-  // Retry Firestore connection after 15 minutes
-  if (Date.now() - quotaExceededTime > 15 * 60 * 1000) {
+  // Retry Firestore connection after 30 seconds
+  if (Date.now() - quotaExceededTime > 30 * 1000) {
     firestoreQuotaExceeded = false;
     return false;
   }
@@ -321,16 +321,13 @@ export function markQuotaExceeded(err: any): boolean {
   const msg = String(err?.message || err?.details || err || '').toLowerCase();
   const code = String(err?.code || '').toLowerCase();
   if (
+    code === 'resource-exhausted' ||
     code.includes('resource-exhausted') ||
-    code.includes('quota') ||
     msg.includes('quota limit') ||
-    msg.includes('quota') ||
-    msg.includes('resource_exhausted') ||
-    msg.includes('resource-exhausted') ||
-    msg.includes('exceeded')
+    msg.includes('resource_exhausted')
   ) {
     if (!firestoreQuotaExceeded) {
-      console.warn("[Firestore Quota Exceeded] Circuit breaker activated. App will seamlessly operate on LocalStorage.");
+      console.warn("[Firestore Quota Exceeded] Circuit breaker activated.");
     }
     firestoreQuotaExceeded = true;
     quotaExceededTime = Date.now();
@@ -771,7 +768,6 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
 
     return await Promise.race([fetchDoc(), timeout]);
   } catch (err) {
-    markQuotaExceeded(err);
     console.warn("firestoreCheckPhone firestore read notice (checking local storage):", err);
   }
 
@@ -1033,23 +1029,21 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   saveMasterSnapshotBackup({ usersList: storedUsers, transactions: storedTxs });
 
   // Direct write to Firestore users & transactions collection
-  if (!isQuotaExceeded()) {
-    try {
-      const userDocRef = doc(db, "users", newUserId);
-      const txDocRef = doc(db, "transactions", signupTx.id);
+  try {
+    const userDocRef = doc(db, "users", newUserId);
+    const txDocRef = doc(db, "transactions", signupTx.id);
 
-      const firestoreWrite = async () => {
-        await setDoc(userDocRef, cleanUndefined(newUser), { merge: true });
-        await setDoc(txDocRef, cleanUndefined(signupTx), { merge: true });
-      };
+    setDoc(userDocRef, cleanUndefined(newUser), { merge: true })
+      .then(() => console.log("Successfully created and saved new user account in Firestore:", newUserId))
+      .catch((err) => {
+        markQuotaExceeded(err);
+        console.warn("Notice saving user to Firestore (saved locally):", err);
+      });
 
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore write timeout")), 8000));
-      await Promise.race([firestoreWrite(), timeout]);
-      console.log("Successfully created and saved new user account in Firestore:", newUserId);
-    } catch (err) {
-      markQuotaExceeded(err);
-      console.warn("Notice saving new user to Firestore during registration (saved locally):", err);
-    }
+    setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
+      .catch((err) => console.warn("Notice saving signup tx to Firestore (saved locally):", err));
+  } catch (err) {
+    console.warn("Notice saving new user to Firestore during registration (saved locally):", err);
   }
 
   return {
