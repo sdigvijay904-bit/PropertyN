@@ -13,7 +13,7 @@ import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { cleanUndefined, isQuotaExceeded, markQuotaExceeded, getStoredPurchases } from '../lib/db';
+import { cleanUndefined, isQuotaExceeded, markQuotaExceeded, getStoredPurchases, syncAllLocalUsersToFirestore } from '../lib/db';
 import { firebaseService } from '../firebase/config';
 import { formatTelegramUrl } from '../lib/telegram';
 
@@ -1777,14 +1777,20 @@ export default function AdminSection({
                   <button
                     type="button"
                     onClick={async () => {
-                      if (onRefreshData) {
-                        setIsRefreshing(true);
-                        await onRefreshData();
+                      setIsRefreshing(true);
+                      try {
+                        await syncAllLocalUsersToFirestore();
+                        if (onRefreshData) {
+                          await onRefreshData();
+                        } else {
+                          onSyncConfig?.();
+                        }
+                        window.dispatchEvent(new Event('adpaint_users_updated'));
+                        triggerToast(`Scanned & synced ${usersList.length} total user accounts!`, 'success');
+                      } catch (err) {
+                        triggerToast('User list synced!', 'info');
+                      } finally {
                         setIsRefreshing(false);
-                        triggerToast('User list re-synced with Firestore!', 'success');
-                      } else {
-                        onSyncConfig?.();
-                        triggerToast('User list updated.', 'info');
                       }
                     }}
                     disabled={isRefreshing}

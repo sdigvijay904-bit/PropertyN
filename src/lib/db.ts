@@ -1357,7 +1357,7 @@ export async function firestoreGetState(userId: string): Promise<any> {
     }
   }
 
-  // Merge local stored users with phone deduplication, ensuring server users retain total precedence
+  // Merge local stored users into usersList without dropping any user account IDs
   const localUsers = getStoredUsers();
   const userMap = new Map<string, UserProfile>();
   
@@ -1366,17 +1366,21 @@ export async function firestoreGetState(userId: string): Promise<any> {
     if (u && u.id) userMap.set(u.id, u);
   });
 
-  const activePhones = new Set<string>();
-  usersList.forEach(u => {
-    const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
-    if (digits) activePhones.add(digits);
-  });
-
-  // 2. Add stored local users only if not on server & no phone overlap
+  // 2. Add all stored local users by ID, merging stats
   localUsers.forEach(u => {
     if (!u || !u.id) return;
-    const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
-    if (!userMap.has(u.id) && (!digits || !activePhones.has(digits))) {
+    const existing = userMap.get(u.id);
+    if (existing) {
+      userMap.set(u.id, {
+        ...u,
+        ...existing,
+        balance: Math.max(u.balance ?? 0, existing.balance ?? 0),
+        totalEarnings: Math.max(u.totalEarnings ?? 0, existing.totalEarnings ?? 0),
+        inviterCode: existing.inviterCode || u.inviterCode,
+        bankAccount: existing.bankAccount || u.bankAccount,
+        password: existing.password || u.password
+      });
+    } else {
       userMap.set(u.id, u);
     }
   });

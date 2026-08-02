@@ -41,6 +41,7 @@ import {
   firestoreSaveState,
   saveMasterSnapshotBackup,
   getStoredPurchases,
+  getStoredUsers,
   cleanUndefined,
   isQuotaExceeded,
   markQuotaExceeded
@@ -1001,17 +1002,16 @@ export default function App() {
             }
           });
 
-          // Also merge local memory users if not yet on server
-          const phoneMap = new Map<string, UserProfile>();
-          liveUsers.forEach(u => {
-            const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
-            if (digits) phoneMap.set(digits, u);
+          // Also merge local memory users & local storage users by ID so no user ID is ever dropped
+          usersListRef.current.forEach(localU => {
+            if (localU && localU.id && !uMap.has(localU.id)) {
+              uMap.set(localU.id, localU);
+            }
           });
 
-          usersListRef.current.forEach(localU => {
-            if (!localU || !localU.id) return;
-            const digits = localU.phone ? localU.phone.replace(/\D/g, '').slice(-10) : '';
-            if (!uMap.has(localU.id) && (!digits || !phoneMap.has(digits))) {
+          const storedLocal1 = getStoredUsers();
+          storedLocal1.forEach(localU => {
+            if (localU && localU.id && !uMap.has(localU.id)) {
               uMap.set(localU.id, localU);
             }
           });
@@ -1202,18 +1202,16 @@ export default function App() {
             }
           });
 
-          // Index server users by phone number (last 10 digits)
-          const phoneMap = new Map<string, UserProfile>();
-          liveUsers.forEach(u => {
-            const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
-            if (digits) phoneMap.set(digits, u);
+          // Preserve all local memory users and local storage users by ID so no user is dropped
+          usersListRef.current.forEach(localU => {
+            if (localU && localU.id && !uMap.has(localU.id)) {
+              uMap.set(localU.id, localU);
+            }
           });
 
-          // Only keep local memory users if they aren't on server and don't share a phone number with any server user
-          usersListRef.current.forEach(localU => {
-            if (!localU || !localU.id) return;
-            const digits = localU.phone ? localU.phone.replace(/\D/g, '').slice(-10) : '';
-            if (!uMap.has(localU.id) && (!digits || !phoneMap.has(digits))) {
+          const storedLocal2 = getStoredUsers();
+          storedLocal2.forEach(localU => {
+            if (localU && localU.id && !uMap.has(localU.id)) {
               uMap.set(localU.id, localU);
             }
           });
