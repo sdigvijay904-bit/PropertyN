@@ -67,6 +67,20 @@ export default function ProfileSection({
     totalClaimedFromTx
   );
 
+  // Check if user has purchased any VIP plan
+  const isVipMember = purchases.some((p) => {
+    const titleLower = (p.planTitle || '').toLowerCase();
+    const idLower = (p.planId || p.id || '').toLowerCase();
+    return (
+      titleLower.includes('vip') ||
+      idLower.includes('vip') ||
+      idLower.includes('special_offer') ||
+      titleLower.includes('dlf luxury') ||
+      titleLower.includes('emaar') ||
+      titleLower.includes('grand metro')
+    );
+  });
+
   // Bank Form State
   const [bankName, setBankName] = useState<string>(user.bankAccount?.bankName || '');
   const [holderName, setHolderName] = useState<string>(user.bankAccount?.accountHolder || '');
@@ -876,11 +890,18 @@ export default function ProfileSection({
                 <h2 className="text-lg font-black tracking-tight flex items-center gap-1.5 text-white">
                   ID : {user.phone && user.phone.length > 6 ? user.phone.substring(0, 6) + '**' + user.phone.substring(user.phone.length - 2) : user.phone}
                 </h2>
-                {/* VIP Member pill badge */}
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-bold text-white/95 border border-white/10 mt-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-                  <span>VIP Member</span>
-                </div>
+                {/* VIP or Standard Member pill badge */}
+                {isVipMember ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 backdrop-blur-md rounded-full text-[10px] font-bold text-amber-300 border border-amber-400/30 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span>VIP Member</span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-[10px] font-bold text-white/90 border border-white/10 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Standard Member</span>
+                  </div>
+                )}
               </div>
             </div>
 
