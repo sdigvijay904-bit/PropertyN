@@ -491,10 +491,10 @@ export default function App() {
 
             if (existingServerUser) {
               let updatedField = false;
-              // Preserve highest local balance and totalEarnings to prevent stale server data from reverting user claims
+              // Preserve highest local balance and totalEarnings while letting fresh server user attributes take precedence
               const mergedObj = {
-                ...existingServerUser,
                 ...localUser,
+                ...existingServerUser,
                 balance: Math.max(localUser.balance ?? 0, existingServerUser.balance ?? 0),
                 totalEarnings: Math.max(localUser.totalEarnings ?? 0, existingServerUser.totalEarnings ?? 0)
               };
@@ -1037,8 +1037,8 @@ export default function App() {
             const local = usersListRef.current.find(l => l.id === u.id);
             if (local) {
               uMap.set(u.id, {
-                ...u,
                 ...local,
+                ...u,
                 balance: Math.max(u.balance ?? 0, local.balance ?? 0),
                 totalEarnings: Math.max(u.totalEarnings ?? 0, local.totalEarnings ?? 0)
               });
@@ -1231,8 +1231,8 @@ export default function App() {
             const local = usersListRef.current.find(l => l.id === u.id);
             if (local) {
               uMap.set(u.id, {
-                ...u,
                 ...local,
+                ...u,
                 balance: Math.max(u.balance ?? 0, local.balance ?? 0),
                 totalEarnings: Math.max(u.totalEarnings ?? 0, local.totalEarnings ?? 0)
               });

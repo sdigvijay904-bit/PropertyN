@@ -1560,6 +1560,16 @@ export async function firestoreGetState(userId: string): Promise<any> {
 
   usersList = Array.from(userMap.values());
 
+  // For admin sessions, run a full scan across users, transactions, deposits & purchases to reconstruct any missed registrations
+  if (userId && (userId.toLowerCase() === 'usr_admin' || userId.toLowerCase().includes('admin'))) {
+    try {
+      const fullScanned = await scanAndMergeAllUsers(usersList);
+      if (fullScanned && fullScanned.length > 0) {
+        usersList = fullScanned;
+      }
+    } catch (e) {}
+  }
+
   // Clean out any deleted plans or deleted purchases
   let deletedPlans: string[] = [];
   try {

@@ -83,7 +83,7 @@ export default function AdminSection({
     let isMounted = true;
     const doScan = async () => {
       try {
-        const scanned = await scanAndMergeAllUsers(usersList);
+        const scanned = await scanAndMergeAllUsers();
         if (isMounted && scanned && scanned.length > 0) {
           setUsersList(scanned);
           onSyncConfig?.(undefined, undefined, scanned, undefined);
