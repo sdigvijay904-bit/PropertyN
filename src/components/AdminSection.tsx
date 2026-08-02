@@ -495,11 +495,10 @@ export default function AdminSection({
   // Custom live ticker simulation state
   const [tickerMessage, setTickerMessage] = useState<string>('');
 
-  // Calculations for Stats Tab (exclude system admin from sponsor user count)
-  const nonAdminUsers = usersList.filter(u => u.role !== 'admin');
-  const totalUsers = nonAdminUsers.length;
-  const systemTotalBalance = nonAdminUsers.reduce((acc, u) => acc + u.balance, 0);
-  const systemTotalEarnings = nonAdminUsers.reduce((acc, u) => acc + u.totalEarnings, 0);
+  // Calculations for Stats Tab
+  const totalUsers = usersList.length;
+  const systemTotalBalance = usersList.reduce((acc, u) => acc + u.balance, 0);
+  const systemTotalEarnings = usersList.reduce((acc, u) => acc + u.totalEarnings, 0);
   
   const totalDeposited = transactions
     .filter(t => t.type === 'recharge' && t.status === 'success')
@@ -1786,7 +1785,7 @@ export default function AdminSection({
                     }`}
                   >
                     <span>All Accounts</span>
-                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">{usersList.filter(u => u.role !== 'admin').length}</span>
+                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">{usersList.length}</span>
                   </button>
 
                   <button
@@ -1799,7 +1798,7 @@ export default function AdminSection({
                   >
                     <span>🔗 Referral Link Accounts</span>
                     <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
-                      {usersList.filter(u => u.role !== 'admin' && Boolean(u.inviterCode)).length}
+                      {usersList.filter(u => Boolean(u.inviterCode)).length}
                     </span>
                   </button>
 
@@ -1813,7 +1812,7 @@ export default function AdminSection({
                   >
                     <span>👤 Direct Registered</span>
                     <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
-                      {usersList.filter(u => u.role !== 'admin' && !u.inviterCode).length}
+                      {usersList.filter(u => !u.inviterCode).length}
                     </span>
                   </button>
 
@@ -1828,7 +1827,6 @@ export default function AdminSection({
                     <span>👑 VIP Investors</span>
                     <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
                       {usersList.filter(u => {
-                        if (u.role === 'admin') return false;
                         const dep = getUserDeposits(u.id, u.phone);
                         const pur = getUserPurchases(u.id, u.phone);
                         return pur.length > 0 || dep.approvedDeposit > 0;
