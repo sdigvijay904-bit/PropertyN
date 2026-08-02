@@ -39,6 +39,7 @@ import {
   firestoreResetPassword,
   firestoreGetState,
   firestoreSaveState,
+  saveMasterSnapshotBackup,
   getStoredPurchases,
   cleanUndefined,
   isQuotaExceeded,
@@ -879,6 +880,15 @@ export default function App() {
       localStorage.setItem('adpaint_team', JSON.stringify(updatedTeam));
       setTeamMembers(updatedTeam);
     }
+
+    // Save master snapshot backup immediately for failsafe security
+    saveMasterSnapshotBackup({
+      usersList: nextUsersList,
+      plans: updatedPlans || plans,
+      transactions: finalTx || transactions,
+      purchases: updatedPurchases || purchases,
+      customTicker: localStorage.getItem('adpaint_custom_ticker')
+    });
 
     // Push the updated state asynchronously to the server to synchronize other active terminals instantly!
     // We only push to the server if we are logged in/registering (user !== null) or if plans, purchases, transactions, or team lists are updated.

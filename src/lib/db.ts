@@ -391,6 +391,48 @@ export async function seedDatabaseIfEmpty() {
   }
 }
 
+// Master Failsafe Snapshot Backup Helper
+export function saveMasterSnapshotBackup(payload: {
+  usersList?: UserProfile[];
+  plans?: InvestmentPlan[];
+  transactions?: TransactionRecord[];
+  purchases?: PurchaseRecord[];
+  config?: Record<string, string>;
+  customTicker?: string | null;
+}) {
+  try {
+    const rawBackup = localStorage.getItem('adpaint_master_backup');
+    let backup: any = {};
+    if (rawBackup) {
+      try { backup = JSON.parse(rawBackup); } catch (e) {}
+    }
+    if (Array.isArray(payload.usersList) && payload.usersList.length > 0) {
+      backup.usersList = payload.usersList;
+    }
+    if (Array.isArray(payload.plans) && payload.plans.length > 0) {
+      backup.plans = payload.plans;
+    }
+    if (Array.isArray(payload.transactions) && payload.transactions.length > 0) {
+      backup.transactions = payload.transactions;
+    }
+    if (Array.isArray(payload.purchases) && payload.purchases.length > 0) {
+      backup.purchases = payload.purchases;
+    }
+    if (payload.config) {
+      backup.config = { ...backup.config, ...payload.config };
+    }
+    if (payload.customTicker !== undefined) {
+      backup.customTicker = payload.customTicker;
+    }
+    backup.lastSavedAt = new Date().toISOString();
+    const jsonStr = JSON.stringify(backup);
+    localStorage.setItem('adpaint_master_backup', jsonStr);
+    try { sessionStorage.setItem('adpaint_master_backup', jsonStr); } catch (e) {}
+  } catch (e) {
+    console.warn("Notice: Local storage master backup snapshot exception", e);
+  }
+}
+
 // Local Storage Fallback Helpers
 export function getStoredUsers(): UserProfile[] {
   const map = new Map<string, UserProfile>();
@@ -400,7 +442,20 @@ export function getStoredUsers(): UserProfile[] {
     if (u && u.id) map.set(u.id, u);
   });
 
-  // 2. Parse adpaint_users_list
+  // 2. Parse adpaint_master_backup snapshot first
+  try {
+    const rawMaster = localStorage.getItem('adpaint_master_backup');
+    if (rawMaster) {
+      const parsedMaster = JSON.parse(rawMaster);
+      if (parsedMaster && Array.isArray(parsedMaster.usersList)) {
+        parsedMaster.usersList.forEach((u: UserProfile) => {
+          if (u && u.id) map.set(u.id, u);
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 3. Parse adpaint_users_list
   try {
     const raw = localStorage.getItem('adpaint_users_list');
     if (raw) {
@@ -1395,6 +1450,8 @@ export async function firestoreSaveState(payload: {
   }
 
   // Persist locally first so offline / quota-exceeded changes are never lost!
+  saveMasterSnapshotBackup({ usersList, plans, transactions, purchases, config, customTicker });
+
   if (Array.isArray(usersList) && usersList.length > 0) {
     localStorage.setItem('adpaint_users_list', JSON.stringify(usersList));
   }
