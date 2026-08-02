@@ -54,7 +54,7 @@ export default function WithdrawModal({
     }
   }, [user.bankAccount]);
 
-  const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '120');
+  const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '300');
 
   // Filter user-specific transactions
   const userTx = transactions.filter(
@@ -66,9 +66,17 @@ export default function WithdrawModal({
     .filter((t) => t.type === 'claim' && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  const totalClaimedFromPurchases = (purchases || [])
+    .filter((p) => (p.userId === user.id) || (p.userId === user.id.replace('usr_', '')))
+    .reduce((sum, p) => sum + (p.totalClaimed || 0), 0);
+
   // Plan Yield is strictly the actual claimed plan earnings matching Total Income on Home/Profile
   const totalPlanEarnings = hasPurchasedPlan
-    ? ((user.totalEarnings !== undefined && user.totalEarnings >= 0) ? user.totalEarnings : totalClaimedFromTx)
+    ? Math.max(
+        (user.totalEarnings !== undefined && user.totalEarnings >= 0) ? user.totalEarnings : 0,
+        totalClaimedFromPurchases,
+        totalClaimedFromTx
+      )
     : 0;
 
   // Sum successful/pending withdraw transactions for THIS user
@@ -77,8 +85,8 @@ export default function WithdrawModal({
     .reduce((sum, t) => sum + t.amount, 0);
 
   const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-  // Withdrawable limit is strictly the plan earnings earned minus withdrawn amount (only plan income can be withdrawn)
-  const withdrawableLimit = hasPurchasedPlan ? maxWithdrawablePlanEarnings : 0;
+  // Withdrawable limit is strictly the plan earnings earned minus withdrawn amount, capped by current wallet balance (deposit balance cannot be withdrawn)
+  const withdrawableLimit = hasPurchasedPlan ? Math.min(Math.max(0, user.balance), maxWithdrawablePlanEarnings) : 0;
 
   const handleSaveBankInline = (e?: React.FormEvent) => {
     if (e) e.preventDefault();

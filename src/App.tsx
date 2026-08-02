@@ -2055,8 +2055,16 @@ export default function App() {
       .filter((t) => t.type === 'claim' && t.status === 'success')
       .reduce((sum, t) => sum + t.amount, 0);
 
+    const totalClaimedFromPurchases = (purchases || [])
+      .filter((p) => (p.userId === userProfile.id) || (p.userId === userProfile.id.replace('usr_', '')))
+      .reduce((sum, p) => sum + (p.totalClaimed || 0), 0);
+
     const totalPlanEarnings = hasPurchased
-      ? ((userProfile.totalEarnings !== undefined && userProfile.totalEarnings >= 0) ? userProfile.totalEarnings : totalClaimedFromTx)
+      ? Math.max(
+          (userProfile.totalEarnings !== undefined && userProfile.totalEarnings >= 0) ? userProfile.totalEarnings : 0,
+          totalClaimedFromPurchases,
+          totalClaimedFromTx
+        )
       : 0;
 
     const totalWithdrawnAmount = userTx
@@ -2064,11 +2072,11 @@ export default function App() {
       .reduce((sum, t) => sum + t.amount, 0);
 
     const maxWithdrawablePlanEarnings = Math.max(0, totalPlanEarnings - totalWithdrawnAmount);
-    const withdrawableLimit = hasPurchased ? maxWithdrawablePlanEarnings : 0;
+    const withdrawableLimit = hasPurchased ? Math.min(Math.max(0, userProfile.balance), maxWithdrawablePlanEarnings) : 0;
 
     if (amount > withdrawableLimit) {
       const fmtMax = Math.floor(withdrawableLimit).toLocaleString('en-IN');
-      triggerToast(`निकासी अस्वीकृत: आप केवल प्लान से प्राप्त कुल आय (₹${fmtMax}) ही विड्रॉल कर सकते हैं।`, 'error');
+      triggerToast(`निकासी अस्वीकृत: आप केवल प्लान खरीदकर कमाई गई आय (₹${fmtMax}) ही विड्रॉल कर सकते हैं। (Only plan earnings can be withdrawn)`, 'error');
       return;
     }
 
@@ -2100,6 +2108,9 @@ export default function App() {
         console.error("Direct withdrawal write to Firestore failed:", err);
       }
     }
+
+    // Immediately update local refs to prevent background sync from overwriting
+    userProfileRef.current = updatedUser;
 
     saveStateToStorage(updatedUser, plans, purchases, [...transactions, withdrawTx], teamMembers);
     triggerToast(`Withdrawal of ₹${amount % 1 === 0 ? amount.toLocaleString('en-IN') : amount.toFixed(2)} requested! Waiting for Admin clearance.`, 'info');
