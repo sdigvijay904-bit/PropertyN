@@ -13,7 +13,7 @@ import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { cleanUndefined, isQuotaExceeded, markQuotaExceeded, getStoredPurchases, syncAllLocalUsersToFirestore } from '../lib/db';
+import { cleanUndefined, isQuotaExceeded, markQuotaExceeded, getStoredPurchases, syncAllLocalUsersToFirestore, scanAndMergeAllUsers } from '../lib/db';
 import { firebaseService } from '../firebase/config';
 import { formatTelegramUrl } from '../lib/telegram';
 
@@ -78,6 +78,30 @@ export default function AdminSection({
     return localStorage.getItem('adpaint_support_avatar');
   });
   const avatarFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    scanAndMergeAllUsers(usersList).then(scanned => {
+      if (isMounted && scanned && scanned.length > 0) {
+        setUsersList(scanned);
+        onSyncConfig?.(undefined, undefined, scanned, undefined);
+      }
+    });
+
+    const handleUsersUpdated = async () => {
+      const scanned = await scanAndMergeAllUsers(usersList);
+      if (isMounted && scanned && scanned.length > 0) {
+        setUsersList(scanned);
+        onSyncConfig?.(undefined, undefined, scanned, undefined);
+      }
+    };
+
+    window.addEventListener('adpaint_users_updated', handleUsersUpdated);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('adpaint_users_updated', handleUsersUpdated);
+    };
+  }, []);
 
   const PRESET_AGENT_PHOTOS = [
     {
@@ -1779,14 +1803,15 @@ export default function AdminSection({
                     onClick={async () => {
                       setIsRefreshing(true);
                       try {
-                        await syncAllLocalUsersToFirestore();
+                        const fullMerged = await scanAndMergeAllUsers(usersList);
+                        setUsersList(fullMerged);
                         if (onRefreshData) {
                           await onRefreshData();
                         } else {
-                          onSyncConfig?.();
+                          onSyncConfig?.(undefined, undefined, fullMerged, undefined);
                         }
                         window.dispatchEvent(new Event('adpaint_users_updated'));
-                        triggerToast(`Scanned & synced ${usersList.length} total user accounts!`, 'success');
+                        triggerToast(`Scanned & synced ${fullMerged.length} total user accounts!`, 'success');
                       } catch (err) {
                         triggerToast('User list synced!', 'info');
                       } finally {

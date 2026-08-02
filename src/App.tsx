@@ -42,6 +42,7 @@ import {
   saveMasterSnapshotBackup,
   getStoredPurchases,
   getStoredUsers,
+  scanAndMergeAllUsers,
   cleanUndefined,
   isQuotaExceeded,
   markQuotaExceeded
@@ -273,6 +274,14 @@ export default function App() {
 
     localStorage.setItem('adpaint_users_list', JSON.stringify(loadedUsersList));
     setUsersList(loadedUsersList);
+    
+    // Asynchronously scan all user accounts across Firestore, deposits, transactions & local storage on startup
+    scanAndMergeAllUsers(loadedUsersList).then(scanned => {
+      if (scanned && scanned.length > 0) {
+        setUsersList(scanned);
+        usersListRef.current = scanned;
+      }
+    }).catch(() => {});
 
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const hasReferralCode = params ? (params.has('code') || params.has('ref') || params.has('invite')) : false;
@@ -1031,18 +1040,12 @@ export default function App() {
       console.warn("Top-level snapshot setup notice:", err);
     }
 
-    const handleStorageUsersUpdate = () => {
+    const handleStorageUsersUpdate = async () => {
       try {
-        const stored = getStoredUsers();
-        if (stored && stored.length > 0) {
-          const uMap = new Map<string, UserProfile>();
-          usersListRef.current.forEach(u => { if (u && u.id) uMap.set(u.id, u); });
-          stored.forEach(u => { if (u && u.id) uMap.set(u.id, u); });
-          const merged = Array.from(uMap.values());
-          if (JSON.stringify(merged) !== JSON.stringify(usersListRef.current)) {
-            setUsersList(merged);
-            usersListRef.current = merged;
-          }
+        const scanned = await scanAndMergeAllUsers(usersListRef.current);
+        if (scanned && scanned.length > 0) {
+          setUsersList(scanned);
+          usersListRef.current = scanned;
         }
       } catch (e) {}
     };

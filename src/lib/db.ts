@@ -497,26 +497,134 @@ export function getStoredUsers(): UserProfile[] {
   return Array.from(map.values());
 }
 
-export async function syncAllLocalUsersToFirestore(): Promise<UserProfile[]> {
-  const allLocalUsers = getStoredUsers();
-  if (allLocalUsers.length === 0) return [];
-  try {
-    for (let i = 0; i < allLocalUsers.length; i += 400) {
-      const chunk = allLocalUsers.slice(i, i + 400);
-      const batch = writeBatch(db);
-      chunk.forEach(u => {
-        if (u && u.id) {
-          const userRef = doc(db, "users", u.id);
-          batch.set(userRef, cleanUndefined(u), { merge: true });
+export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = []): Promise<UserProfile[]> {
+  const userMap = new Map<string, UserProfile>();
+
+  const addUserToMap = (u: Partial<UserProfile> & { id: string }) => {
+    if (!u || !u.id) return;
+    const existing = userMap.get(u.id);
+    if (existing) {
+      userMap.set(u.id, {
+        ...existing,
+        ...u,
+        balance: Math.max(existing.balance ?? 0, u.balance ?? 0),
+        totalEarnings: Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0),
+        inviterCode: existing.inviterCode || u.inviterCode,
+        bankAccount: existing.bankAccount || u.bankAccount,
+        password: existing.password || u.password,
+        role: existing.role === 'admin' ? 'admin' : (u.role || 'user')
+      });
+    } else {
+      userMap.set(u.id, {
+        id: u.id,
+        name: u.name || `User ${u.id.replace('usr_', '')}`,
+        phone: u.phone || '',
+        balance: u.balance ?? 100,
+        totalEarnings: u.totalEarnings ?? 0,
+        dailyEarned: u.dailyEarned ?? 0,
+        checkedInToday: u.checkedInToday ?? false,
+        inviteCode: u.inviteCode || Math.floor(10000 + Math.random() * 90000).toString(),
+        inviterCode: u.inviterCode || '',
+        role: u.role || 'user',
+        password: u.password || 'password123',
+        bankAccount: u.bankAccount,
+        totalInvested: u.totalInvested ?? 0,
+        kycStatus: u.kycStatus || 'none',
+        notifications: u.notifications || []
+      });
+    }
+  };
+
+  // 1. Always include SEED_USERS
+  SEED_USERS.forEach(u => addUserToMap(u));
+
+  // 2. Add current in-memory usersList
+  currentUsersList.forEach(u => addUserToMap(u));
+
+  // 3. Add stored local users (localStorage & master backup)
+  const localUsers = getStoredUsers();
+  localUsers.forEach(u => addUserToMap(u));
+
+  if (!isQuotaExceeded()) {
+    try {
+      // 4. Firestore `users` collection
+      const usersSnap = await getDocs(collection(db, "users"));
+      usersSnap.forEach((docSnap) => {
+        const uData = docSnap.data() as UserProfile;
+        if (uData) {
+          addUserToMap({ ...uData, id: uData.id || docSnap.id });
         }
       });
-      await batch.commit();
+
+      // 5. Firestore `transactions` collection (reconstruct missing users if any)
+      try {
+        const txSnap = await getDocs(collection(db, "transactions"));
+        txSnap.forEach(d => {
+          const t = d.data();
+          if (t) {
+            const rawPhone = t.userPhone || t.phone || '';
+            const digits = rawPhone.replace(/\D/g, '').slice(-10);
+            const userId = t.userId || (digits ? `usr_${digits}` : '');
+            if (userId && !userMap.has(userId)) {
+              addUserToMap({
+                id: userId,
+                name: t.userName || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
+                phone: rawPhone || (digits ? `+91 ${digits}` : ''),
+                balance: 100,
+                totalEarnings: 0
+              });
+            }
+          }
+        });
+      } catch (e) {}
+
+      // 6. Firestore `deposits` collection (reconstruct missing users if any)
+      try {
+        const depSnap = await getDocs(collection(db, "deposits"));
+        depSnap.forEach(d => {
+          const dep = d.data();
+          if (dep) {
+            const rawPhone = dep.mobileNumber || dep.userPhone || dep.phone || '';
+            const digits = rawPhone.replace(/\D/g, '').slice(-10);
+            const userId = dep.userId || (digits ? `usr_${digits}` : '');
+            if (userId && !userMap.has(userId)) {
+              addUserToMap({
+                id: userId,
+                name: dep.name || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
+                phone: rawPhone || (digits ? `+91 ${digits}` : ''),
+                balance: 100,
+                totalEarnings: 0
+              });
+            }
+          }
+        });
+      } catch (e) {}
+
+      // Batch write all discovered users to Firestore
+      const finalUsers = Array.from(userMap.values());
+      for (let i = 0; i < finalUsers.length; i += 400) {
+        const chunk = finalUsers.slice(i, i + 400);
+        const batch = writeBatch(db);
+        chunk.forEach(u => {
+          if (u && u.id) {
+            batch.set(doc(db, "users", u.id), cleanUndefined(u), { merge: true });
+          }
+        });
+        await batch.commit().catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Notice scanning Firestore users:", e);
     }
-    console.log(`Synced ${allLocalUsers.length} local user(s) to Firestore successfully.`);
-  } catch (err) {
-    console.warn("Notice syncing local users to Firestore:", err);
   }
-  return allLocalUsers;
+
+  const result = Array.from(userMap.values());
+  localStorage.setItem('adpaint_users_list', JSON.stringify(result));
+  saveMasterSnapshotBackup({ usersList: result });
+  return result;
+}
+
+export async function syncAllLocalUsersToFirestore(): Promise<UserProfile[]> {
+  return await scanAndMergeAllUsers();
 }
 
 function getStoredTransactions(): TransactionRecord[] {
