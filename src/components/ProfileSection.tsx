@@ -56,12 +56,16 @@ export default function ProfileSection({
     .filter((t) => t.type === 'recharge' && t.status === 'success')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  // Sum successful claim transactions (only plan earnings!)
-  const totalPlanEarnings = (user.totalEarnings !== undefined && user.totalEarnings >= 0)
-    ? user.totalEarnings
-    : transactions
-      .filter((t) => t.type === 'claim' && t.status === 'success')
-      .reduce((sum, t) => sum + t.amount, 0);
+  // Sum successful claim transactions & purchase totalClaimed (only plan earnings!)
+  const totalClaimedFromPurchases = purchases.reduce((acc, p) => acc + (p.totalClaimed || 0), 0);
+  const totalClaimedFromTx = transactions
+    .filter((t) => t.type === 'claim' && t.status === 'success')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalPlanEarnings = Math.max(
+    user.totalEarnings || 0,
+    totalClaimedFromPurchases,
+    totalClaimedFromTx
+  );
 
   // Bank Form State
   const [bankName, setBankName] = useState<string>(user.bankAccount?.bankName || '');

@@ -392,20 +392,79 @@ export async function seedDatabaseIfEmpty() {
 }
 
 // Local Storage Fallback Helpers
-function getStoredUsers(): UserProfile[] {
+export function getStoredUsers(): UserProfile[] {
+  const map = new Map<string, UserProfile>();
+
+  // 1. Always include SEED_USERS
+  SEED_USERS.forEach(u => {
+    if (u && u.id) map.set(u.id, u);
+  });
+
+  // 2. Parse adpaint_users_list
   try {
     const raw = localStorage.getItem('adpaint_users_list');
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const map = new Map<string, UserProfile>();
-        SEED_USERS.forEach(u => map.set(u.id, u));
-        parsed.forEach((u: UserProfile) => map.set(u.id, u));
-        return Array.from(map.values());
+      if (Array.isArray(parsed)) {
+        parsed.forEach((u: UserProfile) => {
+          if (u && u.id) map.set(u.id, u);
+        });
       }
     }
   } catch (e) {}
-  return SEED_USERS;
+
+  // 3. Parse active logged in user in adpaint_user
+  try {
+    const activeRaw = localStorage.getItem('adpaint_user');
+    if (activeRaw) {
+      const activeU = JSON.parse(activeRaw);
+      if (activeU && activeU.id) {
+        map.set(activeU.id, activeU);
+      }
+    }
+  } catch (e) {}
+
+  // 4. Scan all keys in localStorage for any user objects or backups
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('user') || key.includes('usr_'))) {
+        try {
+          const val = localStorage.getItem(key);
+          if (val && val.startsWith('{') && val.includes('"phone"')) {
+            const u = JSON.parse(val);
+            if (u && u.id && u.phone) {
+              map.set(u.id, u);
+            }
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
+  return Array.from(map.values());
+}
+
+export async function syncAllLocalUsersToFirestore(): Promise<UserProfile[]> {
+  const allLocalUsers = getStoredUsers();
+  if (allLocalUsers.length === 0) return [];
+  try {
+    for (let i = 0; i < allLocalUsers.length; i += 400) {
+      const chunk = allLocalUsers.slice(i, i + 400);
+      const batch = writeBatch(db);
+      chunk.forEach(u => {
+        if (u && u.id) {
+          const userRef = doc(db, "users", u.id);
+          batch.set(userRef, cleanUndefined(u), { merge: true });
+        }
+      });
+      await batch.commit();
+    }
+    console.log(`Synced ${allLocalUsers.length} local user(s) to Firestore successfully.`);
+  } catch (err) {
+    console.warn("Notice syncing local users to Firestore:", err);
+  }
+  return allLocalUsers;
 }
 
 function getStoredTransactions(): TransactionRecord[] {
@@ -633,7 +692,11 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
     return { exists: true };
   }
 
-  // 2. Fast Firestore check with a 1.5s Promise.race timeout
+  if (isQuotaExceeded()) {
+    return { exists: false };
+  }
+
+  // 2. Fast Firestore check with a 1.0s Promise.race timeout
   try {
     const fetchDoc = async () => {
       const userDocRef = doc(db, "users", `usr_${last10}`);
@@ -648,11 +711,12 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
     };
 
     const timeout = new Promise<{ exists: boolean }>((resolve) =>
-      setTimeout(() => resolve({ exists: false }), 1500)
+      setTimeout(() => resolve({ exists: false }), 1000)
     );
 
     return await Promise.race([fetchDoc(), timeout]);
   } catch (err) {
+    markQuotaExceeded(err);
     console.warn("firestoreCheckPhone firestore read notice (checking local storage):", err);
   }
 
@@ -673,18 +737,18 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
 
   if (!isQuotaExceeded()) {
     try {
-      await seedDatabaseIfEmpty();
-      const usersColl = collection(db, "users");
+      const fetchFromFirestore = async () => {
+        await seedDatabaseIfEmpty();
+        const usersColl = collection(db, "users");
 
-      if (isAdminInput) {
-        const adminDocRef = doc(db, "users", "usr_admin");
-        const adminSnap = await getDoc(adminDocRef);
-        if (adminSnap.exists()) {
-          user = adminSnap.data() as UserProfile;
+        if (isAdminInput) {
+          const adminDocRef = doc(db, "users", "usr_admin");
+          const adminSnap = await getDoc(adminDocRef);
+          if (adminSnap.exists()) {
+            return adminSnap.data() as UserProfile;
+          }
         }
-      }
 
-      if (!user) {
         const phoneCandidates = Array.from(new Set([
           cleanedPhone,
           phone.trim(),
@@ -696,31 +760,28 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
         ])).filter(Boolean);
 
         for (const cand of phoneCandidates) {
-          if (user) break;
           const q = query(usersColl, where("phone", "==", cand));
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
-            user = querySnapshot.docs[0].data() as UserProfile;
+            return querySnapshot.docs[0].data() as UserProfile;
           }
         }
-      }
 
-      if (!user && (last10.length >= 10 || isAdminInput)) {
-        const docIds = isAdminInput ? ['usr_admin'] : [`usr_${last10}`, `usr_91${last10}`, last10];
-        for (const dId of docIds) {
-          if (user) break;
-          const userDocRef = doc(db, "users", dId);
-          const userSnap = await getDoc(userDocRef);
-          if (userSnap.exists()) {
-            user = userSnap.data() as UserProfile;
+        if (last10.length >= 10 || isAdminInput) {
+          const docIds = isAdminInput ? ['usr_admin'] : [`usr_${last10}`, `usr_91${last10}`, last10];
+          for (const dId of docIds) {
+            const userDocRef = doc(db, "users", dId);
+            const userSnap = await getDoc(userDocRef);
+            if (userSnap.exists()) {
+              return userSnap.data() as UserProfile;
+            }
           }
         }
-      }
 
-      if (!user) {
         const allUsersSnap = await getDocs(usersColl);
+        let matched: UserProfile | null = null;
         allUsersSnap.forEach((docSnap) => {
-          if (user) return;
+          if (matched) return;
           const uData = docSnap.data() as UserProfile;
           const uDigits = uData.phone ? uData.phone.replace(/\D/g, "") : "";
           const uIdDigits = docSnap.id ? docSnap.id.replace(/\D/g, "") : "";
@@ -731,10 +792,17 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
             uData.phone === phone.trim() ||
             (isAdminInput && uData.role === 'admin')
           ) {
-            user = uData;
+            matched = uData;
           }
         });
-      }
+        return matched;
+      };
+
+      const timeout = new Promise<UserProfile | null>((resolve) =>
+        setTimeout(() => resolve(null), 1000)
+      );
+
+      user = await Promise.race([fetchFromFirestore(), timeout]);
     } catch (err) {
       markQuotaExceeded(err);
       console.warn("Firestore read failed on login (using local cache):", err);
@@ -778,30 +846,35 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
   // Load active purchases & transactions
   if (!isQuotaExceeded()) {
     try {
-      const purchasesColl = collection(db, "purchases");
-      const purchasesSnap = await getDocs(purchasesColl);
-      const userDigits = user.phone ? user.phone.replace(/\D/g, "") : "";
-      const userLast10 = userDigits.length >= 10 ? userDigits.slice(-10) : userDigits;
+      const fetchPurchasesAndTx = async () => {
+        const purchasesColl = collection(db, "purchases");
+        const purchasesSnap = await getDocs(purchasesColl);
+        const userDigits = user?.phone ? user.phone.replace(/\D/g, "") : "";
+        const userLast10 = userDigits.length >= 10 ? userDigits.slice(-10) : userDigits;
 
-      purchasesSnap.forEach((docSnap) => {
-        const pData = docSnap.data() as PurchaseRecord;
-        const pPhoneDigits = (pData as any).userPhone ? String((pData as any).userPhone).replace(/\D/g, "") : "";
-        const isMatch = (
-          pData.userId === user.id ||
-          (pData as any).userId === user.id.replace('usr_', '') ||
-          (userLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(userLast10)) ||
-          pData.userId === user.phone
-        );
-        if (isMatch) {
-          purchases.push(pData);
-        }
-      });
+        purchasesSnap.forEach((docSnap) => {
+          const pData = docSnap.data() as PurchaseRecord;
+          const pPhoneDigits = (pData as any).userPhone ? String((pData as any).userPhone).replace(/\D/g, "") : "";
+          const isMatch = (
+            pData.userId === user?.id ||
+            (pData as any).userId === user?.id.replace('usr_', '') ||
+            (userLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(userLast10)) ||
+            pData.userId === user?.phone
+          );
+          if (isMatch) {
+            purchases.push(pData);
+          }
+        });
 
-      const transactionsColl = collection(db, "transactions");
-      const txSnap = await getDocs(transactionsColl);
-      txSnap.forEach((doc) => {
-        transactions.push(doc.data() as TransactionRecord);
-      });
+        const transactionsColl = collection(db, "transactions");
+        const txSnap = await getDocs(transactionsColl);
+        txSnap.forEach((doc) => {
+          transactions.push(doc.data() as TransactionRecord);
+        });
+      };
+
+      const pTimeout = new Promise<void>((resolve) => setTimeout(resolve, 1000));
+      await Promise.race([fetchPurchasesAndTx(), pTimeout]);
     } catch (err) {
       markQuotaExceeded(err);
       console.warn("Firestore purchases/transactions load failed, using local cache:", err);
@@ -887,19 +960,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     userPhone: newUser.phone
   };
 
-  try {
-    firestoreQuotaExceeded = false;
-    const userDocRef = doc(db, "users", newUserId);
-    const txDocRef = doc(db, "transactions", signupTx.id);
-
-    await setDoc(userDocRef, cleanUndefined(newUser), { merge: true });
-    await setDoc(txDocRef, cleanUndefined(signupTx), { merge: true });
-    console.log("Successfully created user account in Firestore:", newUserId);
-  } catch (err) {
-    console.error("Error saving new user to Firestore during registration:", err);
-  }
-
-  // Update local storage so user is registered & saved locally
+  // Update local storage FIRST so user registration is 100% instant without waiting for network!
   const storedUsers = getStoredUsers();
   const existingIdx = storedUsers.findIndex(u => u.id === newUserId || u.phone === cleanedPhone);
   if (existingIdx >= 0) {
@@ -912,6 +973,26 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   const storedTxs = getStoredTransactions();
   storedTxs.unshift(signupTx);
   localStorage.setItem('adpaint_transactions', JSON.stringify(storedTxs));
+
+  // Async non-blocking write to Firestore with 1.0s timeout
+  if (!isQuotaExceeded()) {
+    try {
+      const firestoreWrite = async () => {
+        const userDocRef = doc(db, "users", newUserId);
+        const txDocRef = doc(db, "transactions", signupTx.id);
+
+        await setDoc(userDocRef, cleanUndefined(newUser), { merge: true });
+        await setDoc(txDocRef, cleanUndefined(signupTx), { merge: true });
+      };
+
+      const timeout = new Promise((resolve) => setTimeout(resolve, 1000));
+      await Promise.race([firestoreWrite(), timeout]);
+      console.log("Successfully created user account in Firestore/Local:", newUserId);
+    } catch (err) {
+      markQuotaExceeded(err);
+      console.warn("Notice saving new user to Firestore during registration:", err);
+    }
+  }
 
   return {
     user: newUser,
@@ -1180,31 +1261,44 @@ export async function firestoreGetState(userId: string): Promise<any> {
           fsUsers.push({ ...uData, id: uData.id || docSnap.id });
         }
       });
-      if (fsUsers.length > 0) {
-        const uMap = new Map<string, UserProfile>();
-        // Index server users first as authoritative records
-        fsUsers.forEach(u => {
-          if (u && u.id) uMap.set(u.id, u);
-        });
 
-        // Index server phone numbers (last 10 digits)
-        const serverPhones = new Set<string>();
-        fsUsers.forEach(u => {
-          const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
-          if (digits) serverPhones.add(digits);
-        });
+      const localUsers = getStoredUsers();
+      const uMap = new Map<string, UserProfile>();
 
-        // Only add local users if they don't exist on server and don't share a phone number with any server user
-        usersList.forEach(u => {
-          if (!u || !u.id) return;
-          const digits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
-          if (!uMap.has(u.id) && (!digits || !serverPhones.has(digits))) {
-            uMap.set(u.id, u);
-          }
-        });
+      // 1. Index local users first
+      localUsers.forEach(u => {
+        if (u && u.id) uMap.set(u.id, u);
+      });
 
-        usersList = Array.from(uMap.values());
-      }
+      // 2. Merge server users (server data merges while preserving local account details)
+      const fsUserIds = new Set<string>();
+      fsUsers.forEach(serverU => {
+        if (!serverU || !serverU.id) return;
+        fsUserIds.add(serverU.id);
+        const localU = uMap.get(serverU.id);
+        if (localU) {
+          uMap.set(serverU.id, {
+            ...localU,
+            ...serverU,
+            balance: Math.max(localU.balance ?? 0, serverU.balance ?? 0),
+            totalEarnings: Math.max(localU.totalEarnings ?? 0, serverU.totalEarnings ?? 0),
+            inviterCode: serverU.inviterCode || localU.inviterCode,
+            bankAccount: serverU.bankAccount || localU.bankAccount,
+            password: serverU.password || localU.password
+          });
+        } else {
+          uMap.set(serverU.id, serverU);
+        }
+      });
+
+      usersList = Array.from(uMap.values());
+
+      // Push any local users missing on server to Firestore in background
+      localUsers.forEach(localU => {
+        if (localU && localU.id && !fsUserIds.has(localU.id)) {
+          setDoc(doc(db, "users", localU.id), cleanUndefined(localU), { merge: true }).catch(() => {});
+        }
+      });
     } catch (err) {
       markQuotaExceeded(err);
       console.warn("firestoreGetState encountered error, serving cached/local state:", err);
@@ -1336,14 +1430,32 @@ export async function firestoreSaveState(payload: {
     try {
       await seedDatabaseIfEmpty();
 
-      if (Array.isArray(usersList)) {
-        const userBatch = writeBatch(db);
-        for (const u of usersList) {
-          if (!isAdmin && u.id !== userId) continue;
-          const docRef = doc(db, "users", u.id);
-          userBatch.set(docRef, cleanUndefined(u), { merge: true });
+      if (Array.isArray(usersList) && usersList.length > 0) {
+        const cleanUserPhoneDigits = userId ? userId.replace(/\D/g, '').slice(-10) : '';
+        const usersToPush = isAdmin ? usersList : usersList.filter(u => {
+          if (!u) return false;
+          if (u.id === userId) return true;
+          if (cleanUserPhoneDigits && u.phone) {
+            const uDigits = u.phone.replace(/\D/g, '').slice(-10);
+            if (uDigits && uDigits === cleanUserPhoneDigits) return true;
+          }
+          if (cleanUserPhoneDigits && u.id) {
+            const uIdDigits = u.id.replace(/\D/g, '').slice(-10);
+            if (uIdDigits && uIdDigits === cleanUserPhoneDigits) return true;
+          }
+          return false;
+        });
+        for (let i = 0; i < usersToPush.length; i += 400) {
+          const chunk = usersToPush.slice(i, i + 400);
+          const userBatch = writeBatch(db);
+          chunk.forEach(u => {
+            if (u && u.id) {
+              const docRef = doc(db, "users", u.id);
+              userBatch.set(docRef, cleanUndefined(u), { merge: true });
+            }
+          });
+          await userBatch.commit();
         }
-        await userBatch.commit();
       }
 
       if (isAdmin) {

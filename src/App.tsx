@@ -1899,7 +1899,7 @@ export default function App() {
   };
 
   // Claim Order Accrued Earnings
-  const handleClaimOrderEarnings = (purchaseId: string) => {
+  const handleClaimOrderEarnings = async (purchaseId: string) => {
     if (!userProfile) return;
 
     const purchase = purchases.find((p) => p.id === purchaseId);
@@ -1931,7 +1931,8 @@ export default function App() {
 
     const updatedUser = {
       ...userProfile,
-      totalEarnings: userProfile.totalEarnings + accrued
+      balance: (userProfile.balance || 0) + accrued,
+      totalEarnings: (userProfile.totalEarnings || 0) + accrued
     };
 
     let targetUpdatedPurchase: PurchaseRecord | null = null;
@@ -1939,7 +1940,7 @@ export default function App() {
       if (p.id === purchaseId) {
         const item = {
           ...p,
-          totalClaimed: p.totalClaimed + accrued,
+          totalClaimed: (p.totalClaimed || 0) + accrued,
           completed: isCompleting ? true : p.completed,
           lastClaimedAt: new Date(claimUntil).toISOString()
         };
@@ -1962,13 +1963,20 @@ export default function App() {
 
     if (!isQuotaExceeded() && targetUpdatedPurchase) {
       try {
-        setDoc(doc(db, "purchases", (targetUpdatedPurchase as PurchaseRecord).id), cleanUndefined(targetUpdatedPurchase)).catch(markQuotaExceeded);
-        setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx)).catch(markQuotaExceeded);
-        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser)).catch(markQuotaExceeded);
+        await Promise.all([
+          setDoc(doc(db, "purchases", (targetUpdatedPurchase as PurchaseRecord).id), cleanUndefined(targetUpdatedPurchase), { merge: true }),
+          setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx), { merge: true }),
+          setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser), { merge: true })
+        ]);
       } catch (e) {
+        console.warn("Direct claim Firestore write error:", e);
         markQuotaExceeded(e);
       }
     }
+
+    // Immediately update local refs to prevent background sync from overwriting
+    purchasesRef.current = updatedPurchases;
+    userProfileRef.current = updatedUser;
 
     saveStateToStorage(updatedUser, plans, updatedPurchases, [...transactions, claimTx], teamMembers);
     triggerToast(
