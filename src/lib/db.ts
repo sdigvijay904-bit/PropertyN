@@ -507,11 +507,11 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
       userMap.set(u.id, {
         ...existing,
         ...u,
-        balance: Math.max(existing.balance ?? 0, u.balance ?? 0),
-        totalEarnings: Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0),
-        inviterCode: existing.inviterCode || u.inviterCode,
-        bankAccount: existing.bankAccount || u.bankAccount,
-        password: existing.password || u.password,
+        balance: u.balance !== undefined ? u.balance : existing.balance,
+        totalEarnings: u.totalEarnings !== undefined ? u.totalEarnings : existing.totalEarnings,
+        inviterCode: u.inviterCode || existing.inviterCode,
+        bankAccount: u.bankAccount || existing.bankAccount,
+        password: u.password || existing.password,
         role: existing.role === 'admin' ? 'admin' : (u.role || 'user')
       });
     } else {
@@ -910,7 +910,7 @@ export async function firestoreCheckPhone(phone: string): Promise<{ exists: bool
     };
 
     const timeout = new Promise<{ exists: boolean }>((resolve) =>
-      setTimeout(() => resolve({ exists: false }), 1200)
+      setTimeout(() => resolve({ exists: false }), 800)
     );
 
     return await Promise.race([fetchDoc(), timeout]);
@@ -997,7 +997,7 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
       };
 
       const timeout = new Promise<UserProfile | null>((resolve) =>
-        setTimeout(() => resolve(null), 1000)
+        setTimeout(() => resolve(null), 3500)
       );
 
       user = await Promise.race([fetchFromFirestore(), timeout]);
@@ -1071,7 +1071,7 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
         });
       };
 
-      const pTimeout = new Promise<void>((resolve) => setTimeout(resolve, 1000));
+      const pTimeout = new Promise<void>((resolve) => setTimeout(resolve, 3500));
       await Promise.race([fetchPurchasesAndTx(), pTimeout]);
     } catch (err) {
       markQuotaExceeded(err);
@@ -1180,12 +1180,20 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     const userDocRef = doc(db, "users", newUserId);
     const txDocRef = doc(db, "transactions", signupTx.id);
 
-    // Guarantee Firestore user document creation so Meta Ads webview & mobile browsers persist new user to Cloud
-    await Promise.all([
+    // Save to Firestore in background with a fast 800ms race timeout so registration never hangs on mobile webview
+    const savePromise = Promise.all([
       setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
       setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
-    ]);
-    console.log("Successfully created and saved new user account in Firestore:", newUserId);
+    ]).then(() => {
+      console.log("Successfully created and saved new user account in Firestore:", newUserId);
+    }).catch((err) => {
+      markQuotaExceeded(err);
+      console.warn("Notice saving user to Firestore (saved locally):", err);
+    });
+
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800));
+
+    await Promise.race([savePromise, timeoutPromise]);
   } catch (err: any) {
     markQuotaExceeded(err);
     console.warn("Notice saving new user to Firestore during registration (saved locally):", err);

@@ -494,9 +494,7 @@ export default function App() {
               // Preserve highest local balance and totalEarnings while letting fresh server user attributes take precedence
               const mergedObj = {
                 ...localUser,
-                ...existingServerUser,
-                balance: Math.max(localUser.balance ?? 0, existingServerUser.balance ?? 0),
-                totalEarnings: Math.max(localUser.totalEarnings ?? 0, existingServerUser.totalEarnings ?? 0)
+                ...existingServerUser
               };
 
               // Validate and deep-merge inviterCode if local has it but server is empty
@@ -557,8 +555,8 @@ export default function App() {
               const currentLocal = userProfileRef.current || activeUser;
               const finalMe = {
                 ...sanitizedMe,
-                balance: Math.max(sanitizedMe.balance ?? 0, currentLocal?.balance ?? 0),
-                totalEarnings: Math.max(sanitizedMe.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0)
+                inviterCode: sanitizedMe.inviterCode || currentLocal?.inviterCode,
+                bankAccount: sanitizedMe.bankAccount || currentLocal?.bankAccount
               };
               if (JSON.stringify(finalMe) !== JSON.stringify(activeUser)) {
                 setUserProfile(finalMe);
@@ -1596,9 +1594,11 @@ export default function App() {
       setRegisterOtpInput('');
       setRegisterOtpCode('');
 
-      // Directly push state to server so Firestore gets new user record updated immediately
-      pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
-      syncWithServer(serverUser, true);
+      // Sync state to Firestore server in background (non-blocking)
+      setTimeout(() => {
+        pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
+        syncWithServer(serverUser, true);
+      }, 50);
     } catch (err: any) {
       console.error("Registration error:", err);
       setAuthError(err?.message || 'Server communication error. Please try again.');
