@@ -1610,7 +1610,7 @@ export default function AdminSection({
                   </div>
                   <div className="mt-2.5">
                     <span className="text-2xl font-black font-mono tracking-tight text-white">{totalUsers}</span>
-                    <p className="text-[9px] text-slate-500 font-medium mt-1">Sponsors registered</p>
+                    <p className="text-[9px] text-emerald-400/90 font-medium mt-1 font-mono">All registered users (Direct & Referral)</p>
                   </div>
                 </div>
 
