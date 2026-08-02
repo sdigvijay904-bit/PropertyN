@@ -1029,23 +1029,26 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   storedTxs.unshift(signupTx);
   localStorage.setItem('adpaint_transactions', JSON.stringify(storedTxs));
 
-  // Async non-blocking write to Firestore with 1.0s timeout
+  // Save to master backup snapshot
+  saveMasterSnapshotBackup({ usersList: storedUsers, transactions: storedTxs });
+
+  // Direct write to Firestore users & transactions collection
   if (!isQuotaExceeded()) {
     try {
-      const firestoreWrite = async () => {
-        const userDocRef = doc(db, "users", newUserId);
-        const txDocRef = doc(db, "transactions", signupTx.id);
+      const userDocRef = doc(db, "users", newUserId);
+      const txDocRef = doc(db, "transactions", signupTx.id);
 
+      const firestoreWrite = async () => {
         await setDoc(userDocRef, cleanUndefined(newUser), { merge: true });
         await setDoc(txDocRef, cleanUndefined(signupTx), { merge: true });
       };
 
-      const timeout = new Promise((resolve) => setTimeout(resolve, 1000));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore write timeout")), 8000));
       await Promise.race([firestoreWrite(), timeout]);
-      console.log("Successfully created user account in Firestore/Local:", newUserId);
+      console.log("Successfully created and saved new user account in Firestore:", newUserId);
     } catch (err) {
       markQuotaExceeded(err);
-      console.warn("Notice saving new user to Firestore during registration:", err);
+      console.warn("Notice saving new user to Firestore during registration (saved locally):", err);
     }
   }
 

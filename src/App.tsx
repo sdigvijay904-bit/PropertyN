@@ -1503,6 +1503,7 @@ export default function App() {
       setUsersList(updatedUsersList);
       usersListRef.current = updatedUsersList;
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
+      saveMasterSnapshotBackup({ usersList: updatedUsersList, transactions: regData.transactions });
 
       localStorage.setItem('adpaint_user', JSON.stringify(serverUser));
       localStorage.setItem('adpaint_transactions', JSON.stringify(regData.transactions));
@@ -1512,6 +1513,9 @@ export default function App() {
       localStorage.setItem(`adpaint_notice_shown_${serverUser.id}`, 'true');
       triggerToast('Account Registered Successfully! Enjoy ₹100 Welcome Bonus.', 'success');
       localStorage.removeItem('adpaint_pending_invite_code');
+
+      // Directly push state to server so server receives the new user document immediately
+      pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
 
       // Force instant sync with server
       syncWithServer(serverUser, true);
