@@ -430,24 +430,58 @@ export function saveMasterSnapshotBackup(payload: {
   }
 }
 
-// Local Storage Fallback Helpers
+// Local Storage Fallback & Offline Data Recovery Helpers
 export function getStoredUsers(): UserProfile[] {
   const map = new Map<string, UserProfile>();
 
-  // 1. Always include SEED_USERS
-  SEED_USERS.forEach(u => {
-    if (u && u.id) map.set(u.id, u);
-  });
+  // Helper to add user cleanly
+  const addCandidateUser = (u: any) => {
+    if (!u || typeof u !== 'object') return;
+    const rawId = u.id || (u.phone ? `usr_${String(u.phone).replace(/\D/g, '').slice(-10)}` : '');
+    if (!rawId || rawId === 'usr_demo') return;
 
-  // 2. Parse adpaint_master_backup snapshot first
+    const existing = map.get(rawId);
+    if (!existing) {
+      map.set(rawId, {
+        id: rawId,
+        name: u.name || `User ${rawId.replace('usr_', '')}`,
+        phone: u.phone || '',
+        balance: typeof u.balance === 'number' ? u.balance : 100,
+        totalEarnings: typeof u.totalEarnings === 'number' ? u.totalEarnings : 0,
+        dailyEarned: typeof u.dailyEarned === 'number' ? u.dailyEarned : 0,
+        checkedInToday: Boolean(u.checkedInToday),
+        inviteCode: u.inviteCode || Math.floor(10000 + Math.random() * 90000).toString(),
+        inviterCode: u.inviterCode || '',
+        role: u.role || 'user',
+        password: u.password || 'password123',
+        bankAccount: u.bankAccount,
+        totalInvested: typeof u.totalInvested === 'number' ? u.totalInvested : 0,
+        kycStatus: u.kycStatus || 'none',
+        notifications: Array.isArray(u.notifications) ? u.notifications : []
+      });
+    } else {
+      // Merge extra fields like password, bankAccount, inviterCode if missing in existing
+      map.set(rawId, {
+        ...u,
+        ...existing,
+        password: existing.password || u.password,
+        bankAccount: existing.bankAccount || u.bankAccount,
+        inviterCode: existing.inviterCode || u.inviterCode,
+        balance: Math.max(existing.balance || 0, u.balance || 0)
+      });
+    }
+  };
+
+  // 1. Always include SEED_USERS
+  SEED_USERS.forEach(u => addCandidateUser(u));
+
+  // 2. Parse adpaint_master_backup snapshot
   try {
     const rawMaster = localStorage.getItem('adpaint_master_backup');
     if (rawMaster) {
       const parsedMaster = JSON.parse(rawMaster);
       if (parsedMaster && Array.isArray(parsedMaster.usersList)) {
-        parsedMaster.usersList.forEach((u: UserProfile) => {
-          if (u && u.id) map.set(u.id, u);
-        });
+        parsedMaster.usersList.forEach(addCandidateUser);
       }
     }
   } catch (e) {}
@@ -458,35 +492,55 @@ export function getStoredUsers(): UserProfile[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        parsed.forEach((u: UserProfile) => {
-          if (u && u.id) map.set(u.id, u);
-        });
+        parsed.forEach(addCandidateUser);
       }
     }
   } catch (e) {}
 
-  // 3. Parse active logged in user in adpaint_user
+  // 4. Parse active logged in user in adpaint_user
   try {
     const activeRaw = localStorage.getItem('adpaint_user');
     if (activeRaw) {
       const activeU = JSON.parse(activeRaw);
-      if (activeU && activeU.id) {
-        map.set(activeU.id, activeU);
+      addCandidateUser(activeU);
+    }
+  } catch (e) {}
+
+  // 5. Deep scan all keys in localStorage for user objects or arrays
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        try {
+          const val = localStorage.getItem(key);
+          if (val) {
+            if (val.startsWith('{') && val.includes('"phone"')) {
+              const u = JSON.parse(val);
+              addCandidateUser(u);
+            } else if (val.startsWith('[') && val.includes('"phone"')) {
+              const arr = JSON.parse(val);
+              if (Array.isArray(arr)) arr.forEach(addCandidateUser);
+            }
+          }
+        } catch (e) {}
       }
     }
   } catch (e) {}
 
-  // 4. Scan all keys in localStorage for any user objects or backups
+  // 6. Deep scan all keys in sessionStorage
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (key.includes('user') || key.includes('usr_'))) {
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i);
+      if (key) {
         try {
-          const val = localStorage.getItem(key);
-          if (val && val.startsWith('{') && val.includes('"phone"')) {
-            const u = JSON.parse(val);
-            if (u && u.id && u.phone) {
-              map.set(u.id, u);
+          const val = sessionStorage.getItem(key);
+          if (val) {
+            if (val.startsWith('{') && val.includes('"phone"')) {
+              const u = JSON.parse(val);
+              addCandidateUser(u);
+            } else if (val.startsWith('[') && val.includes('"phone"')) {
+              const arr = JSON.parse(val);
+              if (Array.isArray(arr)) arr.forEach(addCandidateUser);
             }
           }
         } catch (e) {}
@@ -499,25 +553,48 @@ export function getStoredUsers(): UserProfile[] {
 
 export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = []): Promise<UserProfile[]> {
   const userMap = new Map<string, UserProfile>();
+  const phoneMap = new Map<string, string>(); // clean 10-digit phone -> user ID
 
-  const addUserToMap = (u: Partial<UserProfile> & { id: string }) => {
-    if (!u || !u.id) return;
-    const existing = userMap.get(u.id);
+  const addUserToMap = (u: Partial<UserProfile> & { id: string }, isServer = false) => {
+    if (!u || !u.id || u.id === 'usr_demo') return;
+    const cleanPhoneDigits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+
+    // Check if user exists by ID or by 10-digit phone
+    let targetId = u.id;
+    if (!userMap.has(targetId) && cleanPhoneDigits && phoneMap.has(cleanPhoneDigits)) {
+      targetId = phoneMap.get(cleanPhoneDigits)!;
+    }
+
+    const existing = userMap.get(targetId);
     if (existing) {
-      userMap.set(u.id, {
-        ...existing,
-        ...u,
-        balance: u.balance !== undefined ? u.balance : existing.balance,
-        totalEarnings: u.totalEarnings !== undefined ? u.totalEarnings : existing.totalEarnings,
-        inviterCode: u.inviterCode || existing.inviterCode,
-        bankAccount: u.bankAccount || existing.bankAccount,
-        password: u.password || existing.password,
-        role: existing.role === 'admin' ? 'admin' : (u.role || 'user')
-      });
+      if (isServer) {
+        // Server data takes master precedence, but keep local bank/password if missing on server
+        const merged: UserProfile = {
+          ...existing,
+          ...u,
+          id: targetId,
+          password: (u as UserProfile).password || existing.password || 'password123',
+          bankAccount: (u as UserProfile).bankAccount || existing.bankAccount,
+          inviterCode: (u as UserProfile).inviterCode || existing.inviterCode || '',
+          role: existing.role === 'admin' || u.role === 'admin' ? 'admin' : (u.role || existing.role || 'user')
+        };
+        userMap.set(targetId, merged);
+      } else {
+        const merged: UserProfile = {
+          ...u,
+          ...existing,
+          id: targetId,
+          password: existing.password || (u as UserProfile).password || 'password123',
+          bankAccount: existing.bankAccount || (u as UserProfile).bankAccount,
+          inviterCode: existing.inviterCode || (u as UserProfile).inviterCode || '',
+          role: existing.role === 'admin' || u.role === 'admin' ? 'admin' : (existing.role || u.role || 'user')
+        };
+        userMap.set(targetId, merged);
+      }
     } else {
-      userMap.set(u.id, {
-        id: u.id,
-        name: u.name || `User ${u.id.replace('usr_', '')}`,
+      const newUserProfile: UserProfile = {
+        id: targetId,
+        name: u.name || `User ${targetId.replace('usr_', '')}`,
         phone: u.phone || '',
         balance: u.balance ?? 100,
         totalEarnings: u.totalEarnings ?? 0,
@@ -531,32 +608,47 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         totalInvested: u.totalInvested ?? 0,
         kycStatus: u.kycStatus || 'none',
         notifications: u.notifications || []
-      });
+      };
+      userMap.set(targetId, newUserProfile);
+      if (cleanPhoneDigits) {
+        phoneMap.set(cleanPhoneDigits, targetId);
+      }
     }
   };
 
-  // 1. Always include SEED_USERS
-  SEED_USERS.forEach(u => addUserToMap(u));
-
-  // 2. Add current in-memory usersList
-  currentUsersList.forEach(u => addUserToMap(u));
-
-  // 3. Add stored local users (localStorage & master backup)
-  const localUsers = getStoredUsers();
-  localUsers.forEach(u => addUserToMap(u));
-
   if (!isQuotaExceeded()) {
     try {
-      // 4. Firestore `users` collection
+      const serverUserIds = new Set<string>();
+
+      // 1. Fetch Firestore `users` collection as MASTER
       const usersSnap = await getDocs(collection(db, "users"));
       usersSnap.forEach((docSnap) => {
         const uData = docSnap.data() as UserProfile;
-        if (uData) {
-          addUserToMap({ ...uData, id: uData.id || docSnap.id });
+        if (uData && (uData.id || docSnap.id)) {
+          const docId = uData.id || docSnap.id;
+          serverUserIds.add(docId);
+          addUserToMap({ ...uData, id: docId }, true);
         }
       });
 
-      // 5. Firestore `transactions` collection (reconstruct missing users if any)
+      // 2. Add current in-memory usersList & all local storage stored users
+      const allLocalUsers = getStoredUsers();
+      const candidateList = [...currentUsersList, ...allLocalUsers];
+      const unmigratedUsersToPush: UserProfile[] = [];
+
+      candidateList.forEach(u => {
+        if (u && u.id && u.id !== 'usr_demo') {
+          const isMissingOnServer = !serverUserIds.has(u.id);
+          addUserToMap(u, false);
+
+          if (isMissingOnServer) {
+            const finalU = userMap.get(u.id);
+            if (finalU) unmigratedUsersToPush.push(finalU);
+          }
+        }
+      });
+
+      // 3. Reconstruct missing users from Firestore transactions, deposits, and purchases
       try {
         const txSnap = await getDocs(collection(db, "transactions"));
         txSnap.forEach(d => {
@@ -565,20 +657,19 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
             const rawPhone = t.userPhone || t.phone || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
             const userId = t.userId || (digits ? `usr_${digits}` : '');
-            if (userId && !userMap.has(userId)) {
+            if (userId && !userMap.has(userId) && userId !== 'usr_demo') {
               addUserToMap({
                 id: userId,
-                name: t.userName || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
-                phone: rawPhone || (digits ? `+91 ${digits}` : ''),
+                phone: rawPhone,
+                name: `User ${digits || userId.replace('usr_', '')}`,
                 balance: 100,
                 totalEarnings: 0
-              });
+              }, true);
             }
           }
         });
       } catch (e) {}
 
-      // 6. Firestore `deposits` collection (reconstruct missing users if any)
       try {
         const depSnap = await getDocs(collection(db, "deposits"));
         depSnap.forEach(d => {
@@ -587,20 +678,19 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
             const rawPhone = dep.mobileNumber || dep.userPhone || dep.phone || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
             const userId = dep.userId || (digits ? `usr_${digits}` : '');
-            if (userId && !userMap.has(userId)) {
+            if (userId && !userMap.has(userId) && userId !== 'usr_demo') {
               addUserToMap({
                 id: userId,
                 name: dep.name || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
                 phone: rawPhone || (digits ? `+91 ${digits}` : ''),
                 balance: 100,
                 totalEarnings: 0
-              });
+              }, true);
             }
           }
         });
       } catch (e) {}
 
-      // 7. Firestore `purchases` collection (reconstruct missing users if any)
       try {
         const purSnap = await getDocs(collection(db, "purchases"));
         purSnap.forEach(d => {
@@ -609,44 +699,54 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
             const rawPhone = pur.userPhone || pur.phone || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
             const userId = pur.userId || (digits ? `usr_${digits}` : '');
-            if (userId && !userMap.has(userId)) {
+            if (userId && !userMap.has(userId) && userId !== 'usr_demo') {
               addUserToMap({
                 id: userId,
                 name: pur.userName || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
                 phone: rawPhone || (digits ? `+91 ${digits}` : ''),
                 balance: 100,
                 totalEarnings: 0
-              });
+              }, true);
             }
           }
         });
       } catch (e) {}
 
-      // Batch write all discovered users to Firestore
-      const finalUsers = Array.from(userMap.values());
-      for (let i = 0; i < finalUsers.length; i += 400) {
-        const chunk = finalUsers.slice(i, i + 400);
-        const batch = writeBatch(db);
-        chunk.forEach(u => {
-          if (u && u.id) {
-            batch.set(doc(db, "users", u.id), cleanUndefined(u), { merge: true });
+      // CRITICAL MIGRATION STEP: Write any local offline users directly to Firestore!
+      if (unmigratedUsersToPush.length > 0) {
+        console.log(`Migrating ${unmigratedUsersToPush.length} offline local user accounts to Firestore production database...`);
+        for (const uToSave of unmigratedUsersToPush) {
+          try {
+            await setDoc(doc(db, "users", uToSave.id), cleanUndefined(uToSave), { merge: true });
+            console.log(`Successfully migrated local user ${uToSave.id} (${uToSave.phone}) to Firestore!`);
+          } catch (e) {
+            console.warn(`Error migrating user ${uToSave.id} to Firestore:`, e);
           }
-        });
-        await batch.commit().catch(() => {});
+        }
       }
+
+      const result = Array.from(userMap.values());
+      localStorage.setItem('adpaint_users_list', JSON.stringify(result));
+      return result;
     } catch (e) {
-      console.warn("Notice scanning Firestore users:", e);
+      markQuotaExceeded(e);
     }
   }
 
+  // Fallback if offline
+  SEED_USERS.forEach(u => addUserToMap(u, false));
+  currentUsersList.forEach(u => addUserToMap(u, false));
+  const localUsers = getStoredUsers();
+  localUsers.forEach(u => addUserToMap(u, false));
+
   const result = Array.from(userMap.values());
   localStorage.setItem('adpaint_users_list', JSON.stringify(result));
-  saveMasterSnapshotBackup({ usersList: result });
   return result;
 }
 
-export async function syncAllLocalUsersToFirestore(): Promise<UserProfile[]> {
-  return await scanAndMergeAllUsers();
+export async function syncAllLocalUsersToFirestore(): Promise<{ users: UserProfile[]; migratedCount: number }> {
+  const users = await scanAndMergeAllUsers();
+  return { users, migratedCount: users.length };
 }
 
 function getStoredTransactions(): TransactionRecord[] {
@@ -1375,9 +1475,41 @@ export async function firestoreGetState(userId: string): Promise<any> {
         }
       } catch (e) {}
 
+      // 1. Fetch Users FIRST so phone matching for purchases works accurately
+      const usersSnap = await getDocs(collection(db, "users"));
+      const fsUsers: UserProfile[] = [];
+      usersSnap.forEach((docSnap) => {
+        const uData = docSnap.data() as UserProfile;
+        if (uData && uData.id) {
+          fsUsers.push({ ...uData, id: uData.id || docSnap.id });
+        }
+      });
+
+      if (fsUsers.length > 0) {
+        const uMap = new Map<string, UserProfile>();
+        // Server users take master precedence
+        fsUsers.forEach(u => uMap.set(u.id, u));
+
+        // Preserve any recent local users missing on server
+        const localUsers = getStoredUsers();
+        localUsers.forEach(localU => {
+          if (localU && localU.id && !uMap.has(localU.id)) {
+            uMap.set(localU.id, localU);
+            // Push missing local user to Firestore background
+            setDoc(doc(db, "users", localU.id), cleanUndefined(localU), { merge: true }).catch(() => {});
+          }
+        });
+        usersList = Array.from(uMap.values());
+        localStorage.setItem('adpaint_users_list', JSON.stringify(usersList));
+      }
+
+      // 2. Fetch Plans
       const plansSnap = await getDocs(collection(db, "plans"));
       const fsPlans: InvestmentPlan[] = [];
-      plansSnap.forEach((doc) => fsPlans.push(doc.data() as InvestmentPlan));
+      plansSnap.forEach((docSnap) => {
+        const pData = docSnap.data() as InvestmentPlan;
+        if (pData && pData.id) fsPlans.push(pData);
+      });
       let rawDelP: string[] = [];
       try {
         const raw = localStorage.getItem('adpaint_deleted_plans');
@@ -1385,20 +1517,11 @@ export async function firestoreGetState(userId: string): Promise<any> {
       } catch (e) {}
 
       if (fsPlans.length > 0) {
-        const pMap = new Map<string, InvestmentPlan>();
-        const localPlans = getStoredPlans();
-        localPlans.forEach(p => {
-          if (p && p.id && !rawDelP.includes(p.id)) pMap.set(p.id, p);
-        });
-        fsPlans.forEach(p => {
-          if (p && p.id && !rawDelP.includes(p.id)) {
-            const local = pMap.get(p.id);
-            pMap.set(p.id, local ? { ...local, ...p } : p);
-          }
-        });
-        plans = Array.from(pMap.values());
+        plans = fsPlans.filter(p => p && p.id && !rawDelP.includes(p.id));
+        localStorage.setItem('adpaint_plans', JSON.stringify(plans));
       }
 
+      // 3. Fetch Transactions
       const transactionsSnap = await getDocs(collection(db, "transactions"));
       const fsTransactions: TransactionRecord[] = [];
       transactionsSnap.forEach((docSnap) => {
@@ -1409,9 +1532,15 @@ export async function firestoreGetState(userId: string): Promise<any> {
       });
       if (fsTransactions.length > 0) {
         const txMap = new Map<string, TransactionRecord>();
-        transactions.forEach(t => txMap.set(t.id, t));
+        // Server transactions take master precedence
         fsTransactions.forEach(t => txMap.set(t.id, t));
+
+        // Keep local transactions if not yet on server
+        transactions.forEach(t => {
+          if (!txMap.has(t.id)) txMap.set(t.id, t);
+        });
         transactions = Array.from(txMap.values());
+        localStorage.setItem('adpaint_transactions', JSON.stringify(transactions));
       }
 
       // Reconstruct missing recharge transactions directly from deposits collection in Firestore
@@ -1455,6 +1584,7 @@ export async function firestoreGetState(userId: string): Promise<any> {
         console.warn("Notice reading deposits collection in firestoreGetState:", e);
       }
 
+      // 4. Fetch Purchases with full user context
       const purchasesSnap = await getDocs(collection(db, "purchases"));
       const fsPurchases: PurchaseRecord[] = [];
       purchasesSnap.forEach((docSnap) => {
@@ -1481,87 +1611,29 @@ export async function firestoreGetState(userId: string): Promise<any> {
           }
         }
       });
+
       if (fsPurchases.length > 0 || purchases.length > 0) {
-        // Merge server and local purchases safely (local purchases retained if not yet on server)
         const pMap = new Map<string, PurchaseRecord>();
-        // First add local purchases
+        // Add local purchases first
         purchases.forEach(p => pMap.set(p.id, p));
-        // Server purchases take precedence
+        // Server purchases take master precedence
         fsPurchases.forEach(p => pMap.set(p.id, p));
         purchases = Array.from(pMap.values());
+        if (userId) {
+          localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(purchases));
+          localStorage.setItem(`adpaint_backup_purchases_${userId}`, JSON.stringify(purchases));
+        }
       }
-
-      const usersSnap = await getDocs(collection(db, "users"));
-      const fsUsers: UserProfile[] = [];
-      usersSnap.forEach((docSnap) => {
-        const uData = docSnap.data() as UserProfile;
-        if (uData) {
-          fsUsers.push({ ...uData, id: uData.id || docSnap.id });
-        }
-      });
-
-      const localUsers = getStoredUsers();
-      const uMap = new Map<string, UserProfile>();
-
-      // 1. Index local users first
-      localUsers.forEach(u => {
-        if (u && u.id) uMap.set(u.id, u);
-      });
-
-      // 2. Merge server users (server data merges while preserving local account details)
-      const fsUserIds = new Set<string>();
-      fsUsers.forEach(serverU => {
-        if (!serverU || !serverU.id) return;
-        fsUserIds.add(serverU.id);
-        const localU = uMap.get(serverU.id);
-        if (localU) {
-          uMap.set(serverU.id, {
-            ...localU,
-            ...serverU
-          });
-        } else {
-          uMap.set(serverU.id, serverU);
-        }
-      });
-
-      usersList = Array.from(uMap.values());
-
-      // Push any local users missing on server to Firestore in background
-      localUsers.forEach(localU => {
-        if (localU && localU.id && !fsUserIds.has(localU.id)) {
-          setDoc(doc(db, "users", localU.id), cleanUndefined(localU), { merge: true }).catch(() => {});
-        }
-      });
     } catch (err) {
       markQuotaExceeded(err);
       console.warn("firestoreGetState encountered error, serving cached/local state:", err);
     }
   }
 
-  // Merge local stored users into usersList without dropping any user account IDs
-  const localUsers = getStoredUsers();
-  const userMap = new Map<string, UserProfile>();
-  
-  // 1. Add current server/merged users first
-  usersList.forEach(u => {
-    if (u && u.id) userMap.set(u.id, u);
-  });
-
-  // 2. Add all stored local users by ID, merging stats
-  localUsers.forEach(u => {
-    if (!u || !u.id) return;
-    const existing = userMap.get(u.id);
-    if (existing) {
-      userMap.set(u.id, {
-        ...u,
-        ...existing
-      });
-    } else {
-      userMap.set(u.id, u);
-    }
-  });
-
-  usersList = Array.from(userMap.values());
+  // If server usersList is empty (e.g. offline), fallback to local stored users
+  if (!usersList || usersList.length === 0) {
+    usersList = getStoredUsers();
+  }
 
   // For admin sessions, run a full scan across users, transactions, deposits & purchases to reconstruct any missed registrations
   if (userId && (userId.toLowerCase() === 'usr_admin' || userId.toLowerCase().includes('admin'))) {

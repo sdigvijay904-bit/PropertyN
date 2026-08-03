@@ -498,8 +498,14 @@ export default function App() {
           });
 
           // Merge local users: if a user exists locally but not on server, preserve and push to Firestore
-          currentUsersList.forEach((localUser: any) => {
-            if (!localUser || !localUser.id) return;
+          const storedLocalUsers = getStoredUsers();
+          const allLocalCandidates = [...currentUsersList, ...storedLocalUsers];
+          const processedLocalIds = new Set<string>();
+
+          allLocalCandidates.forEach((localUser: any) => {
+            if (!localUser || !localUser.id || localUser.id === 'usr_demo' || processedLocalIds.has(localUser.id)) return;
+            processedLocalIds.add(localUser.id);
+
             const localRawP = localUser.phone ? localUser.phone.replace(/\D/g, '') : '';
             const localLast10 = localRawP.length >= 10 ? localRawP.slice(-10) : localRawP;
             const existingServerUser = serverUserMap.get(localUser.id) || (localLast10 ? phoneToUserMap.get(localLast10) : null);
@@ -948,7 +954,6 @@ export default function App() {
         if (snapshot.exists()) {
           const data = snapshot.data();
           const serverConfig = data.config || {};
-          const isRecentlyEditedLocally = Date.now() - lastLocalUpdateRef.current < 10000;
           const keysToSync = [
             'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
             'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
@@ -960,18 +965,16 @@ export default function App() {
             const serverVal = serverConfig[key];
             if (serverVal !== undefined && serverVal !== null && serverVal !== '') {
               const localVal = localStorage.getItem(key);
-              if (!isRecentlyEditedLocally || !localVal) {
-                if (localVal !== serverVal) {
-                  localStorage.setItem(key, serverVal);
-                  configChanged = true;
-                  if (key === 'adpaint_support_avatar') {
-                    window.dispatchEvent(new Event('adpaint_avatar_updated'));
-                  }
+              if (localVal !== serverVal) {
+                localStorage.setItem(key, serverVal);
+                configChanged = true;
+                if (key === 'adpaint_support_avatar') {
+                  window.dispatchEvent(new Event('adpaint_avatar_updated'));
                 }
               }
             } else if (key === 'adpaint_support_avatar') {
               const localVal = localStorage.getItem(key);
-              if (localVal && !isRecentlyEditedLocally) {
+              if (localVal) {
                 localStorage.removeItem(key);
                 configChanged = true;
                 window.dispatchEvent(new Event('adpaint_avatar_updated'));
@@ -981,8 +984,13 @@ export default function App() {
           if (configChanged) {
             window.dispatchEvent(new Event('adpaint_config_updated'));
           }
-          if (data.customTicker && (!isRecentlyEditedLocally || !localStorage.getItem('adpaint_custom_ticker'))) {
-            localStorage.setItem('adpaint_custom_ticker', data.customTicker);
+          if (data.customTicker) {
+            const currentTicker = localStorage.getItem('adpaint_custom_ticker');
+            if (currentTicker !== data.customTicker) {
+              localStorage.setItem('adpaint_custom_ticker', data.customTicker);
+              setLiveNotif(data.customTicker);
+              window.dispatchEvent(new Event('adpaint_notice_updated'));
+            }
           }
         }
       }, (err) => {
@@ -1011,23 +1019,8 @@ export default function App() {
         });
 
         if (livePlans.length > 0) {
-          const isRecentlyEditedLocally = Date.now() - lastLocalUpdateRef.current < 10000;
           const pMap = new Map<string, InvestmentPlan>();
           livePlans.forEach(p => { if (p && p.id) pMap.set(p.id, p); });
-          plansRef.current.forEach(p => {
-            if (p && p.id && !rawDelP.includes(p.id)) {
-              const existing = pMap.get(p.id);
-              if (existing) {
-                if (isRecentlyEditedLocally) {
-                  pMap.set(p.id, { ...existing, ...p });
-                } else {
-                  pMap.set(p.id, existing);
-                }
-              } else {
-                pMap.set(p.id, p);
-              }
-            }
-          });
           const mergedPlans = Array.from(pMap.values());
           const isDiff = JSON.stringify(mergedPlans) !== JSON.stringify(plansRef.current);
           if (isDiff) {
