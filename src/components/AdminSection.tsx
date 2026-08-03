@@ -3374,6 +3374,7 @@ export default function AdminSection({
                     'adpaint_tg_channel': cleanChannel,
                     'adpaint_tg_support': cleanSupport
                   });
+                  window.dispatchEvent(new Event('adpaint_config_updated'));
                   triggerToast('Telegram settings saved & published live!', 'success');
                 }} className="space-y-4">
                   <div className="space-y-1.5">
@@ -3445,6 +3446,7 @@ export default function AdminSection({
                   syncConfigDirectToFirestore({
                     'adpaint_apk_url': apkUrlInput.trim()
                   });
+                  window.dispatchEvent(new Event('adpaint_config_updated'));
                   triggerToast('APK Download Link saved & published live!', 'success');
                 }} className="space-y-4">
                   <div className="space-y-1.5">
@@ -3700,6 +3702,7 @@ export default function AdminSection({
                     'adpaint_withdraw_time': withdrawTimeInput.trim()
                   });
 
+                  window.dispatchEvent(new Event('adpaint_config_updated'));
                   triggerToast('System thresholds & presets saved and published live!', 'success');
                 }} className="space-y-4">
                   {/* Platform Name */}

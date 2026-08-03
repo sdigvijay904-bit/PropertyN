@@ -938,6 +938,7 @@ export default function App() {
             'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
             'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
           ];
+          let configChanged = false;
           keysToSync.forEach(key => {
             const serverVal = serverConfig[key];
             if (serverVal !== undefined && serverVal !== null && serverVal !== '') {
@@ -945,6 +946,7 @@ export default function App() {
               if (!isRecentlyEditedLocally || !localVal) {
                 if (localVal !== serverVal) {
                   localStorage.setItem(key, serverVal);
+                  configChanged = true;
                   if (key === 'adpaint_support_avatar') {
                     window.dispatchEvent(new Event('adpaint_avatar_updated'));
                   }
@@ -954,10 +956,14 @@ export default function App() {
               const localVal = localStorage.getItem(key);
               if (localVal && !isRecentlyEditedLocally) {
                 localStorage.removeItem(key);
+                configChanged = true;
                 window.dispatchEvent(new Event('adpaint_avatar_updated'));
               }
             }
           });
+          if (configChanged) {
+            window.dispatchEvent(new Event('adpaint_config_updated'));
+          }
           if (data.customTicker && (!isRecentlyEditedLocally || !localStorage.getItem('adpaint_custom_ticker'))) {
             localStorage.setItem('adpaint_custom_ticker', data.customTicker);
           }
