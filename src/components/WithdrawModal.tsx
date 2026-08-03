@@ -54,7 +54,22 @@ export default function WithdrawModal({
     }
   }, [user.bankAccount]);
 
-  const minimumWithdraw = parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '300');
+  const [minimumWithdraw, setMinimumWithdraw] = useState<number>(() => {
+    return parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '300');
+  });
+
+  React.useEffect(() => {
+    const syncWithdrawConfig = () => {
+      setMinimumWithdraw(parseFloat(localStorage.getItem('adpaint_min_withdrawal') || '300'));
+    };
+
+    if (isOpen) {
+      syncWithdrawConfig();
+    }
+
+    window.addEventListener('adpaint_config_updated', syncWithdrawConfig);
+    return () => window.removeEventListener('adpaint_config_updated', syncWithdrawConfig);
+  }, [isOpen]);
 
   // Filter user-specific transactions
   const userTx = transactions.filter(

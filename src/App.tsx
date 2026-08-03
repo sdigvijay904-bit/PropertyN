@@ -455,6 +455,7 @@ export default function App() {
           const isDifferent = JSON.stringify(data.plans) !== JSON.stringify(currentPlans);
           if (isDifferent) {
             setPlans(data.plans);
+            plansRef.current = data.plans;
             localStorage.setItem('adpaint_plans', JSON.stringify(data.plans));
             finalPlans = data.plans;
           }

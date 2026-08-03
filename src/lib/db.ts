@@ -1339,7 +1339,7 @@ export async function firestoreGetState(userId: string): Promise<any> {
       if (configSnap.exists()) {
         const configData = configSnap.data();
         if (configData.config && typeof configData.config === 'object') {
-          config = { ...config, ...configData.config, ...localConfig };
+          config = { ...SEED_CONFIG, ...localConfig, ...configData.config };
         }
         if (configData.customTicker) customTicker = configData.customTicker;
       }
@@ -1376,17 +1376,13 @@ export async function firestoreGetState(userId: string): Promise<any> {
       if (fsPlans.length > 0) {
         const pMap = new Map<string, InvestmentPlan>();
         const localPlans = getStoredPlans();
-        fsPlans.forEach(p => {
+        localPlans.forEach(p => {
           if (p && p.id && !rawDelP.includes(p.id)) pMap.set(p.id, p);
         });
-        localPlans.forEach(p => {
+        fsPlans.forEach(p => {
           if (p && p.id && !rawDelP.includes(p.id)) {
-            const existing = pMap.get(p.id);
-            if (existing) {
-              pMap.set(p.id, { ...existing, ...p });
-            } else {
-              pMap.set(p.id, p);
-            }
+            const local = pMap.get(p.id);
+            pMap.set(p.id, local ? { ...local, ...p } : p);
           }
         });
         plans = Array.from(pMap.values());
@@ -1701,7 +1697,7 @@ export async function firestoreSaveState(payload: {
       }
 
       // Sync plans to Firestore plans collection so all browsers and APKs get identical admin plan prices
-      if (Array.isArray(plans) && plans.length > 0) {
+      if (isAdmin && Array.isArray(plans) && plans.length > 0) {
         const plansBatch = writeBatch(db);
         for (const plan of plans) {
           plansBatch.set(doc(db, "plans", plan.id), cleanUndefined(plan), { merge: true });

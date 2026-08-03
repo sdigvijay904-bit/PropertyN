@@ -14,22 +14,35 @@ interface WelcomeNoticeModalProps {
 }
 
 export default function WelcomeNoticeModal({ isOpen, onClose }: WelcomeNoticeModalProps) {
+  const [platformName, setPlatformName] = React.useState<string>(() => localStorage.getItem('adpaint_platform_name') || 'PropertyN');
+  const [signupBonus, setSignupBonus] = React.useState<string>(() => localStorage.getItem('adpaint_signup_bonus') || '100');
+  const [minWithdrawal, setMinWithdrawal] = React.useState<string>(() => localStorage.getItem('adpaint_min_withdrawal') || '300');
+  const [minRecharge, setMinRecharge] = React.useState<string>(() => localStorage.getItem('adpaint_min_recharge') || '250');
+  const [withdrawTime, setWithdrawTime] = React.useState<string>(() => localStorage.getItem('adpaint_withdraw_time') || '12:30AM - 11:59PM');
+  const [tgChannel, setTgChannel] = React.useState<string>(() => localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99');
+
+  const syncConfig = React.useCallback(() => {
+    setPlatformName(localStorage.getItem('adpaint_platform_name') || 'PropertyN');
+    setSignupBonus(localStorage.getItem('adpaint_signup_bonus') || '100');
+    setMinWithdrawal(localStorage.getItem('adpaint_min_withdrawal') || '300');
+    setMinRecharge(localStorage.getItem('adpaint_min_recharge') || '250');
+    setWithdrawTime(localStorage.getItem('adpaint_withdraw_time') || '12:30AM - 11:59PM');
+    setTgChannel(localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99');
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
+      syncConfig();
       const customTicker = localStorage.getItem('adpaint_custom_ticker') || '';
       localStorage.setItem('adpaint_notice_last_read', customTicker || 'read_default');
       window.dispatchEvent(new Event('adpaint_notice_updated'));
     }
-  }, [isOpen]);
+
+    window.addEventListener('adpaint_config_updated', syncConfig);
+    return () => window.removeEventListener('adpaint_config_updated', syncConfig);
+  }, [isOpen, syncConfig]);
 
   if (!isOpen) return null;
-
-  const platformName = localStorage.getItem('adpaint_platform_name') || 'PropertyN';
-  const signupBonus = localStorage.getItem('adpaint_signup_bonus') || '100';
-  const minWithdrawal = localStorage.getItem('adpaint_min_withdrawal') || '120';
-  const minRecharge = localStorage.getItem('adpaint_min_recharge') || '250';
-  const withdrawTime = localStorage.getItem('adpaint_withdraw_time') || '12:30AM - 11:59PM';
-  const tgChannel = localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99';
 
   const handleTelegramJoin = () => {
     openTelegramUrl(tgChannel, 'https://t.me/PropertyN_99');

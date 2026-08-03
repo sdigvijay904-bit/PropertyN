@@ -128,8 +128,18 @@ export default function HomeSection({
   );
 
 
-  const tgChannel = localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99';
-  const tgSupport = localStorage.getItem('adpaint_tg_support') || 'https://t.me/PropertyN_Support';
+  const [tgChannel, setTgChannel] = useState<string>(() => localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99');
+  const [tgSupport, setTgSupport] = useState<string>(() => localStorage.getItem('adpaint_tg_support') || 'https://t.me/PropertyN_Support');
+
+  useEffect(() => {
+    const syncConfig = () => {
+      setTgChannel(localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99');
+      setTgSupport(localStorage.getItem('adpaint_tg_support') || 'https://t.me/PropertyN_Support');
+    };
+
+    window.addEventListener('adpaint_config_updated', syncConfig);
+    return () => window.removeEventListener('adpaint_config_updated', syncConfig);
+  }, []);
 
   useEffect(() => {
     const slideTimer = setInterval(() => {
