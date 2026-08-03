@@ -443,6 +443,22 @@ export default function App() {
       
       const data = await firestoreGetState(userId);
       if (data) {
+        // 0. Sync global config & custom ticker from Admin Panel
+        if (data.config && typeof data.config === 'object') {
+          Object.entries(data.config).forEach(([key, val]) => {
+            if (typeof val === 'string') {
+              localStorage.setItem(key, val as string);
+            }
+          });
+          window.dispatchEvent(new Event('adpaint_config_updated'));
+          window.dispatchEvent(new Event('adpaint_avatar_updated'));
+        }
+        if (data.customTicker) {
+          localStorage.setItem('adpaint_custom_ticker', data.customTicker);
+          setLiveNotif(data.customTicker);
+          window.dispatchEvent(new Event('adpaint_notice_updated'));
+        }
+
         const currentPlans = plansRef.current;
         const currentPurchases = purchasesRef.current;
         const currentTransactions = transactionsRef.current;
@@ -1594,11 +1610,9 @@ export default function App() {
       setRegisterOtpInput('');
       setRegisterOtpCode('');
 
-      // Sync state to Firestore server in background (non-blocking)
-      setTimeout(() => {
-        pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
-        syncWithServer(serverUser, true);
-      }, 50);
+      // Sync state to Firestore server immediately
+      pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
+      syncWithServer(serverUser, true);
     } catch (err: any) {
       console.error("Registration error:", err);
       setAuthError(err?.message || 'Server communication error. Please try again.');
@@ -1655,7 +1669,7 @@ export default function App() {
       triggerToast('Welcome back! Logs active.', 'success');
 
       // Deep sync
-      syncWithServer(serverUser);
+      syncWithServer(serverUser, true);
 
       // Reset fields
       setMobileNumber('');

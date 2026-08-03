@@ -291,10 +291,15 @@ export default function AdminSection({
           config: configMap,
           customTicker: localStorage.getItem('adpaint_custom_ticker') || null
         }, { merge: true });
+        window.dispatchEvent(new Event('adpaint_config_updated'));
+        window.dispatchEvent(new Event('adpaint_avatar_updated'));
       } catch (err) {
         markQuotaExceeded(err);
         console.error("Direct Firestore config sync error:", err);
       }
+    } else {
+      window.dispatchEvent(new Event('adpaint_config_updated'));
+      window.dispatchEvent(new Event('adpaint_avatar_updated'));
     }
 
     if (onSyncConfig) {

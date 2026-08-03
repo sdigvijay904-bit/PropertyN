@@ -1340,8 +1340,19 @@ export async function firestoreGetState(userId: string): Promise<any> {
         const configData = configSnap.data();
         if (configData.config && typeof configData.config === 'object') {
           config = { ...SEED_CONFIG, ...localConfig, ...configData.config };
+          Object.entries(configData.config).forEach(([key, val]) => {
+            if (typeof val === 'string') {
+              localStorage.setItem(key, val);
+            }
+          });
+          window.dispatchEvent(new Event('adpaint_config_updated'));
+          window.dispatchEvent(new Event('adpaint_avatar_updated'));
         }
-        if (configData.customTicker) customTicker = configData.customTicker;
+        if (configData.customTicker) {
+          customTicker = configData.customTicker;
+          localStorage.setItem('adpaint_custom_ticker', customTicker);
+          window.dispatchEvent(new Event('adpaint_notice_updated'));
+        }
       }
 
       // Fetch global deleted items list from Firestore
