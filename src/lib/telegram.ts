@@ -1,6 +1,6 @@
 /**
  * Utility to format and reliably open Telegram channel and support links
- * across all mobile browsers, PWAs, iOS Safari, Android Chrome, and WebViews.
+ * across all mobile browsers, PWAs, iOS Safari, Android Chrome, and WebViews (Meta/Instagram Ads).
  */
 
 export function formatTelegramUrl(rawUrl?: string | null, defaultFallback: string = 'https://t.me/PropertyN_99'): string {
@@ -11,6 +11,11 @@ export function formatTelegramUrl(rawUrl?: string | null, defaultFallback: strin
   // Handle @username format
   if (trimmed.startsWith('@')) {
     return `https://t.me/${trimmed.substring(1)}`;
+  }
+
+  // Handle plain username (no slashes, no http, e.g. "PropertyN_99")
+  if (!trimmed.includes('/') && !trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('tg://')) {
+    return `https://t.me/${trimmed}`;
   }
 
   // Handle t.me/ or telegram.me/ or telegram.dog/ without protocol
@@ -39,67 +44,74 @@ export function extractTelegramHandle(rawUrl?: string | null): string {
   let cleaned = rawUrl.trim();
   if (cleaned.startsWith('@')) return cleaned.substring(1);
   
+  // Remove protocol and domain
   cleaned = cleaned.replace(/^(https?:\/\/)?(www\.)?(t\.me|telegram\.me|telegram\.dog)\//i, '');
   cleaned = cleaned.replace(/^s\//i, ''); // remove /s/ channel preview prefix if present
   
-  if (cleaned.startsWith('+') || cleaned.startsWith('joinchat/')) return ''; // private invite
+  if (cleaned.startsWith('+') || cleaned.startsWith('joinchat/')) return ''; // private invite link
   
-  return cleaned.split('/')[0].split('?')[0].replace(/[^a-zA-Z0-9_]/g, '');
+  // Take only the username part before any extra path or query params
+  const handlePart = cleaned.split('/')[0].split('?')[0].split('#')[0];
+  return handlePart.replace(/[^a-zA-Z0-9_]/g, '');
 }
 
 export function openTelegramUrl(rawUrl?: string | null, defaultFallback: string = 'https://t.me/PropertyN_99'): void {
   const finalUrl = formatTelegramUrl(rawUrl, defaultFallback);
   const handle = extractTelegramHandle(finalUrl);
 
-  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
-  const isMetaOrMobileWebView = typeof navigator !== 'undefined' && /FBAN|FBAV|Instagram|MetaApp|MicroMessenger|WebView/i.test(navigator.userAgent);
+  const isMetaOrMobileWebView = typeof navigator !== 'undefined' && /FBAN|FBAV|Instagram|MetaApp|MicroMessenger|WebView|Android.*Version\/[0-9]/i.test(navigator.userAgent);
 
-  // 1. If we have a clear handle and user is on Android (especially Meta/Instagram Ads WebView)
-  if (handle && isAndroid) {
-    // Intent URL forces Android OS to open Telegram App directly instead of Instagram internal webview
-    const intentUrl = `intent://resolve?domain=${handle}#Intent;package=org.telegram.messenger;scheme=tg;end;`;
+  // 1. If we have a valid handle, attempt direct Telegram App launch using tg://resolve protocol
+  // This uses native Telegram URI scheme which works cleanly on both Android and iOS without "Username not found" intent bugs
+  if (handle) {
+    const tgScheme = `tg://resolve?domain=${handle}`;
     try {
-      window.location.href = intentUrl;
-      // If Telegram app opens, browser halts execution here.
-      // If app is not installed, fallback fires via setTimeout below.
+      const link = document.createElement('a');
+      link.href = tgScheme;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch {
       // ignore
     }
-  } else if (handle) {
-    // 2. iOS or standard browser - trigger tg:// deep link
-    const tgScheme = `tg://resolve?domain=${handle}`;
-    try {
-      const a = document.createElement('a');
-      a.href = tgScheme;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch {
-      // ignore
+  } else if (finalUrl.startsWith('https://t.me/+') || finalUrl.includes('/joinchat/')) {
+    // Handle private invite link deep link (tg://join?invite=...)
+    const inviteCode = finalUrl.includes('/+') ? finalUrl.split('/+')[1]?.split('?')[0] : finalUrl.split('joinchat/')[1]?.split('?')[0];
+    if (inviteCode) {
+      try {
+        const link = document.createElement('a');
+        link.href = `tg://join?invite=${inviteCode}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch {
+        // ignore
+      }
     }
   }
 
-  // 3. Fallback Web View after 400ms delay if app did not open
+  // 2. Fallback Web Navigation after 350ms delay if app did not open
   setTimeout(() => {
-    // For public channels inside Meta/Instagram in-app browser, t.me/s/handle is Telegram's official
-    // Channel Web Preview which renders 100% reliably without "User not found" errors!
-    let webFallbackUrl = finalUrl;
+    // For Meta Ads / Instagram In-App browser, if public channel, t.me/s/handle is Telegram's official preview
+    let webUrl = finalUrl;
     if (handle && isMetaOrMobileWebView && !finalUrl.includes('/+')) {
-      webFallbackUrl = `https://t.me/s/${handle}`;
+      webUrl = `https://t.me/s/${handle}`;
     }
 
     try {
       if (isMetaOrMobileWebView) {
-        window.location.href = webFallbackUrl;
+        window.location.href = webUrl;
       } else {
-        const win = window.open(webFallbackUrl, '_blank', 'noopener,noreferrer');
-        if (!win || win.closed) {
-          window.location.href = webFallbackUrl;
+        const win = window.open(webUrl, '_blank', 'noopener,noreferrer');
+        if (!win || win.closed || typeof win.closed === 'undefined') {
+          window.location.href = webUrl;
         }
       }
     } catch {
-      window.location.href = webFallbackUrl;
+      window.location.href = webUrl;
     }
-  }, handle ? 400 : 0);
+  }, handle ? 350 : 0);
 }
+
 

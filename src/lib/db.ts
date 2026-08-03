@@ -180,7 +180,7 @@ const SEED_PLANS: InvestmentPlan[] = [
 const SEED_CONFIG: Record<string, string> = {
   adpaint_upi_id: "sdigvijay904-3@oksbi",
   adpaint_upi_name: "PropertyN Solutions",
-  adpaint_tg_channel: "https://t.me/PropertyNc",
+  adpaint_tg_channel: "https://t.me/PropertyN_99",
   adpaint_tg_support: "https://t.me/PropertyN_Support",
   adpaint_platform_name: "PropertyN",
   adpaint_daily_bonus: "10",
