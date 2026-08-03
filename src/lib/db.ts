@@ -1217,25 +1217,34 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
   const newUserId = `usr_${last10Digits}`;
 
-  // Check if phone already registered locally or in Firestore
+  // Check if phone already registered in Firestore or local store
   const check = await firestoreCheckPhone(cleanedPhone);
   if (check.exists) {
     throw new Error("Mobile number already registered! Please log in.");
   }
 
+  const nowIso = new Date().toISOString();
+  const nowFormatted = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
   const newUser: UserProfile = {
     id: newUserId,
     name,
     phone: cleanedPhone,
+    email: `${last10Digits}@propertyn.online`,
     balance: 100, // free signup bonus
     totalEarnings: 0,
     dailyEarned: 0,
+    totalInvested: 0,
     checkedInToday: false,
     inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
     inviterCode: inviterCode || "",
     role: 'user',
     password: password_entered,
+    status: 'active',
     kycStatus: 'none',
+    createdAt: nowIso,
+    registrationDate: nowFormatted,
+    deviceInfo: typeof navigator !== 'undefined' ? navigator.userAgent : 'Mobile/Web Browser',
     notifications: [
       {
         id: `notif_${Date.now()}`,
@@ -1258,7 +1267,22 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     userPhone: newUser.phone
   };
 
-  // Update local storage FIRST so user registration is 100% instant without waiting for network!
+  // Direct mandatory write to Firestore production database FIRST
+  try {
+    const userDocRef = doc(db, "users", newUserId);
+    const txDocRef = doc(db, "transactions", signupTx.id);
+
+    await Promise.all([
+      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
+      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
+    ]);
+    console.log("Successfully created new user record in Firestore production database:", newUserId);
+  } catch (err: any) {
+    console.error("Firestore registration write error:", err);
+    throw new Error(`Database registration failed: ${err?.message || 'Connection error'}. Account was not created.`);
+  }
+
+  // Update local storage cache AFTER successful database write so offline cache stays in sync
   const storedUsers = getStoredUsers();
   const existingIdx = storedUsers.findIndex(u => u.id === newUserId || u.phone === cleanedPhone);
   if (existingIdx >= 0) {
@@ -1274,30 +1298,6 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
 
   // Save to master backup snapshot
   saveMasterSnapshotBackup({ usersList: storedUsers, transactions: storedTxs });
-
-  // Direct write to Firestore users & transactions collection
-  try {
-    const userDocRef = doc(db, "users", newUserId);
-    const txDocRef = doc(db, "transactions", signupTx.id);
-
-    // Save to Firestore in background with a fast 800ms race timeout so registration never hangs on mobile webview
-    const savePromise = Promise.all([
-      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
-      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
-    ]).then(() => {
-      console.log("Successfully created and saved new user account in Firestore:", newUserId);
-    }).catch((err) => {
-      markQuotaExceeded(err);
-      console.warn("Notice saving user to Firestore (saved locally):", err);
-    });
-
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800));
-
-    await Promise.race([savePromise, timeoutPromise]);
-  } catch (err: any) {
-    markQuotaExceeded(err);
-    console.warn("Notice saving new user to Firestore during registration (saved locally):", err);
-  }
 
   return {
     user: newUser,

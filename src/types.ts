@@ -14,6 +14,7 @@ export interface UserProfile {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   balance: number;
   totalEarnings: number;
   dailyEarned: number;
@@ -28,6 +29,8 @@ export interface UserProfile {
   status?: 'active' | 'blocked';
   totalInvested?: number;
   createdAt?: string;
+  registrationDate?: string;
+  deviceInfo?: string;
   avatar?: string;
   kycStatus?: 'none' | 'pending' | 'verified' | 'rejected';
   kycIdType?: string;
