@@ -93,20 +93,15 @@ export default function AdminSection({
 
     doScan();
 
-    const interval = setInterval(() => {
+    const handleUsersUpdated = async () => {
       if (isMounted) {
         doScan();
       }
-    }, 5000);
-
-    const handleUsersUpdated = async () => {
-      doScan();
     };
 
     window.addEventListener('adpaint_users_updated', handleUsersUpdated);
     return () => {
       isMounted = false;
-      clearInterval(interval);
       window.removeEventListener('adpaint_users_updated', handleUsersUpdated);
     };
   }, []);

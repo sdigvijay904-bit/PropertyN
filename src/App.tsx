@@ -1603,9 +1603,10 @@ export default function App() {
       setRegisterOtpInput('');
       setRegisterOtpCode('');
 
-      // Sync state to Firestore server immediately
-      pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
-      syncWithServer(serverUser, true);
+      // Sync state to Firestore server in background (non-blocking for instant UI response)
+      setTimeout(() => {
+        pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
+      }, 100);
     } catch (err: any) {
       console.error("Registration error:", err);
       setAuthError(err?.message || 'Server communication error. Please try again.');
