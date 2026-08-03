@@ -61,7 +61,7 @@ export default function RechargeModal({
   const [minRecharge, setMinRecharge] = useState<number>(250);
 
   useEffect(() => {
-    if (isOpen) {
+    const syncPaymentConfig = () => {
       const savedUpiId = localStorage.getItem('adpaint_upi_id') || 'propertyn@ybl';
       const savedUpiName = localStorage.getItem('adpaint_upi_name') || 'PropertyN Payments Ltd';
       const savedCashierUrl = localStorage.getItem('adpaint_cashier_url') || '';
@@ -71,6 +71,10 @@ export default function RechargeModal({
       setUpiName(savedUpiName);
       setCashierUrl(savedCashierUrl);
       setMinRecharge(savedMinRecharge);
+    };
+
+    if (isOpen) {
+      syncPaymentConfig();
 
       // Apply prefilled amount if available
       if (prefilledAmount) {
@@ -85,6 +89,9 @@ export default function RechargeModal({
       setError('');
       setIsSubmitting(false);
     }
+
+    window.addEventListener('adpaint_config_updated', syncPaymentConfig);
+    return () => window.removeEventListener('adpaint_config_updated', syncPaymentConfig);
   }, [isOpen, prefilledAmount]);
 
   // Generate pure client-side Base64 QR code for direct display and mobile APK save/download

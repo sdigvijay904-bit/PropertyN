@@ -3275,18 +3275,29 @@ export default function AdminSection({
                     triggerToast('All fields are required', 'error');
                     return;
                   }
-                  localStorage.setItem('adpaint_upi_id', upiIdInput.trim());
-                  localStorage.setItem('adpaint_upi_name', upiNameInput.trim());
+                  const cleanUpiId = upiIdInput.trim();
+                  const cleanUpiName = upiNameInput.trim();
+                  localStorage.setItem('adpaint_upi_id', cleanUpiId);
+                  localStorage.setItem('adpaint_upi_name', cleanUpiName);
                   localStorage.setItem('adpaint_cashier_url', '');
-                  setSavedUpiId(upiIdInput.trim());
-                  setSavedUpiName(upiNameInput.trim());
+                  setSavedUpiId(cleanUpiId);
+                  setSavedUpiName(cleanUpiName);
                   setSavedCashierUrl('');
                   syncConfigDirectToFirestore({
-                    'adpaint_upi_id': upiIdInput.trim(),
-                    'adpaint_upi_name': upiNameInput.trim(),
+                    'adpaint_upi_id': cleanUpiId,
+                    'adpaint_upi_name': cleanUpiName,
                     'adpaint_cashier_url': ''
                   });
-                  triggerToast('UPI settings saved & published live!', 'success');
+                  firebaseService.updateSettings({
+                    upiId: cleanUpiId,
+                    merchantName: cleanUpiName,
+                    minDeposit: parseFloat(savedMinRecharge || '250'),
+                    maxDeposit: 100000,
+                    qrCodeUrl: '',
+                    updatedAt: new Date().toISOString()
+                  }).catch(() => {});
+                  window.dispatchEvent(new Event('adpaint_config_updated'));
+                  triggerToast('UPI settings saved & published live across all mobile devices!', 'success');
                 }} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Merchant UPI ID (e.g. upi@bank)</label>

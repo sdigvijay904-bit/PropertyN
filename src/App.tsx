@@ -292,10 +292,8 @@ export default function App() {
       const parsedUser = JSON.parse(storedUser);
       const latestFromList = loadedUsersList.find(u => u.id === parsedUser.id);
       const rawUser = parsedUser ? {
-        ...latestFromList,
         ...parsedUser,
-        balance: Math.max(parsedUser.balance ?? 0, latestFromList?.balance ?? 0),
-        totalEarnings: Math.max(parsedUser.totalEarnings ?? 0, latestFromList?.totalEarnings ?? 0)
+        ...latestFromList
       } : (latestFromList || parsedUser);
       const finalUser = sanitizeUserCheckIn(rawUser)!;
       setUserProfile(finalUser);
@@ -1036,9 +1034,7 @@ export default function App() {
             if (local) {
               uMap.set(u.id, {
                 ...local,
-                ...u,
-                balance: Math.max(u.balance ?? 0, local.balance ?? 0),
-                totalEarnings: Math.max(u.totalEarnings ?? 0, local.totalEarnings ?? 0)
+                ...u
               });
             } else {
               uMap.set(u.id, u);
@@ -1116,9 +1112,8 @@ export default function App() {
             if (sanitized) {
               const currentLocal = userProfileRef.current;
               const mergedMe = {
-                ...sanitized,
-                balance: Math.max(sanitized.balance ?? 0, currentLocal?.balance ?? 0),
-                totalEarnings: Math.max(sanitized.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0)
+                ...currentLocal,
+                ...sanitized
               };
               if (JSON.stringify(mergedMe) !== JSON.stringify(userProfileRef.current)) {
                 setUserProfile(mergedMe);
@@ -1224,15 +1219,13 @@ export default function App() {
         });
         if (liveUsers.length > 0) {
           const uMap = new Map<string, UserProfile>();
-          // Server snapshot is authoritative, but preserve higher local claimed balance/earnings
+          // Server snapshot is authoritative
           liveUsers.forEach(u => {
             const local = usersListRef.current.find(l => l.id === u.id);
             if (local) {
               uMap.set(u.id, {
                 ...local,
-                ...u,
-                balance: Math.max(u.balance ?? 0, local.balance ?? 0),
-                totalEarnings: Math.max(u.totalEarnings ?? 0, local.totalEarnings ?? 0)
+                ...u
               });
             } else {
               uMap.set(u.id, u);

@@ -1510,12 +1510,7 @@ export async function firestoreGetState(userId: string): Promise<any> {
         if (localU) {
           uMap.set(serverU.id, {
             ...localU,
-            ...serverU,
-            balance: Math.max(localU.balance ?? 0, serverU.balance ?? 0),
-            totalEarnings: Math.max(localU.totalEarnings ?? 0, serverU.totalEarnings ?? 0),
-            inviterCode: serverU.inviterCode || localU.inviterCode,
-            bankAccount: serverU.bankAccount || localU.bankAccount,
-            password: serverU.password || localU.password
+            ...serverU
           });
         } else {
           uMap.set(serverU.id, serverU);
@@ -1552,12 +1547,7 @@ export async function firestoreGetState(userId: string): Promise<any> {
     if (existing) {
       userMap.set(u.id, {
         ...u,
-        ...existing,
-        balance: Math.max(u.balance ?? 0, existing.balance ?? 0),
-        totalEarnings: Math.max(u.totalEarnings ?? 0, existing.totalEarnings ?? 0),
-        inviterCode: existing.inviterCode || u.inviterCode,
-        bankAccount: existing.bankAccount || u.bankAccount,
-        password: existing.password || u.password
+        ...existing
       });
     } else {
       userMap.set(u.id, u);

@@ -132,12 +132,13 @@ export const firebaseService = {
 
   // --- SETTINGS APIS ---
   getSettings: async (): Promise<PaymentSettings> => {
+    let settings = DEFAULT_SETTINGS;
     if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         const docRef = doc(db, 'settings', 'payment_config');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          return docSnap.data() as PaymentSettings;
+          settings = { ...DEFAULT_SETTINGS, ...(docSnap.data() as PaymentSettings) };
         }
       } catch (e) {
         markQuotaExceeded(e);
@@ -148,12 +149,14 @@ export const firebaseService = {
     const saved = localStorage.getItem('propertyn_payment_config');
     if (saved) {
       try {
-        return JSON.parse(saved);
-      } catch {
-        return DEFAULT_SETTINGS;
-      }
+        settings = { ...settings, ...JSON.parse(saved) };
+      } catch {}
     }
-    return DEFAULT_SETTINGS;
+    const adpaintUpiId = localStorage.getItem('adpaint_upi_id');
+    const adpaintUpiName = localStorage.getItem('adpaint_upi_name');
+    if (adpaintUpiId) settings.upiId = adpaintUpiId;
+    if (adpaintUpiName) settings.merchantName = adpaintUpiName;
+    return settings;
   },
 
   updateSettings: async (settings: PaymentSettings): Promise<void> => {
