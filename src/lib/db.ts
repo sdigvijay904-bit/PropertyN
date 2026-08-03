@@ -1217,9 +1217,14 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   const last10Digits = digitsOnly.substring(digitsOnly.length - 10);
   const newUserId = `usr_${last10Digits}`;
 
-  // Check if phone already registered in Firestore or local store
-  const check = await firestoreCheckPhone(cleanedPhone);
-  if (check.exists) {
+  // Instant local storage check (0ms)
+  const storedUsers = getStoredUsers();
+  const existingLocally = storedUsers.some(u => {
+    if (u.role === 'admin' || u.id === 'usr_admin') return false;
+    const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
+    return uDigits.length >= 10 && uDigits.slice(-10) === last10Digits;
+  });
+  if (existingLocally) {
     throw new Error("Mobile number already registered! Please log in.");
   }
 
@@ -1267,26 +1272,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     userPhone: newUser.phone
   };
 
-  // Direct write to Firestore production database with fast timeout so UI registration never hangs
-  try {
-    const userDocRef = doc(db, "users", newUserId);
-    const txDocRef = doc(db, "transactions", signupTx.id);
-
-    const writePromise = Promise.all([
-      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
-      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
-    ]);
-
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 800));
-
-    await Promise.race([writePromise, timeoutPromise]);
-    console.log("Registered new user record in Firestore:", newUserId);
-  } catch (err: any) {
-    console.warn("Firestore registration notice:", err);
-  }
-
-  // Update local storage cache AFTER successful database write so offline cache stays in sync
-  const storedUsers = getStoredUsers();
+  // 1. Update local storage cache immediately (0ms instant registration)
   const existingIdx = storedUsers.findIndex(u => u.id === newUserId || u.phone === cleanedPhone);
   if (existingIdx >= 0) {
     storedUsers[existingIdx] = newUser;
@@ -1301,6 +1287,23 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
 
   // Save to master backup snapshot
   saveMasterSnapshotBackup({ usersList: storedUsers, transactions: storedTxs });
+
+  // 2. Fire non-blocking asynchronous Firestore write in background so UI never waits or hangs
+  try {
+    const userDocRef = doc(db, "users", newUserId);
+    const txDocRef = doc(db, "transactions", signupTx.id);
+
+    Promise.all([
+      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
+      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
+    ]).then(() => {
+      console.log("Asynchronously registered user record in Firestore:", newUserId);
+    }).catch(err => {
+      console.warn("Background Firestore user write notice:", err);
+    });
+  } catch (err: any) {
+    console.warn("Firestore setup notice:", err);
+  }
 
   return {
     user: newUser,

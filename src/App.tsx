@@ -1550,14 +1550,7 @@ export default function App() {
     setIsSubmittingAuth(true);
 
     try {
-      const checkData = await firestoreCheckPhone(targetPhone);
-      if (checkData.exists) {
-        setAuthError('Mobile number already registered! Please log in.');
-        setIsSubmittingAuth(false);
-        return;
-      }
-
-      // Success registration
+      // Instant success registration (0ms local-first architecture)
       const finalInviterCode = invitationCode || localStorage.getItem('adpaint_pending_invite_code') || undefined;
 
       const regData = await firestoreRegister({
