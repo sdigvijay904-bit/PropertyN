@@ -1033,52 +1033,26 @@ export default function App() {
         console.warn("Real-time plans snapshot listener notice:", err?.message || err);
       });
 
-      // Live Users collection listener at top level so ALL registrations (Meta Ads, Socials, APK, Web) reflect immediately in Admin Panel
+      // Live Users collection listener at top level so ALL registrations reflect immediately in Admin Panel
       const usersColRef = collection(db, "users");
       unsubUsers = onSnapshot(usersColRef, (snapshot) => {
         const liveUsers: UserProfile[] = [];
         snapshot.forEach(d => {
           const u = d.data() as UserProfile;
-          if (u) {
+          if (u && !u.id?.startsWith('tx_') && !u.id?.startsWith('pur_') && !u.id?.startsWith('dep_') && !(u as any).type) {
             liveUsers.push({ ...u, id: u.id || d.id });
           }
         });
-        if (liveUsers.length > 0) {
-          const uMap = new Map<string, UserProfile>();
-          liveUsers.forEach(u => {
-            const local = usersListRef.current.find(l => l.id === u.id);
-            if (local) {
-              uMap.set(u.id, {
-                ...local,
-                ...u
-              });
-            } else {
-              uMap.set(u.id, u);
+        scanAndMergeAllUsers(liveUsers).then(scanned => {
+          if (scanned && scanned.length > 0) {
+            const isDiff = JSON.stringify(scanned) !== JSON.stringify(usersListRef.current);
+            if (isDiff) {
+              setUsersList(scanned);
+              usersListRef.current = scanned;
+              localStorage.setItem('adpaint_users_list', JSON.stringify(scanned));
             }
-          });
-
-          // Also merge local memory users & local storage users by ID so no user ID is ever dropped
-          usersListRef.current.forEach(localU => {
-            if (localU && localU.id && !uMap.has(localU.id)) {
-              uMap.set(localU.id, localU);
-            }
-          });
-
-          const storedLocal1 = getStoredUsers();
-          storedLocal1.forEach(localU => {
-            if (localU && localU.id && !uMap.has(localU.id)) {
-              uMap.set(localU.id, localU);
-            }
-          });
-
-          const merged = Array.from(uMap.values());
-          const isDiff = JSON.stringify(merged) !== JSON.stringify(usersListRef.current);
-          if (isDiff) {
-            setUsersList(merged);
-            usersListRef.current = merged;
-            localStorage.setItem('adpaint_users_list', JSON.stringify(merged));
           }
-        }
+        }).catch(() => {});
       }, (err) => {
         console.warn("Top-level users snapshot notice:", err?.message || err);
       });
@@ -1229,48 +1203,20 @@ export default function App() {
         const liveUsers: UserProfile[] = [];
         snap.forEach(d => {
           const u = d.data() as UserProfile;
-          if (u) {
+          if (u && !u.id?.startsWith('tx_') && !u.id?.startsWith('pur_') && !u.id?.startsWith('dep_') && !(u as any).type) {
             liveUsers.push({ ...u, id: u.id || d.id });
           }
         });
-        if (liveUsers.length > 0) {
-          const uMap = new Map<string, UserProfile>();
-          // Server snapshot is authoritative
-          liveUsers.forEach(u => {
-            const local = usersListRef.current.find(l => l.id === u.id);
-            if (local) {
-              uMap.set(u.id, {
-                ...local,
-                ...u
-              });
-            } else {
-              uMap.set(u.id, u);
+        scanAndMergeAllUsers(liveUsers).then(scanned => {
+          if (scanned && scanned.length > 0) {
+            const isDiff = JSON.stringify(scanned) !== JSON.stringify(usersListRef.current);
+            if (isDiff) {
+              setUsersList(scanned);
+              usersListRef.current = scanned;
+              localStorage.setItem('adpaint_users_list', JSON.stringify(scanned));
             }
-          });
-
-          // Preserve all local memory users and local storage users by ID so no user is dropped
-          usersListRef.current.forEach(localU => {
-            if (localU && localU.id && !uMap.has(localU.id)) {
-              uMap.set(localU.id, localU);
-            }
-          });
-
-          const storedLocal2 = getStoredUsers();
-          storedLocal2.forEach(localU => {
-            if (localU && localU.id && !uMap.has(localU.id)) {
-              uMap.set(localU.id, localU);
-            }
-          });
-
-          const merged = Array.from(uMap.values());
-
-          const isDiff = JSON.stringify(merged) !== JSON.stringify(usersListRef.current);
-          if (isDiff) {
-            setUsersList(merged);
-            usersListRef.current = merged;
-            localStorage.setItem('adpaint_users_list', JSON.stringify(merged));
           }
-        }
+        }).catch(() => {});
       }, (err) => {
         console.warn("Notice reading live users snapshot:", err);
         markQuotaExceeded(err);

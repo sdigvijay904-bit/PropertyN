@@ -437,22 +437,35 @@ export function getStoredUsers(): UserProfile[] {
   // Helper to add user cleanly
   const addCandidateUser = (u: any) => {
     if (!u || typeof u !== 'object') return;
-    const rawId = u.id || (u.phone ? `usr_${String(u.phone).replace(/\D/g, '').slice(-10)}` : '');
-    if (!rawId || rawId === 'usr_demo') return;
+    
+    // STRICT REJECTION: Reject transaction, deposit, purchase, plan, or config objects
+    if (u.type || u.amount !== undefined || u.utrNumber !== undefined || u.proofUrl !== undefined || u.dailyIncome !== undefined || u.planId !== undefined) {
+      return;
+    }
 
-    const existing = map.get(rawId);
+    const rawId = String(u.id || '');
+    if (!rawId || rawId === 'usr_demo' || rawId.startsWith('tx_') || rawId.startsWith('pur_') || rawId.startsWith('dep_') || rawId.startsWith('plan_') || rawId.startsWith('cfg_') || rawId.startsWith('notif_')) {
+      return;
+    }
+
+    const cleanPhoneDigits = u.phone ? String(u.phone).replace(/\D/g, '').slice(-10) : '';
+    const key = (u.role === 'admin' || rawId === 'usr_admin' || rawId === 'admin')
+      ? 'usr_admin'
+      : (cleanPhoneDigits.length >= 10 ? `usr_${cleanPhoneDigits}` : rawId);
+
+    const existing = map.get(key);
     if (!existing) {
-      map.set(rawId, {
-        id: rawId,
-        name: u.name || `User ${rawId.replace('usr_', '')}`,
-        phone: u.phone || '',
+      map.set(key, {
+        id: key,
+        name: u.name || (key === 'usr_admin' ? 'System Admin' : `User ${cleanPhoneDigits || key.replace('usr_', '')}`),
+        phone: u.phone || (cleanPhoneDigits ? `+91 ${cleanPhoneDigits}` : ''),
         balance: typeof u.balance === 'number' ? u.balance : 100,
         totalEarnings: typeof u.totalEarnings === 'number' ? u.totalEarnings : 0,
         dailyEarned: typeof u.dailyEarned === 'number' ? u.dailyEarned : 0,
         checkedInToday: Boolean(u.checkedInToday),
         inviteCode: u.inviteCode || Math.floor(10000 + Math.random() * 90000).toString(),
         inviterCode: u.inviterCode || '',
-        role: u.role || 'user',
+        role: u.role || (key === 'usr_admin' ? 'admin' : 'user'),
         password: u.password || 'password123',
         bankAccount: u.bankAccount,
         totalInvested: typeof u.totalInvested === 'number' ? u.totalInvested : 0,
@@ -460,10 +473,10 @@ export function getStoredUsers(): UserProfile[] {
         notifications: Array.isArray(u.notifications) ? u.notifications : []
       });
     } else {
-      // Merge extra fields like password, bankAccount, inviterCode if missing in existing
-      map.set(rawId, {
+      map.set(key, {
         ...u,
         ...existing,
+        id: key,
         password: existing.password || u.password,
         bankAccount: existing.bankAccount || u.bankAccount,
         inviterCode: existing.inviterCode || u.inviterCode,
@@ -506,18 +519,27 @@ export function getStoredUsers(): UserProfile[] {
     }
   } catch (e) {}
 
-  // 5. Deep scan all keys in localStorage for user objects or arrays
+  // 5. Deep scan all keys in localStorage for user objects or arrays (filtering strictly)
+  const skipKeys = new Set([
+    'adpaint_transactions', 'adpaint_deposits', 'adpaint_purchases',
+    'adpaint_plans', 'adpaint_deleted_plans', 'adpaint_custom_ticker',
+    'adpaint_upi_id', 'adpaint_upi_name', 'adpaint_tg_channel', 'adpaint_tg_support',
+    'adpaint_apk_url', 'adpaint_platform_name', 'adpaint_daily_bonus',
+    'adpaint_min_withdrawal', 'adpaint_min_recharge', 'adpaint_recharge_presets',
+    'adpaint_withdraw_time', 'adpaint_cashier_url', 'adpaint_support_avatar'
+  ]);
+
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key) {
+      if (key && !skipKeys.has(key) && !key.startsWith('adpaint_purchases_') && !key.startsWith('adpaint_backup_purchases_') && !key.startsWith('adpaint_notice_shown_')) {
         try {
           const val = localStorage.getItem(key);
           if (val) {
-            if (val.startsWith('{') && val.includes('"phone"')) {
+            if (val.startsWith('{') && val.includes('"password"') && val.includes('"phone"')) {
               const u = JSON.parse(val);
               addCandidateUser(u);
-            } else if (val.startsWith('[') && val.includes('"phone"')) {
+            } else if (val.startsWith('[') && val.includes('"password"') && val.includes('"phone"')) {
               const arr = JSON.parse(val);
               if (Array.isArray(arr)) arr.forEach(addCandidateUser);
             }
@@ -531,14 +553,14 @@ export function getStoredUsers(): UserProfile[] {
   try {
     for (let i = 0; i < sessionStorage.length; i++) {
       const key = sessionStorage.key(i);
-      if (key) {
+      if (key && !skipKeys.has(key)) {
         try {
           const val = sessionStorage.getItem(key);
           if (val) {
-            if (val.startsWith('{') && val.includes('"phone"')) {
+            if (val.startsWith('{') && val.includes('"password"') && val.includes('"phone"')) {
               const u = JSON.parse(val);
               addCandidateUser(u);
-            } else if (val.startsWith('[') && val.includes('"phone"')) {
+            } else if (val.startsWith('[') && val.includes('"password"') && val.includes('"phone"')) {
               const arr = JSON.parse(val);
               if (Array.isArray(arr)) arr.forEach(addCandidateUser);
             }
@@ -557,10 +579,16 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
 
   const addUserToMap = (u: Partial<UserProfile> & { id: string }, isServer = false) => {
     if (!u || !u.id || u.id === 'usr_demo') return;
-    const cleanPhoneDigits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+    // Reject transactions, deposits, purchases, plans
+    if ((u as any).type || (u as any).amount !== undefined || (u as any).utrNumber !== undefined || (u as any).dailyIncome !== undefined) return;
+    if (u.id.startsWith('tx_') || u.id.startsWith('pur_') || u.id.startsWith('dep_') || u.id.startsWith('plan_') || u.id.startsWith('cfg_')) return;
 
-    // Check if user exists by ID or by 10-digit phone
-    let targetId = u.id;
+    const cleanPhoneDigits = u.phone ? String(u.phone).replace(/\D/g, '').slice(-10) : '';
+
+    let targetId = (u.role === 'admin' || u.id === 'usr_admin' || u.id === 'admin')
+      ? 'usr_admin'
+      : (cleanPhoneDigits.length >= 10 ? `usr_${cleanPhoneDigits}` : u.id);
+
     if (!userMap.has(targetId) && cleanPhoneDigits && phoneMap.has(cleanPhoneDigits)) {
       targetId = phoneMap.get(cleanPhoneDigits)!;
     }
@@ -568,7 +596,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
     const existing = userMap.get(targetId);
     if (existing) {
       if (isServer) {
-        // Server data takes master precedence, but keep local bank/password if missing on server
+        // Server data takes master precedence
         const merged: UserProfile = {
           ...existing,
           ...u,
@@ -594,8 +622,8 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
     } else {
       const newUserProfile: UserProfile = {
         id: targetId,
-        name: u.name || `User ${targetId.replace('usr_', '')}`,
-        phone: u.phone || '',
+        name: u.name || `User ${cleanPhoneDigits || targetId.replace('usr_', '')}`,
+        phone: u.phone || (cleanPhoneDigits ? `+91 ${cleanPhoneDigits}` : ''),
         balance: u.balance ?? 100,
         totalEarnings: u.totalEarnings ?? 0,
         dailyEarned: u.dailyEarned ?? 0,
@@ -648,7 +676,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         }
       });
 
-      // 3. Reconstruct missing users from Firestore transactions, deposits, and purchases
+      // 3. Reconstruct missing users from Firestore transactions, deposits, and purchases (using ONLY valid 10-digit phones)
       try {
         const txSnap = await getDocs(collection(db, "transactions"));
         txSnap.forEach(d => {
@@ -656,15 +684,17 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
           if (t) {
             const rawPhone = t.userPhone || t.phone || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
-            const userId = t.userId || (digits ? `usr_${digits}` : '');
-            if (userId && !userMap.has(userId) && userId !== 'usr_demo') {
-              addUserToMap({
-                id: userId,
-                phone: rawPhone,
-                name: `User ${digits || userId.replace('usr_', '')}`,
-                balance: 100,
-                totalEarnings: 0
-              }, true);
+            if (digits && digits.length >= 10) {
+              const userId = `usr_${digits}`;
+              if (!userMap.has(userId)) {
+                addUserToMap({
+                  id: userId,
+                  phone: rawPhone,
+                  name: t.userName || `User ${digits}`,
+                  balance: 100,
+                  totalEarnings: 0
+                }, true);
+              }
             }
           }
         });
@@ -677,15 +707,17 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
           if (dep) {
             const rawPhone = dep.mobileNumber || dep.userPhone || dep.phone || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
-            const userId = dep.userId || (digits ? `usr_${digits}` : '');
-            if (userId && !userMap.has(userId) && userId !== 'usr_demo') {
-              addUserToMap({
-                id: userId,
-                name: dep.name || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
-                phone: rawPhone || (digits ? `+91 ${digits}` : ''),
-                balance: 100,
-                totalEarnings: 0
-              }, true);
+            if (digits && digits.length >= 10) {
+              const userId = `usr_${digits}`;
+              if (!userMap.has(userId)) {
+                addUserToMap({
+                  id: userId,
+                  name: dep.name || `VIP Member (+91 ${digits})`,
+                  phone: rawPhone || `+91 ${digits}`,
+                  balance: 100,
+                  totalEarnings: 0
+                }, true);
+              }
             }
           }
         });
@@ -698,15 +730,17 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
           if (pur) {
             const rawPhone = pur.userPhone || pur.phone || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
-            const userId = pur.userId || (digits ? `usr_${digits}` : '');
-            if (userId && !userMap.has(userId) && userId !== 'usr_demo') {
-              addUserToMap({
-                id: userId,
-                name: pur.userName || (digits ? `VIP Member (+91 ${digits})` : `User ${userId}`),
-                phone: rawPhone || (digits ? `+91 ${digits}` : ''),
-                balance: 100,
-                totalEarnings: 0
-              }, true);
+            if (digits && digits.length >= 10) {
+              const userId = `usr_${digits}`;
+              if (!userMap.has(userId)) {
+                addUserToMap({
+                  id: userId,
+                  name: pur.userName || `VIP Member (+91 ${digits})`,
+                  phone: rawPhone || `+91 ${digits}`,
+                  balance: 100,
+                  totalEarnings: 0
+                }, true);
+              }
             }
           }
         });
