@@ -251,8 +251,8 @@ export default function App() {
         id: 'usr_admin',
         name: 'System Admin',
         phone: '+91 9999999999',
-        balance: 100000,
-        totalEarnings: 100000,
+        balance: 0,
+        totalEarnings: 0,
         dailyEarned: 0,
         checkedInToday: false,
         inviteCode: '88888',
@@ -1197,7 +1197,7 @@ export default function App() {
             pData.userId === userProfile.phone
           );
 
-          if (isMatch || currentUserId === 'usr_admin') {
+          if (isMatch) {
             const localP = purchasesRef.current.find(p => p.id === pData.id);
             const mergedP = localP ? {
               ...pData,
