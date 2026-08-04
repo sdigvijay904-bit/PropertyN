@@ -734,14 +734,14 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
     const existing = userMap.get(targetId);
     if (existing) {
       if (isServer) {
-        // Server data takes master precedence while preserving highest non-zero balances/earnings
+        // Server data takes master precedence as modified in Admin panel
         const merged: UserProfile = {
           ...existing,
           ...u,
           id: targetId,
-          balance: Math.max(existing.balance ?? 0, u.balance ?? 0),
-          totalEarnings: Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0),
-          totalInvested: Math.max(existing.totalInvested ?? 0, u.totalInvested ?? 0),
+          balance: typeof u.balance === 'number' ? u.balance : (existing.balance ?? 0),
+          totalEarnings: typeof u.totalEarnings === 'number' ? u.totalEarnings : (existing.totalEarnings ?? 0),
+          totalInvested: typeof u.totalInvested === 'number' ? u.totalInvested : (existing.totalInvested ?? 0),
           password: (u as UserProfile).password || existing.password || 'password123',
           bankAccount: (u as UserProfile).bankAccount || existing.bankAccount,
           inviterCode: (u as UserProfile).inviterCode || existing.inviterCode || '',
@@ -753,9 +753,6 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
           ...u,
           ...existing,
           id: targetId,
-          balance: Math.max(existing.balance ?? 0, u.balance ?? 0),
-          totalEarnings: Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0),
-          totalInvested: Math.max(existing.totalInvested ?? 0, u.totalInvested ?? 0),
           password: existing.password || (u as UserProfile).password || 'password123',
           bankAccount: existing.bankAccount || (u as UserProfile).bankAccount,
           inviterCode: existing.inviterCode || (u as UserProfile).inviterCode || '',

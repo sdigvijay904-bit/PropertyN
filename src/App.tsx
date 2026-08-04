@@ -571,13 +571,10 @@ export default function App() {
 
             if (existingServerUser) {
               let updatedField = false;
-              // Preserve highest balance, totalEarnings, and totalInvested while letting fresh server user attributes take precedence
+              // Server user attributes (balance, earnings, investments, status) are authoritative as modified in Admin panel
               const mergedObj = {
                 ...localUser,
                 ...existingServerUser,
-                balance: Math.max(localUser.balance ?? 0, existingServerUser.balance ?? 0),
-                totalEarnings: Math.max(localUser.totalEarnings ?? 0, existingServerUser.totalEarnings ?? 0),
-                totalInvested: Math.max(localUser.totalInvested ?? 0, existingServerUser.totalInvested ?? 0),
               };
 
               // Validate and deep-merge inviterCode if local has it but server is empty
