@@ -154,8 +154,63 @@ app.post("/api/login", (req, res) => {
   });
 });
 
+const FIREBASE_PROJECT_ID = "isentropic-forcaster-rd2jw";
+const FIREBASE_DATABASE_ID = "ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769-c63579d84978";
+const FIREBASE_API_KEY = "AIzaSyCFrLoVD9mJnwxhdV7AlCGxojWfGpYdpAk";
+const FIRESTORE_REST_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DATABASE_ID}/documents`;
+
+function jsToFirestoreFields(obj: any): any {
+  if (obj === null || obj === undefined) return {};
+  const fields: any = {};
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (val === undefined) continue;
+
+    if (val === null) {
+      fields[key] = { nullValue: null };
+    } else if (typeof val === 'string') {
+      fields[key] = { stringValue: val };
+    } else if (typeof val === 'number') {
+      if (Number.isInteger(val)) {
+        fields[key] = { integerValue: String(val) };
+      } else {
+        fields[key] = { doubleValue: val };
+      }
+    } else if (typeof val === 'boolean') {
+      fields[key] = { booleanValue: val };
+    } else if (Array.isArray(val)) {
+      const convertedArr = val.map(item => {
+        if (item === null || item === undefined) return { nullValue: null };
+        if (typeof item === 'string') return { stringValue: item };
+        if (typeof item === 'number') return Number.isInteger(item) ? { integerValue: String(item) } : { doubleValue: item };
+        if (typeof item === 'boolean') return { booleanValue: item };
+        if (typeof item === 'object') return { mapValue: { fields: jsToFirestoreFields(item) } };
+        return { stringValue: String(item) };
+      });
+      fields[key] = { arrayValue: { values: convertedArr } };
+    } else if (typeof val === 'object') {
+      fields[key] = { mapValue: { fields: jsToFirestoreFields(val) } };
+    }
+  }
+  return fields;
+}
+
+async function writeFirestoreRestServer(collectionName: string, docId: string, data: any) {
+  try {
+    const fields = jsToFirestoreFields(data);
+    const url = `${FIRESTORE_REST_BASE}/${collectionName}/${docId}?key=${FIREBASE_API_KEY}`;
+    await fetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
+    });
+  } catch (e) {
+    console.error(`[Server Firestore Sync Fail] ${collectionName}/${docId}:`, e);
+  }
+}
+
 // API: Server-side Registration
-app.post("/api/register", (req, res) => {
+app.post("/api/register", async (req, res) => {
   const { id, name, phone, password, inviterCode } = req.body;
   if (!name || !phone || !password) {
     return res.status(400).json({ error: "Required fields missing." });
@@ -218,6 +273,10 @@ app.post("/api/register", (req, res) => {
   db.transactions.unshift(signupTx);
   writeDb(db);
   
+  // Sync to Firestore REST asynchronously
+  writeFirestoreRestServer("users", newUser.id, newUser);
+  writeFirestoreRestServer("transactions", signupTx.id, signupTx);
+
   res.json({
     user: newUser,
     purchases: [],
@@ -307,6 +366,18 @@ app.post("/api/save-state", (req, res) => {
   }
 
   writeDb(db);
+
+  // Sync usersList & transactions to Firestore REST asynchronously
+  if (Array.isArray(incoming.usersList)) {
+    incoming.usersList.forEach((u: any) => {
+      if (u && u.id) writeFirestoreRestServer("users", u.id, u);
+    });
+  }
+  if (Array.isArray(incoming.transactions)) {
+    incoming.transactions.forEach((t: any) => {
+      if (t && t.id) writeFirestoreRestServer("transactions", t.id, t);
+    });
+  }
 
   // Dynamically calculate and append totalInvested for each user based on their actual purchases
   const usersWithInvestments = (db.usersList || []).map((u: any) => {

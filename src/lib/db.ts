@@ -575,6 +575,7 @@ export function getStoredUsers(): UserProfile[] {
 
 const FIREBASE_PROJECT_ID = "isentropic-forcaster-rd2jw";
 const FIREBASE_DATABASE_ID = "ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769-c63579d84978";
+const FIREBASE_API_KEY = "AIzaSyCFrLoVD9mJnwxhdV7AlCGxojWfGpYdpAk";
 const FIRESTORE_REST_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DATABASE_ID}/documents`;
 
 export function jsToFirestoreFields(obj: any): any {
@@ -649,7 +650,7 @@ export async function writeFirestoreViaRest(collectionName: string, docId: strin
   try {
     const cleanData = cleanUndefined(data);
     const fields = jsToFirestoreFields(cleanData);
-    const url = `${FIRESTORE_REST_BASE}/${collectionName}/${docId}`;
+    const url = `${FIRESTORE_REST_BASE}/${collectionName}/${docId}?key=${FIREBASE_API_KEY}`;
     const response = await fetch(url, {
       method: 'PATCH',
       headers: {
@@ -672,7 +673,7 @@ export async function writeFirestoreViaRest(collectionName: string, docId: strin
 
 export async function fetchFirestoreCollectionViaRest(collectionName: string): Promise<any[]> {
   try {
-    const url = `${FIRESTORE_REST_BASE}/${collectionName}?pageSize=300`;
+    const url = `${FIRESTORE_REST_BASE}/${collectionName}?pageSize=300&key=${FIREBASE_API_KEY}`;
     const response = await fetch(url);
     if (response.ok) {
       const data = await response.json();
@@ -904,6 +905,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         console.log(`Migrating ${unmigratedUsersToPush.length} offline local user accounts to Firestore production database...`);
         for (const uToSave of unmigratedUsersToPush) {
           try {
+            writeFirestoreViaRest("users", uToSave.id, uToSave);
             await setDoc(doc(db, "users", uToSave.id), cleanUndefined(uToSave), { merge: true });
             console.log(`Successfully migrated local user ${uToSave.id} (${uToSave.phone}) to Firestore!`);
           } catch (e) {
