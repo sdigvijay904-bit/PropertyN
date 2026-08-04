@@ -96,3 +96,25 @@ export interface LiveNotification {
   text: string;
   time: string;
 }
+
+export function isSponsorMatch(sponsor: UserProfile, inviterCode?: string): boolean {
+  if (!sponsor || !inviterCode) return false;
+  const codeClean = String(inviterCode).trim().toLowerCase();
+  if (!codeClean) return false;
+
+  // 1. Direct match with sponsor's inviteCode
+  if (sponsor.inviteCode && String(sponsor.inviteCode).trim().toLowerCase() === codeClean) {
+    return true;
+  }
+  // 2. Direct match with sponsor's user ID
+  if (sponsor.id && String(sponsor.id).trim().toLowerCase() === codeClean) {
+    return true;
+  }
+  // 3. Match 10-digit phone number
+  const sponsorDigits = sponsor.phone ? String(sponsor.phone).replace(/\D/g, '').slice(-10) : '';
+  const inviterDigits = codeClean.replace(/\D/g, '').slice(-10);
+  if (sponsorDigits && inviterDigits && sponsorDigits.length >= 10 && inviterDigits.length >= 10 && sponsorDigits === inviterDigits) {
+    return true;
+  }
+  return false;
+}

@@ -11,7 +11,7 @@ import {
   writeBatch 
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from "../types";
+import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord, isSponsorMatch } from "../types";
 
 // Seed Data from db.json to guarantee data preservation for all existing users (including Vinod, Ajay, etc.)
 const SEED_USERS: UserProfile[] = [
@@ -650,10 +650,25 @@ export async function writeFirestoreViaRest(collectionName: string, docId: strin
   try {
     const cleanData = cleanUndefined(data);
     const fields = jsToFirestoreFields(cleanData);
+
+    // Method 1: Try POST createDocument first (fastest & guaranteed for new user registrations)
+    const postUrl = `${FIRESTORE_REST_BASE}/${collectionName}?documentId=${encodeURIComponent(docId)}&key=${FIREBASE_API_KEY}`;
+    const postResponse = await fetch(postUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ fields })
+    });
+
+    if (postResponse.ok) {
+      console.log(`[REST Create Success] ${collectionName}/${docId}`);
+      return true;
+    }
+
+    // Method 2: If document already exists (409 Conflict) or POST fails, use PATCH with updateMask
     const fieldKeys = Object.keys(fields);
     const maskParams = fieldKeys.map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
-
-    // Method 1: PATCH with updateMask (Upsert)
     const patchUrl = `${FIRESTORE_REST_BASE}/${collectionName}/${encodeURIComponent(docId)}?key=${FIREBASE_API_KEY}${maskParams ? '&' + maskParams : ''}`;
     const response = await fetch(patchUrl, {
       method: 'PATCH',
@@ -668,22 +683,7 @@ export async function writeFirestoreViaRest(collectionName: string, docId: strin
       return true;
     }
 
-    // Method 2: POST createDocument fallback for brand new documents
-    const postUrl = `${FIRESTORE_REST_BASE}/${collectionName}?documentId=${encodeURIComponent(docId)}&key=${FIREBASE_API_KEY}`;
-    const postResponse = await fetch(postUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ fields })
-    });
-
-    if (postResponse.ok || postResponse.status === 409) {
-      console.log(`[REST Create Success] ${collectionName}/${docId}`);
-      return true;
-    }
-
-    console.warn(`[REST Sync Warning] ${collectionName}/${docId}: patch=${response.status}, post=${postResponse.status}`);
+    console.warn(`[REST Sync Warning] ${collectionName}/${docId}: post=${postResponse.status}, patch=${response.status}`);
     return false;
   } catch (err) {
     console.warn(`[REST Sync Exception] on ${collectionName}/${docId}:`, err);
@@ -788,11 +788,38 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
     }
   };
 
+  const serverUserIds = new Set<string>();
+
+  // 1a. Fetch server state users from Express /api/get-state (100% reliable across Meta Ads WebView & Mobile)
+  try {
+    const apiRes = await fetch('/api/get-state');
+    if (apiRes.ok) {
+      const apiData = await apiRes.json();
+      if (Array.isArray(apiData.usersList)) {
+        apiData.usersList.forEach((u: any) => {
+          if (u && u.id && u.id !== 'usr_demo') {
+            serverUserIds.add(u.id);
+            addUserToMap(u, true);
+          }
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 1b. Fetch users via Firestore REST API (Works directly in all mobile browsers & Meta WebView without WebChannel issues)
+  try {
+    const restUsers = await fetchFirestoreCollectionViaRest("users");
+    restUsers.forEach((uData) => {
+      if (uData && uData.id) {
+        serverUserIds.add(uData.id);
+        addUserToMap(uData, true);
+      }
+    });
+  } catch (e) {}
+
+  // 1c. Fetch users via Firestore Web SDK (if quota not exceeded)
   if (!isQuotaExceeded()) {
     try {
-      const serverUserIds = new Set<string>();
-
-      // 1. Fetch Firestore `users` collection as MASTER
       const usersSnap = await getDocs(collection(db, "users"));
       usersSnap.forEach((docSnap) => {
         const uData = docSnap.data() as UserProfile;
@@ -802,151 +829,149 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
           addUserToMap({ ...uData, id: docId }, true);
         }
       });
-
-      // Dual REST API fetch for users to guarantee fetching Meta Ads / Instagram in-app browser registrations
-      try {
-        const restUsers = await fetchFirestoreCollectionViaRest("users");
-        restUsers.forEach((uData) => {
-          if (uData && uData.id) {
-            serverUserIds.add(uData.id);
-            addUserToMap(uData, true);
-          }
-        });
-      } catch (e) {}
-
-      // 1b. Fetch server state users from /api/get-state
-      try {
-        const apiRes = await fetch('/api/get-state');
-        if (apiRes.ok) {
-          const apiData = await apiRes.json();
-          if (Array.isArray(apiData.usersList)) {
-            apiData.usersList.forEach((u: any) => {
-              if (u && u.id && u.id !== 'usr_demo') {
-                addUserToMap(u, true);
-              }
-            });
-          }
-        }
-      } catch (e) {}
-
-      // 2. Add current in-memory usersList & all local storage stored users
-      const allLocalUsers = getStoredUsers();
-      currentUsersList.forEach(u => {
-        if (u && u.id && u.id !== 'usr_demo') {
-          addUserToMap(u, true);
-        }
-      });
-
-      const unmigratedUsersToPush: UserProfile[] = [];
-      allLocalUsers.forEach(u => {
-        if (u && u.id && u.id !== 'usr_demo') {
-          const isMissingOnServer = !serverUserIds.has(u.id);
-          addUserToMap(u, false);
-
-          if (isMissingOnServer) {
-            const finalU = userMap.get(u.id);
-            if (finalU) unmigratedUsersToPush.push(finalU);
-          }
-        }
-      });
-
-      // 3. Reconstruct missing users from Firestore transactions, deposits, and purchases (using ONLY valid 10-digit phones)
-      try {
-        const txSnap = await getDocs(collection(db, "transactions"));
-        txSnap.forEach(d => {
-          const t = d.data();
-          if (t) {
-            const rawPhone = t.userPhone || t.phone || t.userId || '';
-            const digits = rawPhone.replace(/\D/g, '').slice(-10);
-            if (digits && digits.length >= 10) {
-              const userId = `usr_${digits}`;
-              if (!userMap.has(userId)) {
-                addUserToMap({
-                  id: userId,
-                  phone: t.userPhone || t.phone || `+91 ${digits}`,
-                  name: t.userName || `User ${digits}`,
-                  balance: 100,
-                  totalEarnings: 0
-                }, true);
-              }
-            }
-          }
-        });
-      } catch (e) {}
-
-      try {
-        const depSnap = await getDocs(collection(db, "deposits"));
-        depSnap.forEach(d => {
-          const dep = d.data();
-          if (dep) {
-            const rawPhone = dep.mobileNumber || dep.userPhone || dep.phone || dep.userId || '';
-            const digits = rawPhone.replace(/\D/g, '').slice(-10);
-            if (digits && digits.length >= 10) {
-              const userId = `usr_${digits}`;
-              if (!userMap.has(userId)) {
-                addUserToMap({
-                  id: userId,
-                  name: dep.name || `VIP Member (+91 ${digits})`,
-                  phone: dep.mobileNumber || dep.userPhone || dep.phone || `+91 ${digits}`,
-                  balance: 100,
-                  totalEarnings: 0
-                }, true);
-              }
-            }
-          }
-        });
-      } catch (e) {}
-
-      try {
-        const purSnap = await getDocs(collection(db, "purchases"));
-        purSnap.forEach(d => {
-          const pur = d.data();
-          if (pur) {
-            const rawPhone = pur.userPhone || pur.phone || pur.userId || '';
-            const digits = rawPhone.replace(/\D/g, '').slice(-10);
-            if (digits && digits.length >= 10) {
-              const userId = `usr_${digits}`;
-              if (!userMap.has(userId)) {
-                addUserToMap({
-                  id: userId,
-                  name: pur.userName || `VIP Member (+91 ${digits})`,
-                  phone: pur.userPhone || pur.phone || `+91 ${digits}`,
-                  balance: 100,
-                  totalEarnings: 0
-                }, true);
-              }
-            }
-          }
-        });
-      } catch (e) {}
-
-      // CRITICAL MIGRATION STEP: Write any local offline users directly to Firestore!
-      if (unmigratedUsersToPush.length > 0) {
-        console.log(`Migrating ${unmigratedUsersToPush.length} offline local user accounts to Firestore production database...`);
-        for (const uToSave of unmigratedUsersToPush) {
-          try {
-            writeFirestoreViaRest("users", uToSave.id, uToSave);
-            await setDoc(doc(db, "users", uToSave.id), cleanUndefined(uToSave), { merge: true });
-            console.log(`Successfully migrated local user ${uToSave.id} (${uToSave.phone}) to Firestore!`);
-          } catch (e) {
-            console.warn(`Error migrating user ${uToSave.id} to Firestore:`, e);
-          }
-        }
-      }
-
-      const result = Array.from(userMap.values());
-      localStorage.setItem('adpaint_users_list', JSON.stringify(result));
-      return result;
     } catch (e) {
       markQuotaExceeded(e);
     }
   }
 
-  // Fallback if offline
-  SEED_USERS.forEach(u => addUserToMap(u, false));
-  currentUsersList.forEach(u => addUserToMap(u, false));
-  const localUsers = getStoredUsers();
-  localUsers.forEach(u => addUserToMap(u, false));
+  // 2. Add current in-memory usersList & all local storage stored users
+  const allLocalUsers = getStoredUsers();
+  currentUsersList.forEach(u => {
+    if (u && u.id && u.id !== 'usr_demo') {
+      addUserToMap(u, true);
+    }
+  });
+
+  const unmigratedUsersToPush: UserProfile[] = [];
+  allLocalUsers.forEach(u => {
+    if (u && u.id && u.id !== 'usr_demo') {
+      const isMissingOnServer = !serverUserIds.has(u.id);
+      addUserToMap(u, false);
+
+      if (isMissingOnServer) {
+        const finalU = userMap.get(u.id);
+        if (finalU) unmigratedUsersToPush.push(finalU);
+      }
+    }
+  });
+
+  // 3. Reconstruct missing users from transactions, deposits, and purchases via REST API
+  try {
+    const restTx = await fetchFirestoreCollectionViaRest("transactions");
+    restTx.forEach(t => {
+      if (t) {
+        const rawPhone = t.userPhone || t.phone || t.userId || '';
+        const digits = rawPhone.replace(/\D/g, '').slice(-10);
+        if (digits && digits.length >= 10) {
+          const userId = `usr_${digits}`;
+          if (!userMap.has(userId)) {
+            addUserToMap({
+              id: userId,
+              phone: t.userPhone || t.phone || `+91 ${digits}`,
+              name: t.userName || `User ${digits}`,
+              balance: 100,
+              totalEarnings: 0
+            }, true);
+          }
+        }
+      }
+    });
+  } catch (e) {}
+
+  // 4. Reconstruct missing users from Firestore Web SDK collections if available
+  if (!isQuotaExceeded()) {
+    try {
+      const txSnap = await getDocs(collection(db, "transactions"));
+      txSnap.forEach(d => {
+        const t = d.data();
+        if (t) {
+          const rawPhone = t.userPhone || t.phone || t.userId || '';
+          const digits = rawPhone.replace(/\D/g, '').slice(-10);
+          if (digits && digits.length >= 10) {
+            const userId = `usr_${digits}`;
+            if (!userMap.has(userId)) {
+              addUserToMap({
+                id: userId,
+                phone: t.userPhone || t.phone || `+91 ${digits}`,
+                name: t.userName || `User ${digits}`,
+                balance: 100,
+                totalEarnings: 0
+              }, true);
+            }
+          }
+        }
+      });
+    } catch (e) {}
+
+    try {
+      const depSnap = await getDocs(collection(db, "deposits"));
+      depSnap.forEach(d => {
+        const dep = d.data();
+        if (dep) {
+          const rawPhone = dep.mobileNumber || dep.userPhone || dep.phone || dep.userId || '';
+          const digits = rawPhone.replace(/\D/g, '').slice(-10);
+          if (digits && digits.length >= 10) {
+            const userId = `usr_${digits}`;
+            if (!userMap.has(userId)) {
+              addUserToMap({
+                id: userId,
+                name: dep.name || `VIP Member (+91 ${digits})`,
+                phone: dep.mobileNumber || dep.userPhone || dep.phone || `+91 ${digits}`,
+                balance: 100,
+                totalEarnings: 0
+              }, true);
+            }
+          }
+        }
+      });
+    } catch (e) {}
+
+    try {
+      const purSnap = await getDocs(collection(db, "purchases"));
+      purSnap.forEach(d => {
+        const pur = d.data();
+        if (pur) {
+          const rawPhone = pur.userPhone || pur.phone || pur.userId || '';
+          const digits = rawPhone.replace(/\D/g, '').slice(-10);
+          if (digits && digits.length >= 10) {
+            const userId = `usr_${digits}`;
+            if (!userMap.has(userId)) {
+              addUserToMap({
+                id: userId,
+                name: pur.userName || `VIP Member (+91 ${digits})`,
+                phone: pur.userPhone || pur.phone || `+91 ${digits}`,
+                balance: 100,
+                totalEarnings: 0
+              }, true);
+            }
+          }
+        }
+      });
+    } catch (e) {}
+  }
+
+  // Sync any unmigrated offline accounts to server & Firestore
+  if (unmigratedUsersToPush.length > 0) {
+    for (const uToSave of unmigratedUsersToPush) {
+      try {
+        writeFirestoreViaRest("users", uToSave.id, uToSave);
+        if (!isQuotaExceeded()) {
+          setDoc(doc(db, "users", uToSave.id), cleanUndefined(uToSave), { merge: true }).catch(() => {});
+        }
+        fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: uToSave.id,
+            name: uToSave.name,
+            phone: uToSave.phone,
+            password: uToSave.password,
+            inviterCode: uToSave.inviterCode
+          })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+  }
 
   const result = Array.from(userMap.values());
   localStorage.setItem('adpaint_users_list', JSON.stringify(result));
@@ -1516,6 +1541,15 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   const nowIso = new Date().toISOString();
   const nowFormatted = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
+  // Resolve canonical sponsor invite code if possible
+  let resolvedInviterCode = (inviterCode || "").trim();
+  if (resolvedInviterCode) {
+    const sponsor = storedUsers.find(u => isSponsorMatch(u, resolvedInviterCode));
+    if (sponsor && sponsor.inviteCode) {
+      resolvedInviterCode = sponsor.inviteCode;
+    }
+  }
+
   const newUser: UserProfile = {
     id: newUserId,
     name,
@@ -1527,7 +1561,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     totalInvested: 0,
     checkedInToday: false,
     inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
-    inviterCode: inviterCode || "",
+    inviterCode: resolvedInviterCode,
     role: 'user',
     password: password_entered,
     status: 'active',

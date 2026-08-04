@@ -170,11 +170,27 @@ const FIREBASE_DATABASE_ID = "ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769
 const FIREBASE_API_KEY = "AIzaSyCFrLoVD9mJnwxhdV7AlCGxojWfGpYdpAk";
 const FIRESTORE_REST_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DATABASE_ID}/documents`;
 
+function cleanUndefined(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(cleanUndefined);
+  if (typeof obj === 'object') {
+    const newObj: any = {};
+    for (const key of Object.keys(obj)) {
+      if (obj[key] !== undefined) {
+        newObj[key] = cleanUndefined(obj[key]);
+      }
+    }
+    return newObj;
+  }
+  return obj;
+}
+
 function jsToFirestoreFields(obj: any): any {
   if (obj === null || obj === undefined) return {};
+  const cleaned = cleanUndefined(obj);
   const fields: any = {};
-  for (const key of Object.keys(obj)) {
-    const val = obj[key];
+  for (const key of Object.keys(cleaned)) {
+    const val = cleaned[key];
     if (val === undefined) continue;
 
     if (val === null) {
@@ -208,10 +224,22 @@ function jsToFirestoreFields(obj: any): any {
 
 async function writeFirestoreRestServer(collectionName: string, docId: string, data: any) {
   try {
-    const fields = jsToFirestoreFields(data);
+    const cleanData = cleanUndefined(data);
+    const fields = jsToFirestoreFields(cleanData);
+    
+    // Method 1: Try POST create document first (for new registrations)
+    const postUrl = `${FIRESTORE_REST_BASE}/${collectionName}?documentId=${encodeURIComponent(docId)}&key=${FIREBASE_API_KEY}`;
+    const postRes = await fetch(postUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
+    });
+
+    if (postRes.ok) return true;
+
+    // Method 2: If document already exists (409) or POST fails, use PATCH update
     const fieldKeys = Object.keys(fields);
     const maskParams = fieldKeys.map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
-
     const patchUrl = `${FIRESTORE_REST_BASE}/${collectionName}/${encodeURIComponent(docId)}?key=${FIREBASE_API_KEY}${maskParams ? '&' + maskParams : ''}`;
     const patchRes = await fetch(patchUrl, {
       method: 'PATCH',
@@ -219,15 +247,7 @@ async function writeFirestoreRestServer(collectionName: string, docId: string, d
       body: JSON.stringify({ fields })
     });
 
-    if (patchRes.ok) return;
-
-    // Fallback POST for new documents
-    const postUrl = `${FIRESTORE_REST_BASE}/${collectionName}?documentId=${encodeURIComponent(docId)}&key=${FIREBASE_API_KEY}`;
-    await fetch(postUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields })
-    });
+    if (patchRes.ok) return true;
   } catch (e) {
     console.error(`[Server Firestore Sync Fail] ${collectionName}/${docId}:`, e);
   }
@@ -261,6 +281,18 @@ app.post("/api/register", async (req, res) => {
     });
   }
   
+  let resolvedInviterCode = (inviterCode || '').trim();
+  if (resolvedInviterCode && db.usersList) {
+    const sponsor = db.usersList.find((u: any) => 
+      (u.inviteCode && String(u.inviteCode).trim().toLowerCase() === resolvedInviterCode.toLowerCase()) ||
+      (u.id && String(u.id).trim().toLowerCase() === resolvedInviterCode.toLowerCase()) ||
+      (u.phone && u.phone.replace(/\D/g, '').slice(-10) === resolvedInviterCode.replace(/\D/g, '').slice(-10))
+    );
+    if (sponsor && sponsor.inviteCode) {
+      resolvedInviterCode = sponsor.inviteCode;
+    }
+  }
+
   const newUserId = id || (digitsOnly.length >= 10 ? `usr_${digitsOnly}` : `usr_${Date.now()}`);
   const newUser = {
     id: newUserId,
@@ -271,7 +303,7 @@ app.post("/api/register", async (req, res) => {
     dailyEarned: 0,
     checkedInToday: false,
     inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
-    inviterCode: inviterCode || '',
+    inviterCode: resolvedInviterCode,
     role: 'user',
     password,
     status: 'active',

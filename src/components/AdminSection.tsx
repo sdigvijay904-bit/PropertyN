@@ -10,7 +10,7 @@ import {
   ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag, Power, PauseCircle, Coins
 } from 'lucide-react';
 import SupportAgentAvatar from './SupportAgentAvatar';
-import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
+import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord, isSponsorMatch } from '../types';
 import { db } from '../lib/firebase';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { cleanUndefined, isQuotaExceeded, markQuotaExceeded, getStoredPurchases, syncAllLocalUsersToFirestore, scanAndMergeAllUsers } from '../lib/db';
@@ -700,7 +700,7 @@ export default function AdminSection({
 
     if (targetUser.inviterCode && rechargeAmt > 0) {
       // Level 1 Sponsor
-      const inviter1 = usersList.find(u => u.inviteCode === targetUser.inviterCode);
+      const inviter1 = usersList.find(u => isSponsorMatch(u, targetUser.inviterCode));
       if (inviter1) {
         creditSponsorList.push(inviter1.id);
         const comm1 = rechargeAmt * 0.10;
@@ -733,7 +733,7 @@ export default function AdminSection({
 
         // Level 2 Sponsor
         if (inviter1.inviterCode) {
-          const inviter2 = usersList.find(u => u.inviteCode === inviter1.inviterCode);
+          const inviter2 = usersList.find(u => isSponsorMatch(u, inviter1.inviterCode));
           if (inviter2) {
             creditSponsorList.push(inviter2.id);
             const comm2 = rechargeAmt * 0.05;
@@ -766,7 +766,7 @@ export default function AdminSection({
 
             // Level 3 Sponsor
             if (inviter2.inviterCode) {
-              const inviter3 = usersList.find(u => u.inviteCode === inviter2.inviterCode);
+              const inviter3 = usersList.find(u => isSponsorMatch(u, inviter2.inviterCode));
               if (inviter3) {
                 creditSponsorList.push(inviter3.id);
                 const comm3 = rechargeAmt * 0.02;
@@ -1508,7 +1508,7 @@ export default function AdminSection({
     };
 
     // Level 1: referred directly by current user
-    const level1Users = usersList.filter(u => u.inviterCode === targetUser.inviteCode);
+    const level1Users = usersList.filter(u => isSponsorMatch(targetUser, u.inviterCode));
     level1Users.forEach(u1 => {
       list.push({
         id: u1.id,
@@ -1520,7 +1520,7 @@ export default function AdminSection({
       });
 
       // Level 2: referred by Level 1 users
-      const level2Users = usersList.filter(u => u.inviterCode === u1.inviteCode);
+      const level2Users = usersList.filter(u => isSponsorMatch(u1, u.inviterCode));
       level2Users.forEach(u2 => {
         list.push({
           id: u2.id,
@@ -1532,7 +1532,7 @@ export default function AdminSection({
         });
 
         // Level 3: referred by Level 2 users
-        const level3Users = usersList.filter(u => u.inviterCode === u2.inviteCode);
+        const level3Users = usersList.filter(u => isSponsorMatch(u2, u.inviterCode));
         level3Users.forEach(u3 => {
           list.push({
             id: u3.id,
@@ -2645,7 +2645,7 @@ export default function AdminSection({
                                     <span>• Sponsor:</span>
                                     <strong className="text-white font-black">{user.inviterCode}</strong>
                                     {(() => {
-                                      const sponsor = usersList.find(u => u.inviteCode === user.inviterCode);
+                                      const sponsor = usersList.find(u => isSponsorMatch(u, user.inviterCode));
                                       return sponsor ? `(${sponsor.name} - ${sponsor.phone})` : '';
                                     })()}
                                   </span>

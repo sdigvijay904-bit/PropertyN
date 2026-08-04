@@ -11,7 +11,7 @@ import {
   Check, ShoppingBag
 } from 'lucide-react';
 
-import { UserProfile, InvestmentPlan, PurchaseRecord, TransactionRecord, TeamMember, BankAccount } from './types';
+import { UserProfile, InvestmentPlan, PurchaseRecord, TransactionRecord, TeamMember, BankAccount, isSponsorMatch } from './types';
 import { INITIAL_PLANS, MOCK_TEAM_MEMBERS, INITIAL_TRANSACTIONS, GENERATE_RANDOM_LIVE_NOTIF } from './data';
 
 import HomeSection from './components/HomeSection';
@@ -399,7 +399,7 @@ export default function App() {
                hashParams.get('code') || hashParams.get('ref') || hashParams.get('invite') || hashParams.get('inviterCode') || hashParams.get('invitationCode') || '';
 
         if (!code) {
-          const match = fullUrl.match(/(?:code|ref|invite|inviter)[=/](\d{4,6})/i);
+          const match = fullUrl.match(/(?:code|ref|invite|inviter)[=/]([a-zA-Z0-0_-]{4,20})/i);
           if (match && match[1]) {
             code = match[1];
           }
@@ -412,14 +412,14 @@ export default function App() {
       let finalCode = '';
       const hasReferralInUrl = !!code;
       if (code) {
-        finalCode = code.replace(/\D/g, '');
+        finalCode = code.trim();
         if (finalCode) {
           localStorage.setItem('adpaint_pending_invite_code', finalCode);
         }
       } else {
         const savedCode = localStorage.getItem('adpaint_pending_invite_code');
         if (savedCode) {
-          finalCode = savedCode;
+          finalCode = savedCode.trim();
         }
       }
 
@@ -433,7 +433,9 @@ export default function App() {
           setIsLoggedIn(false);
           setAuthTab('register');
           setTimeout(() => {
-            triggerToast(`Referral Code ${finalCode} applied successfully!`, 'success');
+            const sponsor = usersListRef.current.find(u => isSponsorMatch(u, finalCode));
+            const sponsorName = sponsor ? `${sponsor.name} (${finalCode})` : finalCode;
+            triggerToast(`Referral Applied! Sponsor: ${sponsorName}`, 'success');
           }, 800);
         } else {
           const storedUser = localStorage.getItem('adpaint_user');
@@ -1436,7 +1438,7 @@ export default function App() {
     console.log(`Total active system users scanned: ${allUsers.length}`);
 
     // Level 1: referred directly by current user
-    const level1Users = allUsers.filter(u => u.inviterCode === user.inviteCode);
+    const level1Users = allUsers.filter(u => isSponsorMatch(user, u.inviterCode));
     console.log(`Level 1 (Direct Referred) matches: ${level1Users.length}`, level1Users.map(u => ({ name: u.name, code: u.inviteCode, sponsor: u.inviterCode })));
 
     const level2Collected: UserProfile[] = [];
@@ -1455,7 +1457,7 @@ export default function App() {
       });
 
       // Level 2: referred by Level 1 users
-      const level2Users = allUsers.filter(u => u.inviterCode === u1.inviteCode);
+      const level2Users = allUsers.filter(u => isSponsorMatch(u1, u.inviterCode));
       level2Users.forEach(u2 => {
         level2Collected.push(u2);
         const invested2 = getUserInvestedAmount(u2);
@@ -1470,7 +1472,7 @@ export default function App() {
         });
 
         // Level 3: referred by Level 2 users
-        const level3Users = allUsers.filter(u => u.inviterCode === u2.inviteCode);
+        const level3Users = allUsers.filter(u => isSponsorMatch(u2, u.inviterCode));
         level3Users.forEach(u3 => {
           level3Collected.push(u3);
           const invested3 = getUserInvestedAmount(u3);

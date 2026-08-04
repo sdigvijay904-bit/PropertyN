@@ -351,15 +351,23 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
               {/* Invitation Code (Register only) */}
               {authTab === 'register' && (
                 <div className="space-y-1">
-                  <label className="text-[11px] text-teal-100/90 font-bold block">
-                    Invitation Code (Optional)
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] text-teal-100/90 font-bold block">
+                      Invitation Code (Optional)
+                    </label>
+                    {invitationCode && (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-extrabold px-2 py-0.5 rounded-md border border-emerald-500/40 animate-pulse flex items-center gap-1">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                        <span>Referral Applied ({invitationCode})</span>
+                      </span>
+                    )}
+                  </div>
                   <div className="relative flex items-center bg-[#072d25] border border-teal-700/80 rounded-xl p-1 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400 transition-all shadow-inner">
                     <Gift className="w-4 h-4 text-emerald-400 ml-2 shrink-0" />
                     <input
                       type="text"
                       value={invitationCode}
-                      onChange={(e) => setInvitationCode(e.target.value.replace(/\D/g, ''))}
+                      onChange={(e) => setInvitationCode(e.target.value)}
                       placeholder="Enter invitation code (optional)"
                       className="w-full pl-3 pr-3 py-2 bg-transparent text-xs min-[380px]:text-sm font-semibold text-white placeholder:text-teal-500/70 focus:outline-none"
                     />
