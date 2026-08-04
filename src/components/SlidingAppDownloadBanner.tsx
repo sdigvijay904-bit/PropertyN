@@ -12,14 +12,28 @@ export const SlidingAppDownloadBanner: React.FC<SlidingAppDownloadBannerProps> =
   triggerToast
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const apkUrl = localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk';
+  const [apkUrl, setApkUrl] = useState<string>(() => localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk');
 
   useEffect(() => {
+    const updateUrl = () => {
+      const url = localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk';
+      setApkUrl(url);
+    };
+
+    updateUrl();
+    window.addEventListener('adpaint_config_updated', updateUrl);
+    window.addEventListener('storage', updateUrl);
+
     // Slide in smoothly after 600ms whenever mounted on Register page
     const timer = setTimeout(() => {
       setIsVisible(true);
     }, 600);
-    return () => clearTimeout(timer);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('adpaint_config_updated', updateUrl);
+      window.removeEventListener('storage', updateUrl);
+    };
   }, []);
 
   const handleDismiss = (e: React.MouseEvent) => {

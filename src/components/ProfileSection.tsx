@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Landmark, Wallet, ChevronRight, User, ShoppingBag, CheckSquare, Banknote, Lock, FileText,
   Building, Download, ArrowLeft, RefreshCw, Eye, EyeOff, Save, CheckCircle2, TrendingUp, AlertTriangle, LogOut, ShieldCheck,
-  Bell, Settings, Gift, CreditCard, Star
+  Bell, Settings, Gift, CreditCard, Star, Smartphone
 } from 'lucide-react';
 import { UserProfile, PurchaseRecord, TransactionRecord, BankAccount } from '../types';
 import { Real3DWalletIcon, Real3DRechargedBadgeIcon, Real3DIncomeIcon, Real3DRechargeActionIcon, Real3DWithdrawActionIcon } from './RealIcons';
@@ -804,6 +804,7 @@ export default function ProfileSection({
               <div className="divide-y divide-slate-100/50">
                 {([
                   ...(user.role === 'admin' ? [{ label: 'Admin Panel Control Room', desc: 'Manage users, approvals, plans, & notifications', icon: ShieldCheck, action: onEnterAdminTerminal, highlight: true, grad: 'from-teal-500 to-teal-600' }] : []),
+                  { label: 'App Download', desc: 'Get official Android App (.APK) for fast access', icon: Smartphone, action: handleDownloadApp, badge: 'v2.4 APK', grad: 'from-emerald-500 to-teal-600' },
                   { label: 'Daily Check-in', desc: 'Check in daily to earn free rewards', icon: CheckSquare, action: onDailyCheckIn, highlight: !(user.lastCheckInDate === new Date().toDateString() && user.checkedInToday), grad: 'from-teal-400 to-emerald-600' },
                   { label: 'Bank Account', desc: 'Bank details & withdrawal settings', icon: Landmark, action: () => setSubView('bank'), verified: !!user.bankAccount, grad: 'from-amber-400 to-orange-500' },
                   { label: 'Password', desc: 'Password & Security', icon: Lock, action: () => setSubView('password'), grad: 'from-sky-400 to-blue-500' },

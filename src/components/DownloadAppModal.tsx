@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Smartphone, Copy, Check, Download, AlertTriangle, ShieldCheck, ExternalLink, HelpCircle } from 'lucide-react';
 
@@ -15,7 +15,22 @@ interface DownloadAppModalProps {
 
 export default function DownloadAppModal({ isOpen, onClose, triggerToast }: DownloadAppModalProps) {
   const [copied, setCopied] = useState(false);
-  const apkUrl = localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk';
+  const [apkUrl, setApkUrl] = useState<string>(() => localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk');
+
+  useEffect(() => {
+    const updateUrl = () => {
+      const url = localStorage.getItem('adpaint_apk_url') || 'https://raw.githubusercontent.com/adpaint-app/builds/main/PropertyN_Earnings.apk';
+      setApkUrl(url);
+    };
+
+    updateUrl();
+    window.addEventListener('adpaint_config_updated', updateUrl);
+    window.addEventListener('storage', updateUrl);
+    return () => {
+      window.removeEventListener('adpaint_config_updated', updateUrl);
+      window.removeEventListener('storage', updateUrl);
+    };
+  }, [isOpen]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(apkUrl);
