@@ -1179,31 +1179,43 @@ export default function App() {
         const currentUserId = userProfile.id;
         const uPhoneDigits = userProfile.phone ? userProfile.phone.replace(/\D/g, "") : "";
         const uLast10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : uPhoneDigits;
+        const userIdDigits = currentUserId ? currentUserId.replace(/\D/g, "").slice(-10) : "";
 
         const liveUserPurchases: PurchaseRecord[] = [];
         snap.forEach(dSnap => {
           const pData = dSnap.data() as PurchaseRecord;
-          if (!pData || !pData.id || rawDelPur.includes(pData.id)) return;
+          if (!pData) return;
+          const pObj: PurchaseRecord = { ...pData, id: pData.id || dSnap.id };
+          if (!pObj.id || rawDelPur.includes(pObj.id)) return;
 
-          const pPhoneDigits = (pData as any).userPhone ? String((pData as any).userPhone).replace(/\D/g, "") : "";
+          const pPhoneDigits = (pObj as any).userPhone ? String((pObj as any).userPhone).replace(/\D/g, "") : "";
+          const pUserIdDigits = pObj.userId ? String(pObj.userId).replace(/\D/g, "") : "";
+
           const isMatch = (
-            pData.userId === currentUserId ||
-            (pData as any).userId === currentUserId.replace('usr_', '') ||
-            (uLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(uLast10)) ||
-            pData.userId === userProfile.phone
+            pObj.userId === currentUserId ||
+            (pObj as any).userId === currentUserId.replace('usr_', '') ||
+            pObj.userId === userProfile.phone ||
+            (uLast10 && uLast10.length >= 10 && (
+              (pUserIdDigits && pUserIdDigits.endsWith(uLast10)) ||
+              (pPhoneDigits && pPhoneDigits.endsWith(uLast10))
+            )) ||
+            (userIdDigits && userIdDigits.length >= 10 && (
+              (pUserIdDigits && pUserIdDigits.endsWith(userIdDigits)) ||
+              (pPhoneDigits && pPhoneDigits.endsWith(userIdDigits))
+            ))
           );
 
           if (isMatch) {
-            const localP = purchasesRef.current.find(p => p.id === pData.id);
+            const localP = purchasesRef.current.find(p => p.id === pObj.id);
             const mergedP = localP ? {
-              ...pData,
+              ...pObj,
               ...localP,
-              totalClaimed: Math.max(pData.totalClaimed ?? 0, localP.totalClaimed ?? 0),
-              lastClaimedAt: (new Date(localP.lastClaimedAt || 0).getTime() > new Date(pData.lastClaimedAt || 0).getTime())
+              totalClaimed: Math.max(pObj.totalClaimed ?? 0, localP.totalClaimed ?? 0),
+              lastClaimedAt: (new Date(localP.lastClaimedAt || 0).getTime() > new Date(pObj.lastClaimedAt || 0).getTime())
                 ? localP.lastClaimedAt
-                : pData.lastClaimedAt,
-              completed: localP.completed || pData.completed
-            } : pData;
+                : pObj.lastClaimedAt,
+              completed: localP.completed || pObj.completed
+            } : pObj;
             liveUserPurchases.push(mergedP);
           }
         });

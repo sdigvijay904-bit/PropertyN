@@ -686,14 +686,14 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         txSnap.forEach(d => {
           const t = d.data();
           if (t) {
-            const rawPhone = t.userPhone || t.phone || '';
+            const rawPhone = t.userPhone || t.phone || t.userId || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
             if (digits && digits.length >= 10) {
               const userId = `usr_${digits}`;
               if (!userMap.has(userId)) {
                 addUserToMap({
                   id: userId,
-                  phone: rawPhone,
+                  phone: t.userPhone || t.phone || `+91 ${digits}`,
                   name: t.userName || `User ${digits}`,
                   balance: 100,
                   totalEarnings: 0
@@ -709,7 +709,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         depSnap.forEach(d => {
           const dep = d.data();
           if (dep) {
-            const rawPhone = dep.mobileNumber || dep.userPhone || dep.phone || '';
+            const rawPhone = dep.mobileNumber || dep.userPhone || dep.phone || dep.userId || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
             if (digits && digits.length >= 10) {
               const userId = `usr_${digits}`;
@@ -717,7 +717,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
                 addUserToMap({
                   id: userId,
                   name: dep.name || `VIP Member (+91 ${digits})`,
-                  phone: rawPhone || `+91 ${digits}`,
+                  phone: dep.mobileNumber || dep.userPhone || dep.phone || `+91 ${digits}`,
                   balance: 100,
                   totalEarnings: 0
                 }, true);
@@ -732,7 +732,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         purSnap.forEach(d => {
           const pur = d.data();
           if (pur) {
-            const rawPhone = pur.userPhone || pur.phone || '';
+            const rawPhone = pur.userPhone || pur.phone || pur.userId || '';
             const digits = rawPhone.replace(/\D/g, '').slice(-10);
             if (digits && digits.length >= 10) {
               const userId = `usr_${digits}`;
@@ -740,7 +740,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
                 addUserToMap({
                   id: userId,
                   name: pur.userName || `VIP Member (+91 ${digits})`,
-                  phone: rawPhone || `+91 ${digits}`,
+                  phone: pur.userPhone || pur.phone || `+91 ${digits}`,
                   balance: 100,
                   totalEarnings: 0
                 }, true);
@@ -894,42 +894,57 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
   // 5. Reconstruct missing purchases from purchase transactions if any
 
   txList.forEach(tx => {
-    if (tx.type === 'purchase' && (tx.userId === userId || !tx.userId)) {
-      const reconstructedId = tx.id.startsWith('tx_pur_') ? tx.id.replace('tx_pur_', 'pur_') : `pur_${tx.id}`;
-      if (deletedPurchases.includes(reconstructedId) || deletedPurchases.includes(tx.id)) {
-        return;
-      }
+    if (tx.type === 'purchase') {
+      const txUserIdDigits = tx.userId ? String(tx.userId).replace(/\D/g, "").slice(-10) : "";
+      const txPhoneDigits = tx.userPhone ? String(tx.userPhone).replace(/\D/g, "").slice(-10) : "";
+      const targetUserDigits = userId ? String(userId).replace(/\D/g, "").slice(-10) : "";
 
-      const existingMatch = Array.from(map.values()).find(p => 
-        p.id === tx.id || 
-        p.id === tx.id.replace('tx_pur_', 'pur_') ||
-        p.datePurchased === tx.date ||
-        (p.price === tx.amount && Math.abs(new Date(p.datePurchased).getTime() - new Date(tx.date).getTime()) < 60000)
+      const isTxMatch = (
+        tx.userId === userId ||
+        !tx.userId ||
+        (targetUserDigits && targetUserDigits.length >= 10 && (
+          (txUserIdDigits && txUserIdDigits.endsWith(targetUserDigits)) ||
+          (txPhoneDigits && txPhoneDigits.endsWith(targetUserDigits))
+        ))
       );
 
-      if (!existingMatch) {
-        const cleanDesc = tx.description ? tx.description.replace(/^Purchased\s+/i, '').trim() : '';
-        const matchedPlan = planList.find(pl => 
-          (cleanDesc && pl.title.toLowerCase().includes(cleanDesc.toLowerCase())) ||
-          (cleanDesc && cleanDesc.toLowerCase().includes(pl.title.toLowerCase())) ||
-          pl.price === tx.amount
+      if (isTxMatch) {
+        const reconstructedId = tx.id.startsWith('tx_pur_') ? tx.id.replace('tx_pur_', 'pur_') : `pur_${tx.id}`;
+        if (deletedPurchases.includes(reconstructedId) || deletedPurchases.includes(tx.id)) {
+          return;
+        }
+
+        const existingMatch = Array.from(map.values()).find(p => 
+          p.id === tx.id || 
+          p.id === tx.id.replace('tx_pur_', 'pur_') ||
+          p.datePurchased === tx.date ||
+          (p.price === tx.amount && Math.abs(new Date(p.datePurchased).getTime() - new Date(tx.date).getTime()) < 60000)
         );
 
-        const reconstructedPurchase: PurchaseRecord = {
-          id: reconstructedId,
-          userId: userId,
-          planId: matchedPlan ? matchedPlan.id : `plan_${tx.amount}`,
-          planTitle: cleanDesc || (matchedPlan ? matchedPlan.title : `Investment Plan ₹${tx.amount}`),
-          price: tx.amount || (matchedPlan ? matchedPlan.price : 0),
-          dailyIncome: matchedPlan ? matchedPlan.dailyIncome : Math.round((tx.amount || 0) * 0.1),
-          durationDays: matchedPlan ? matchedPlan.durationDays : 45,
-          datePurchased: tx.date || new Date().toISOString(),
-          lastClaimedAt: tx.date || new Date().toISOString(),
-          totalClaimed: 0,
-          completed: false
-        };
-        if (!deletedPurchases.includes(reconstructedPurchase.id)) {
-          map.set(reconstructedId, reconstructedPurchase);
+        if (!existingMatch) {
+          const cleanDesc = tx.description ? tx.description.replace(/^Purchased\s+/i, '').trim() : '';
+          const matchedPlan = planList.find(pl => 
+            (cleanDesc && pl.title.toLowerCase().includes(cleanDesc.toLowerCase())) ||
+            (cleanDesc && cleanDesc.toLowerCase().includes(pl.title.toLowerCase())) ||
+            pl.price === tx.amount
+          );
+
+          const reconstructedPurchase: PurchaseRecord = {
+            id: reconstructedId,
+            userId: userId,
+            planId: matchedPlan ? matchedPlan.id : `plan_${tx.amount}`,
+            planTitle: cleanDesc || (matchedPlan ? matchedPlan.title : `Investment Plan ₹${tx.amount}`),
+            price: tx.amount || (matchedPlan ? matchedPlan.price : 0),
+            dailyIncome: matchedPlan ? matchedPlan.dailyIncome : Math.round((tx.amount || 0) * 0.1),
+            durationDays: matchedPlan ? matchedPlan.durationDays : 45,
+            datePurchased: tx.date || new Date().toISOString(),
+            lastClaimedAt: tx.date || new Date().toISOString(),
+            totalClaimed: 0,
+            completed: false
+          };
+          if (!deletedPurchases.includes(reconstructedPurchase.id)) {
+            map.set(reconstructedId, reconstructedPurchase);
+          }
         }
       }
     }
@@ -1081,7 +1096,8 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
           const adminDocRef = doc(db, "users", "usr_admin");
           const adminSnap = await getDoc(adminDocRef);
           if (adminSnap.exists()) {
-            return adminSnap.data() as UserProfile;
+            const data = adminSnap.data() as UserProfile;
+            return { ...data, id: data.id || adminSnap.id };
           }
         }
 
@@ -1099,7 +1115,9 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
           const q = query(usersColl, where("phone", "==", cand));
           const querySnapshot = await getDocs(q);
           if (!querySnapshot.empty) {
-            return querySnapshot.docs[0].data() as UserProfile;
+            const doc0 = querySnapshot.docs[0];
+            const data0 = doc0.data() as UserProfile;
+            return { ...data0, id: data0.id || doc0.id };
           }
         }
 
@@ -1109,7 +1127,8 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
             const userDocRef = doc(db, "users", dId);
             const userSnap = await getDoc(userDocRef);
             if (userSnap.exists()) {
-              return userSnap.data() as UserProfile;
+              const data = userSnap.data() as UserProfile;
+              return { ...data, id: data.id || userSnap.id };
             }
           }
         }
@@ -1128,7 +1147,7 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
             uData.phone === phone.trim() ||
             (isAdminInput && uData.role === 'admin')
           ) {
-            matched = uData;
+            matched = { ...uData, id: uData.id || docSnap.id };
           }
         });
         return matched;
@@ -1188,17 +1207,30 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
         const userDigits = user?.phone ? user.phone.replace(/\D/g, "") : "";
         const userLast10 = userDigits.length >= 10 ? userDigits.slice(-10) : userDigits;
 
+        const userIdDigits = user?.id ? user.id.replace(/\D/g, "").slice(-10) : "";
+
         purchasesSnap.forEach((docSnap) => {
           const pData = docSnap.data() as PurchaseRecord;
-          const pPhoneDigits = (pData as any).userPhone ? String((pData as any).userPhone).replace(/\D/g, "") : "";
+          if (!pData) return;
+          const pObj: PurchaseRecord = { ...pData, id: pData.id || docSnap.id };
+          const pPhoneDigits = (pObj as any).userPhone ? String((pObj as any).userPhone).replace(/\D/g, "") : "";
+          const pUserIdDigits = pObj.userId ? String(pObj.userId).replace(/\D/g, "") : "";
+
           const isMatch = (
-            pData.userId === user?.id ||
-            (pData as any).userId === user?.id.replace('usr_', '') ||
-            (userLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(userLast10)) ||
-            pData.userId === user?.phone
+            pObj.userId === user?.id ||
+            (pObj as any).userId === user?.id?.replace('usr_', '') ||
+            pObj.userId === user?.phone ||
+            (userLast10 && userLast10.length >= 10 && (
+              (pUserIdDigits && pUserIdDigits.endsWith(userLast10)) ||
+              (pPhoneDigits && pPhoneDigits.endsWith(userLast10))
+            )) ||
+            (userIdDigits && userIdDigits.length >= 10 && (
+              (pUserIdDigits && pUserIdDigits.endsWith(userIdDigits)) ||
+              (pPhoneDigits && pPhoneDigits.endsWith(userIdDigits))
+            ))
           );
           if (isMatch) {
-            purchases.push(pData);
+            purchases.push(pObj);
           }
         });
 
@@ -1551,7 +1583,7 @@ export async function firestoreGetState(userId: string): Promise<any> {
       const fsUsers: UserProfile[] = [];
       usersSnap.forEach((docSnap) => {
         const uData = docSnap.data() as UserProfile;
-        if (uData && uData.id) {
+        if (uData) {
           fsUsers.push({ ...uData, id: uData.id || docSnap.id });
         }
       });
@@ -1579,7 +1611,9 @@ export async function firestoreGetState(userId: string): Promise<any> {
       const fsPlans: InvestmentPlan[] = [];
       plansSnap.forEach((docSnap) => {
         const pData = docSnap.data() as InvestmentPlan;
-        if (pData && pData.id) fsPlans.push(pData);
+        if (pData) {
+          fsPlans.push({ ...pData, id: pData.id || docSnap.id });
+        }
       });
       let rawDelP: string[] = [];
       try {
@@ -1668,13 +1702,23 @@ export async function firestoreGetState(userId: string): Promise<any> {
             const uObj = usersList.find(u => u.id === userId);
             const uPhoneDigits = uObj?.phone ? uObj.phone.replace(/\D/g, "") : "";
             const uLast10 = uPhoneDigits.length >= 10 ? uPhoneDigits.slice(-10) : uPhoneDigits;
+            const targetIdDigits = userId.replace(/\D/g, "").slice(-10);
+
             const pPhoneDigits = (pObj as any).userPhone ? String((pObj as any).userPhone).replace(/\D/g, "") : "";
-            
+            const pUserIdDigits = pObj.userId ? String(pObj.userId).replace(/\D/g, "") : "";
+
             const isMatch = (
               pObj.userId === userId ||
               (pObj as any).userId === userId.replace('usr_', '') ||
-              (uLast10 && pPhoneDigits.length >= 10 && pPhoneDigits.endsWith(uLast10)) ||
-              pObj.userId === uObj?.phone
+              pObj.userId === uObj?.phone ||
+              (uLast10 && uLast10.length >= 10 && (
+                (pUserIdDigits && pUserIdDigits.endsWith(uLast10)) ||
+                (pPhoneDigits && pPhoneDigits.endsWith(uLast10))
+              )) ||
+              (targetIdDigits && targetIdDigits.length >= 10 && (
+                (pUserIdDigits && pUserIdDigits.endsWith(targetIdDigits)) ||
+                (pPhoneDigits && pPhoneDigits.endsWith(targetIdDigits))
+              ))
             );
             if (isMatch) {
               fsPurchases.push(pObj);
