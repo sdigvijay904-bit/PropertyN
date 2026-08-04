@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
@@ -1438,51 +1438,76 @@ export default function AdminSection({
     setTickerMessage('');
   };
 
-  // Filter users by search query safely across ALL accounts
-  const filteredUsers = usersList.filter(u => {
-    if (!u) return false;
+  // Filter users by search query safely across ALL accounts, sorted by createdAt / registration date in descending order
+  const filteredUsers = useMemo(() => {
+    const list = usersList.filter(u => {
+      if (!u) return false;
 
-    const searchTrim = searchQuery.trim();
-    if (!searchTrim) return true;
+      const searchTrim = searchQuery.trim();
+      if (!searchTrim) return true;
 
-    const searchLower = searchTrim.toLowerCase();
-    const searchDigits = searchTrim.replace(/\D/g, '');
+      const searchLower = searchTrim.toLowerCase();
+      const searchDigits = searchTrim.replace(/\D/g, '');
 
-    const nameStr = (u.name || '').toLowerCase();
-    const phoneRaw = (u.phone || '');
-    const phoneDigits = phoneRaw.replace(/\D/g, '');
-    const inviteCodeStr = (u.inviteCode || '').toLowerCase();
-    const inviterCodeStr = (u.inviterCode || '').toLowerCase();
-    const idStr = (u.id || '').toLowerCase();
-    const passStr = (u.password || '').toLowerCase();
+      const nameStr = (u.name || '').toLowerCase();
+      const phoneRaw = (u.phone || '');
+      const phoneDigits = phoneRaw.replace(/\D/g, '');
+      const inviteCodeStr = (u.inviteCode || '').toLowerCase();
+      const inviterCodeStr = (u.inviterCode || '').toLowerCase();
+      const idStr = (u.id || '').toLowerCase();
+      const passStr = (u.password || '').toLowerCase();
 
-    // Check sponsor info
-    const sponsor = u.inviterCode ? usersList.find(s => s.inviteCode === u.inviterCode) : null;
-    const sponsorName = sponsor ? (sponsor.name || '').toLowerCase() : '';
-    const sponsorPhoneDigits = sponsor ? (sponsor.phone || '').replace(/\D/g, '') : '';
+      // Check sponsor info
+      const sponsor = u.inviterCode ? usersList.find(s => s.inviteCode === u.inviterCode) : null;
+      const sponsorName = sponsor ? (sponsor.name || '').toLowerCase() : '';
+      const sponsorPhoneDigits = sponsor ? (sponsor.phone || '').replace(/\D/g, '') : '';
 
-    const matchesName = nameStr.includes(searchLower);
-    const matchesPhoneRaw = phoneRaw.includes(searchTrim);
-    const matchesPhoneDigits = searchDigits.length >= 3 && phoneDigits.includes(searchDigits);
-    const matchesInviteCode = inviteCodeStr.includes(searchLower);
-    const matchesInviterCode = inviterCodeStr.includes(searchLower);
-    const matchesId = idStr.includes(searchLower);
-    const matchesPass = passStr.includes(searchLower);
-    const matchesSponsorName = sponsorName.includes(searchLower);
-    const matchesSponsorPhone = searchDigits.length >= 3 && sponsorPhoneDigits.includes(searchDigits);
+      const matchesName = nameStr.includes(searchLower);
+      const matchesPhoneRaw = phoneRaw.includes(searchTrim);
+      const matchesPhoneDigits = searchDigits.length >= 3 && phoneDigits.includes(searchDigits);
+      const matchesInviteCode = inviteCodeStr.includes(searchLower);
+      const matchesInviterCode = inviterCodeStr.includes(searchLower);
+      const matchesId = idStr.includes(searchLower);
+      const matchesPass = passStr.includes(searchLower);
+      const matchesSponsorName = sponsorName.includes(searchLower);
+      const matchesSponsorPhone = searchDigits.length >= 3 && sponsorPhoneDigits.includes(searchDigits);
 
-    return (
-      matchesName ||
-      matchesPhoneRaw ||
-      matchesPhoneDigits ||
-      matchesInviteCode ||
-      matchesInviterCode ||
-      matchesId ||
-      matchesPass ||
-      matchesSponsorName ||
-      matchesSponsorPhone
-    );
-  });
+      return (
+        matchesName ||
+        matchesPhoneRaw ||
+        matchesPhoneDigits ||
+        matchesInviteCode ||
+        matchesInviterCode ||
+        matchesId ||
+        matchesPass ||
+        matchesSponsorName ||
+        matchesSponsorPhone
+      );
+    });
+
+    // Sort descending by registration date or timestamp
+    return list.sort((a, b) => {
+      const getTs = (u: UserProfile): number => {
+        if (u.createdAt) {
+          const t = new Date(u.createdAt).getTime();
+          if (!isNaN(t)) return t;
+        }
+        if (u.registrationDate) {
+          const t = new Date(u.registrationDate).getTime();
+          if (!isNaN(t)) return t;
+        }
+        if (u.id) {
+          const match = u.id.match(/\d+/);
+          if (match) {
+            const num = parseInt(match[0], 10);
+            if (!isNaN(num)) return num;
+          }
+        }
+        return 0;
+      };
+      return getTs(b) - getTs(a);
+    });
+  }, [usersList, searchQuery]);
 
   // Pagination calculation for Admin Users list
   const totalUsersCount = filteredUsers.length;
@@ -1490,7 +1515,9 @@ export default function AdminSection({
   const totalUserPages = Math.ceil(totalUsersCount / effectivePageSize) || 1;
   const activeUserPage = Math.min(Math.max(1, userPage), totalUserPages);
   const userStartIndex = userPageSize === -1 ? 0 : (activeUserPage - 1) * effectivePageSize;
-  const paginatedUsers = userPageSize === -1 ? filteredUsers : filteredUsers.slice(userStartIndex, userStartIndex + effectivePageSize);
+  const paginatedUsers = useMemo(() => {
+    return userPageSize === -1 ? filteredUsers : filteredUsers.slice(userStartIndex, userStartIndex + effectivePageSize);
+  }, [filteredUsers, userPageSize, userStartIndex, effectivePageSize]);
 
   const getDownlineTree = (targetUser: UserProfile) => {
     const list: { id: string; name: string; phone: string; level: number; totalInvested: number; inviterName: string }[] = [];
@@ -1851,11 +1878,21 @@ export default function AdminSection({
                     </span>
                     <input
                       type="text"
-                      placeholder="Search phone (9595350797), name, invite code, sponsor..."
+                      placeholder="Search member by name, phone number (e.g., 9876543210), invite code..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600 transition-all font-mono"
+                      className="w-full pl-11 pr-10 py-3 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-bold text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-500 transition-all font-mono"
                     />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 rounded-full hover:bg-slate-800/80 transition-colors cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   <button
                     type="button"
