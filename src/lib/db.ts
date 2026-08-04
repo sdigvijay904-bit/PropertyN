@@ -1373,7 +1373,31 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
     }
   }
 
-  // Local fallback lookup if Firestore failed or returned empty
+  // Server REST scan fallback lookup if Web SDK failed or returned empty
+  if (!user) {
+    try {
+      const scannedUsers = await scanAndMergeAllUsers();
+      if (isAdminInput) {
+        user = scannedUsers.find(u => u.role === 'admin' || u.id === 'usr_admin') || null;
+      }
+      if (!user) {
+        user = scannedUsers.find(u => {
+          const uDigits = u.phone ? u.phone.replace(/\D/g, "") : "";
+          const uIdDigits = u.id ? u.id.replace(/\D/g, "") : "";
+          return (
+            (last10 && uDigits.length >= 10 && uDigits.endsWith(last10)) ||
+            (last10 && uIdDigits.length >= 10 && uIdDigits.endsWith(last10)) ||
+            u.phone === cleanedPhone ||
+            u.phone === phone.trim()
+          );
+        }) || null;
+      }
+    } catch (e) {
+      console.warn("Server REST scan failed on login:", e);
+    }
+  }
+
+  // Local fallback lookup if REST scan also returned empty
   if (!user) {
     const localUsers = getStoredUsers();
     if (isAdminInput) {
@@ -1458,6 +1482,52 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
     }
   }
 
+  // Also query HTTPS REST endpoints to guarantee zero data loss across mobile devices
+  try {
+    const restPurchases = await fetchFirestoreCollectionViaRest("purchases");
+    const restTx = await fetchFirestoreCollectionViaRest("transactions");
+    
+    if (restPurchases && restPurchases.length > 0) {
+      const userDigits = user?.phone ? user.phone.replace(/\D/g, "") : "";
+      const userLast10 = userDigits.length >= 10 ? userDigits.slice(-10) : userDigits;
+      const userIdDigits = user?.id ? user.id.replace(/\D/g, "").slice(-10) : "";
+
+      restPurchases.forEach((pData: any) => {
+        if (!pData) return;
+        const pObj: PurchaseRecord = { ...pData, id: pData.id || pData.docId };
+        const pPhoneDigits = (pObj as any).userPhone ? String((pObj as any).userPhone).replace(/\D/g, "") : "";
+        const pUserIdDigits = pObj.userId ? String(pObj.userId).replace(/\D/g, "") : "";
+
+        const isMatch = (
+          pObj.userId === user?.id ||
+          (pObj as any).userId === user?.id?.replace('usr_', '') ||
+          pObj.userId === user?.phone ||
+          (userLast10 && userLast10.length >= 10 && (
+            (pUserIdDigits && pUserIdDigits.endsWith(userLast10)) ||
+            (pPhoneDigits && pPhoneDigits.endsWith(userLast10))
+          )) ||
+          (userIdDigits && userIdDigits.length >= 10 && (
+            (pUserIdDigits && pUserIdDigits.endsWith(userIdDigits)) ||
+            (pPhoneDigits && pPhoneDigits.endsWith(userIdDigits))
+          ))
+        );
+        if (isMatch && !purchases.some(p => p.id === pObj.id)) {
+          purchases.push(pObj);
+        }
+      });
+    }
+
+    if (restTx && restTx.length > 0) {
+      restTx.forEach((t: any) => {
+        if (t && t.id && !transactions.some(existing => existing.id === t.id)) {
+          transactions.push(t);
+        }
+      });
+    }
+  } catch (e) {
+    console.warn("REST purchases/transactions fetch error on login:", e);
+  }
+
   // Merge local transactions first
   const localTx = getStoredTransactions();
   const txMap = new Map<string, TransactionRecord>();
@@ -1490,6 +1560,26 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
     const timeB = new Date(b.date).getTime() || 0;
     return timeB - timeA;
   });
+
+  // Instantly persist authoritative server user profile, purchases, and transactions to local device storage
+  try {
+    localStorage.setItem('adpaint_user', JSON.stringify(user));
+    if (user.id) {
+      localStorage.setItem(`adpaint_purchases_${user.id}`, JSON.stringify(purchases));
+      localStorage.setItem(`adpaint_backup_purchases_${user.id}`, JSON.stringify(purchases));
+    }
+    localStorage.setItem('adpaint_transactions', JSON.stringify(transactions));
+    
+    // Update or insert into global users list in local storage
+    const storedUsers = getStoredUsers();
+    const updatedUsersList = storedUsers.map(u => u.id === user.id ? user : u);
+    if (!updatedUsersList.some(u => u.id === user.id)) {
+      updatedUsersList.push(user);
+    }
+    localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
+  } catch (e) {
+    console.warn("Failed to persist login data to localStorage:", e);
+  }
 
   return {
     user,
@@ -2012,19 +2102,19 @@ export async function firestoreGetState(userId: string): Promise<any> {
     }
   }
 
-  // If server usersList is empty (e.g. offline), fallback to local stored users
-  if (!usersList || usersList.length === 0) {
-    usersList = getStoredUsers();
+  // Always perform a full server REST scan to merge server users across devices
+  try {
+    const fullScanned = await scanAndMergeAllUsers(usersList);
+    if (fullScanned && fullScanned.length > 0) {
+      usersList = fullScanned;
+    }
+  } catch (e) {
+    console.warn("Notice: scanAndMergeAllUsers in firestoreGetState:", e);
   }
 
-  // For admin sessions, run a full scan across users, transactions, deposits & purchases to reconstruct any missed registrations
-  if (userId && (userId.toLowerCase() === 'usr_admin' || userId.toLowerCase().includes('admin'))) {
-    try {
-      const fullScanned = await scanAndMergeAllUsers(usersList);
-      if (fullScanned && fullScanned.length > 0) {
-        usersList = fullScanned;
-      }
-    } catch (e) {}
+  // If usersList is still empty, fallback to local stored users
+  if (!usersList || usersList.length === 0) {
+    usersList = getStoredUsers();
   }
 
   // Clean out any deleted plans or deleted purchases

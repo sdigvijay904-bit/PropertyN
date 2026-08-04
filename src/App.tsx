@@ -281,6 +281,34 @@ export default function App() {
       if (scanned && scanned.length > 0) {
         setUsersList(scanned);
         usersListRef.current = scanned;
+
+        const currentActive = userProfileRef.current;
+        if (currentActive) {
+          const rawActivePhone = currentActive.phone ? currentActive.phone.replace(/\D/g, '') : '';
+          const activeLast10 = rawActivePhone.length >= 10 ? rawActivePhone.slice(-10) : rawActivePhone;
+
+          const updatedMe = scanned.find(u => {
+            if (u.id === currentActive.id) return true;
+            if (activeLast10) {
+              const uDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+              const uLast10 = uDigits.length >= 10 ? uDigits.slice(-10) : uDigits;
+              if (uLast10 && uLast10 === activeLast10) return true;
+            }
+            return false;
+          });
+
+          if (updatedMe) {
+            const finalMe = sanitizeUserCheckIn({
+              ...currentActive,
+              ...updatedMe,
+              inviterCode: updatedMe.inviterCode || currentActive.inviterCode,
+              bankAccount: updatedMe.bankAccount || currentActive.bankAccount
+            })!;
+            setUserProfile(finalMe);
+            userProfileRef.current = finalMe;
+            localStorage.setItem('adpaint_user', JSON.stringify(finalMe));
+          }
+        }
       }
     }).catch(() => {});
 
