@@ -596,11 +596,14 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
     const existing = userMap.get(targetId);
     if (existing) {
       if (isServer) {
-        // Server data takes master precedence
+        // Server data takes master precedence while preserving highest non-zero balances/earnings
         const merged: UserProfile = {
           ...existing,
           ...u,
           id: targetId,
+          balance: Math.max(existing.balance ?? 0, u.balance ?? 0),
+          totalEarnings: Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0),
+          totalInvested: Math.max(existing.totalInvested ?? 0, u.totalInvested ?? 0),
           password: (u as UserProfile).password || existing.password || 'password123',
           bankAccount: (u as UserProfile).bankAccount || existing.bankAccount,
           inviterCode: (u as UserProfile).inviterCode || existing.inviterCode || '',
@@ -612,6 +615,9 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
           ...u,
           ...existing,
           id: targetId,
+          balance: Math.max(existing.balance ?? 0, u.balance ?? 0),
+          totalEarnings: Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0),
+          totalInvested: Math.max(existing.totalInvested ?? 0, u.totalInvested ?? 0),
           password: existing.password || (u as UserProfile).password || 'password123',
           bankAccount: existing.bankAccount || (u as UserProfile).bankAccount,
           inviterCode: existing.inviterCode || (u as UserProfile).inviterCode || '',
@@ -826,15 +832,28 @@ export function getStoredPurchases(userId: string, currentTransactions?: Transac
     }
   } catch (e) {}
 
-  // 2. Check main localStorage key
+  // 2. Check main localStorage key with phone & user ID matching
+  const targetDigits = userId.replace(/\D/g, '').slice(-10);
   try {
     const mainRaw = localStorage.getItem('adpaint_purchases');
     if (mainRaw) {
       const parsedMain = JSON.parse(mainRaw);
       if (Array.isArray(parsedMain)) {
         parsedMain.forEach((p: PurchaseRecord) => {
-          if (p && p.id && !deletedPurchases.includes(p.id) && (p.userId === userId || !p.userId)) {
-            if (!map.has(p.id)) map.set(p.id, p);
+          if (!p || !p.id || deletedPurchases.includes(p.id)) return;
+          const pUserIdDigits = p.userId ? String(p.userId).replace(/\D/g, '').slice(-10) : '';
+          const pPhoneDigits = (p as any).userPhone ? String((p as any).userPhone).replace(/\D/g, '').slice(-10) : '';
+          const isMatch = (
+            p.userId === userId ||
+            (p as any).userId === userId.replace('usr_', '') ||
+            !p.userId ||
+            (targetDigits.length >= 10 && (
+              (pUserIdDigits && pUserIdDigits.endsWith(targetDigits)) ||
+              (pPhoneDigits && pPhoneDigits.endsWith(targetDigits))
+            ))
+          );
+          if (isMatch && !map.has(p.id)) {
+            map.set(p.id, p);
           }
         });
       }
@@ -1262,6 +1281,19 @@ export async function firestoreLogin(payload: { phone: string; password_entered:
   localPurchases.forEach(p => pMap.set(p.id, p));
   purchases.forEach(p => pMap.set(p.id, p));
   purchases = Array.from(pMap.values());
+
+  // Calculate user total invested and total earnings from purchases and transactions
+  const approvedRechargeTotal = transactions
+    .filter(t => t.type === 'recharge' && (t.status === 'success' || (t.status as string) === 'APPROVED' || (t.status as string) === 'approved'))
+    .reduce((s, t) => s + (t.amount || 0), 0);
+  const totalPlanPrice = purchases.reduce((s, p) => s + (p.price || 0), 0);
+  const totalClaimed = purchases.reduce((s, p) => s + (p.totalClaimed || 0), 0);
+
+  const realInvested = Math.max(user.totalInvested || 0, approvedRechargeTotal, totalPlanPrice);
+  const realEarnings = Math.max(user.totalEarnings || 0, totalClaimed);
+
+  user.totalInvested = realInvested;
+  user.totalEarnings = realEarnings;
 
   transactions.sort((a, b) => {
     const timeA = new Date(a.date).getTime() || 0;

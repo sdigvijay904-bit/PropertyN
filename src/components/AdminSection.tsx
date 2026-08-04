@@ -327,7 +327,7 @@ export default function AdminSection({
 
   // Helper to fetch purchased plans for a user
   const getUserPurchases = (userId: string, userPhone?: string): PurchaseRecord[] => {
-    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
+    const targetDigits = (userPhone || userId || '').replace(/\D/g, '').slice(-10);
     
     let deletedPurchases: string[] = [];
     try {
@@ -335,11 +335,20 @@ export default function AdminSection({
       if (rawDel) deletedPurchases = JSON.parse(rawDel);
     } catch (e) {}
 
-    const fromProp = (purchases || []).filter(p => 
-      !deletedPurchases.includes(p.id) &&
-      (p.userId === userId || 
-      (cleanPhone.length >= 10 && (p as any).userPhone && (p as any).userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10))))
-    );
+    const fromProp = (purchases || []).filter(p => {
+      if (deletedPurchases.includes(p.id)) return false;
+      const pUserIdDigits = p.userId ? String(p.userId).replace(/\D/g, '').slice(-10) : '';
+      const pPhoneDigits = (p as any).userPhone ? String((p as any).userPhone).replace(/\D/g, '').slice(-10) : '';
+      return (
+        p.userId === userId ||
+        (p as any).userId === userId.replace('usr_', '') ||
+        (userPhone && p.userId === userPhone) ||
+        (targetDigits.length >= 10 && (
+          (pUserIdDigits && pUserIdDigits.endsWith(targetDigits)) ||
+          (pPhoneDigits && pPhoneDigits.endsWith(targetDigits))
+        ))
+      );
+    });
 
     const fromStorage = getStoredPurchases(userId, transactions, plans).filter(p => !deletedPurchases.includes(p.id));
 
@@ -352,39 +361,61 @@ export default function AdminSection({
 
   // Helper to fetch user deposits (recharges)
   const getUserDeposits = (userId: string, userPhone?: string) => {
-    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
-    const userTx = (transactions || []).filter(t => 
-      t.type === 'recharge' && (
-        (t.userId && t.userId === userId) || 
-        (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
-      )
-    );
-    const approvedDeposit = userTx.filter(t => t.status === 'success').reduce((sum, t) => sum + (t.amount || 0), 0);
+    const targetDigits = (userPhone || userId || '').replace(/\D/g, '').slice(-10);
+    const userTx = (transactions || []).filter(t => {
+      if (t.type !== 'recharge') return false;
+      const tUserIdDigits = t.userId ? String(t.userId).replace(/\D/g, '').slice(-10) : '';
+      const tPhoneDigits = t.userPhone ? String(t.userPhone).replace(/\D/g, '').slice(-10) : '';
+      return (
+        (t.userId && t.userId === userId) ||
+        (userPhone && t.userId === userPhone) ||
+        (targetDigits.length >= 10 && (
+          (tUserIdDigits && tUserIdDigits.endsWith(targetDigits)) ||
+          (tPhoneDigits && tPhoneDigits.endsWith(targetDigits))
+        ))
+      );
+    });
+    const approvedDeposit = userTx.filter(t => t.status === 'success' || (t.status as string) === 'APPROVED' || (t.status as string) === 'approved').reduce((sum, t) => sum + (t.amount || 0), 0);
     const pendingDeposit = userTx.filter(t => t.status === 'pending').reduce((sum, t) => sum + (t.amount || 0), 0);
     return { approvedDeposit, pendingDeposit, totalCount: userTx.length, transactions: userTx };
   };
 
   // Helper to fetch user withdrawals
   const getUserWithdrawals = (userId: string, userPhone?: string) => {
-    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
-    const userTx = (transactions || []).filter(t => 
-      t.type === 'withdraw' && (
-        (t.userId && t.userId === userId) || 
-        (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
-      )
-    );
-    const approvedWithdraw = userTx.filter(t => t.status === 'success').reduce((sum, t) => sum + (t.amount || 0), 0);
+    const targetDigits = (userPhone || userId || '').replace(/\D/g, '').slice(-10);
+    const userTx = (transactions || []).filter(t => {
+      if (t.type !== 'withdraw') return false;
+      const tUserIdDigits = t.userId ? String(t.userId).replace(/\D/g, '').slice(-10) : '';
+      const tPhoneDigits = t.userPhone ? String(t.userPhone).replace(/\D/g, '').slice(-10) : '';
+      return (
+        (t.userId && t.userId === userId) ||
+        (userPhone && t.userId === userPhone) ||
+        (targetDigits.length >= 10 && (
+          (tUserIdDigits && tUserIdDigits.endsWith(targetDigits)) ||
+          (tPhoneDigits && tPhoneDigits.endsWith(targetDigits))
+        ))
+      );
+    });
+    const approvedWithdraw = userTx.filter(t => t.status === 'success' || (t.status as string) === 'APPROVED' || (t.status as string) === 'approved').reduce((sum, t) => sum + (t.amount || 0), 0);
     const pendingWithdraw = userTx.filter(t => t.status === 'pending').reduce((sum, t) => sum + (t.amount || 0), 0);
     return { approvedWithdraw, pendingWithdraw, totalCount: userTx.length, transactions: userTx };
   };
 
   // Helper to fetch ALL transactions for a user
   const getUserTransactions = (userId: string, userPhone?: string) => {
-    const cleanPhone = userPhone ? userPhone.replace(/\D/g, '') : '';
-    return (transactions || []).filter(t => 
-      (t.userId && t.userId === userId) || 
-      (cleanPhone.length >= 10 && t.userPhone && t.userPhone.replace(/\D/g, '').includes(cleanPhone.slice(-10)))
-    );
+    const targetDigits = (userPhone || userId || '').replace(/\D/g, '').slice(-10);
+    return (transactions || []).filter(t => {
+      const tUserIdDigits = t.userId ? String(t.userId).replace(/\D/g, '').slice(-10) : '';
+      const tPhoneDigits = t.userPhone ? String(t.userPhone).replace(/\D/g, '').slice(-10) : '';
+      return (
+        (t.userId && t.userId === userId) ||
+        (userPhone && t.userId === userPhone) ||
+        (targetDigits.length >= 10 && (
+          (tUserIdDigits && tUserIdDigits.endsWith(targetDigits)) ||
+          (tPhoneDigits && tPhoneDigits.endsWith(targetDigits))
+        ))
+      );
+    });
   };
 
   // Helper to toggle plan deactivation (complete / active state)

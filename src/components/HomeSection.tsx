@@ -114,9 +114,12 @@ export default function HomeSection({
   };
 
   // Sum successful recharge transactions
-  const totalRecharged = transactions
-    .filter((t) => t.type === 'recharge' && t.status === 'success')
-    .reduce((sum, t) => sum + t.amount, 0);
+  const totalRecharged = Math.max(
+    user.totalInvested || 0,
+    transactions
+      .filter((t) => t.type === 'recharge' && (t.status === 'success' || (t as any).status === 'APPROVED' || (t as any).status === 'approved'))
+      .reduce((sum, t) => sum + t.amount, 0)
+  );
 
   // Sum successful claim transactions (only plan earnings!)
   const totalClaimedFromTx = transactions
