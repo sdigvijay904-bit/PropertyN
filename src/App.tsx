@@ -1036,23 +1036,45 @@ export default function App() {
       // Live Users collection listener at top level so ALL registrations reflect immediately in Admin Panel
       const usersColRef = collection(db, "users");
       unsubUsers = onSnapshot(usersColRef, (snapshot) => {
-        const liveUsers: UserProfile[] = [];
-        snapshot.forEach(d => {
-          const u = d.data() as UserProfile;
-          if (u && !u.id?.startsWith('tx_') && !u.id?.startsWith('pur_') && !u.id?.startsWith('dep_') && !(u as any).type) {
-            liveUsers.push({ ...u, id: u.id || d.id });
+        const liveUsersMap = new Map<string, UserProfile>();
+
+        // 1. Local stored users
+        const localUsers = getStoredUsers();
+        localUsers.forEach(u => {
+          if (u && u.id && u.id !== 'usr_demo' && !u.id.startsWith('tx_') && !u.id.startsWith('pur_') && !u.id.startsWith('dep_') && !(u as any).type) {
+            liveUsersMap.set(u.id, u);
           }
         });
-        scanAndMergeAllUsers(liveUsers).then(scanned => {
-          if (scanned && scanned.length > 0) {
-            const isDiff = JSON.stringify(scanned) !== JSON.stringify(usersListRef.current);
-            if (isDiff) {
-              setUsersList(scanned);
-              usersListRef.current = scanned;
-              localStorage.setItem('adpaint_users_list', JSON.stringify(scanned));
-            }
+
+        // 2. In-memory usersList
+        usersListRef.current.forEach(u => {
+          if (u && u.id && u.id !== 'usr_demo' && !u.id.startsWith('tx_') && !u.id.startsWith('pur_') && !u.id.startsWith('dep_') && !(u as any).type) {
+            liveUsersMap.set(u.id, u);
           }
-        }).catch(() => {});
+        });
+
+        // 3. Firestore live snapshot (Authoritative master)
+        snapshot.forEach(d => {
+          const u = d.data() as UserProfile;
+          if (u && u.id !== 'usr_demo' && !u.id?.startsWith('tx_') && !u.id?.startsWith('pur_') && !u.id?.startsWith('dep_') && !(u as any).type) {
+            const uid = u.id || d.id;
+            const existing = liveUsersMap.get(uid);
+            liveUsersMap.set(uid, {
+              ...existing,
+              ...u,
+              id: uid,
+              password: u.password || existing?.password || 'password123'
+            });
+          }
+        });
+
+        const merged = Array.from(liveUsersMap.values());
+        const isDiff = JSON.stringify(merged) !== JSON.stringify(usersListRef.current);
+        if (isDiff) {
+          setUsersList(merged);
+          usersListRef.current = merged;
+          localStorage.setItem('adpaint_users_list', JSON.stringify(merged));
+        }
       }, (err) => {
         console.warn("Top-level users snapshot notice:", err?.message || err);
       });
@@ -1200,23 +1222,45 @@ export default function App() {
       // Live Users collection listener for Admin real-time panel & team updates
       const usersColRef = collection(db, "users");
       unsubUsers = onSnapshot(usersColRef, (snap) => {
-        const liveUsers: UserProfile[] = [];
-        snap.forEach(d => {
-          const u = d.data() as UserProfile;
-          if (u && !u.id?.startsWith('tx_') && !u.id?.startsWith('pur_') && !u.id?.startsWith('dep_') && !(u as any).type) {
-            liveUsers.push({ ...u, id: u.id || d.id });
+        const liveUsersMap = new Map<string, UserProfile>();
+
+        // 1. Local stored users
+        const localUsers = getStoredUsers();
+        localUsers.forEach(u => {
+          if (u && u.id && u.id !== 'usr_demo' && !u.id.startsWith('tx_') && !u.id.startsWith('pur_') && !u.id.startsWith('dep_') && !(u as any).type) {
+            liveUsersMap.set(u.id, u);
           }
         });
-        scanAndMergeAllUsers(liveUsers).then(scanned => {
-          if (scanned && scanned.length > 0) {
-            const isDiff = JSON.stringify(scanned) !== JSON.stringify(usersListRef.current);
-            if (isDiff) {
-              setUsersList(scanned);
-              usersListRef.current = scanned;
-              localStorage.setItem('adpaint_users_list', JSON.stringify(scanned));
-            }
+
+        // 2. In-memory usersList
+        usersListRef.current.forEach(u => {
+          if (u && u.id && u.id !== 'usr_demo' && !u.id.startsWith('tx_') && !u.id.startsWith('pur_') && !u.id.startsWith('dep_') && !(u as any).type) {
+            liveUsersMap.set(u.id, u);
           }
-        }).catch(() => {});
+        });
+
+        // 3. Firestore live snapshot (Authoritative master)
+        snap.forEach(d => {
+          const u = d.data() as UserProfile;
+          if (u && u.id !== 'usr_demo' && !u.id?.startsWith('tx_') && !u.id?.startsWith('pur_') && !u.id?.startsWith('dep_') && !(u as any).type) {
+            const uid = u.id || d.id;
+            const existing = liveUsersMap.get(uid);
+            liveUsersMap.set(uid, {
+              ...existing,
+              ...u,
+              id: uid,
+              password: u.password || existing?.password || 'password123'
+            });
+          }
+        });
+
+        const merged = Array.from(liveUsersMap.values());
+        const isDiff = JSON.stringify(merged) !== JSON.stringify(usersListRef.current);
+        if (isDiff) {
+          setUsersList(merged);
+          usersListRef.current = merged;
+          localStorage.setItem('adpaint_users_list', JSON.stringify(merged));
+        }
       }, (err) => {
         console.warn("Notice reading live users snapshot:", err);
         markQuotaExceeded(err);

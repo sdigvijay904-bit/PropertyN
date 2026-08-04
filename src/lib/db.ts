@@ -661,10 +661,14 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
 
       // 2. Add current in-memory usersList & all local storage stored users
       const allLocalUsers = getStoredUsers();
-      const candidateList = [...currentUsersList, ...allLocalUsers];
-      const unmigratedUsersToPush: UserProfile[] = [];
+      currentUsersList.forEach(u => {
+        if (u && u.id && u.id !== 'usr_demo') {
+          addUserToMap(u, true);
+        }
+      });
 
-      candidateList.forEach(u => {
+      const unmigratedUsersToPush: UserProfile[] = [];
+      allLocalUsers.forEach(u => {
         if (u && u.id && u.id !== 'usr_demo') {
           const isMissingOnServer = !serverUserIds.has(u.id);
           addUserToMap(u, false);
@@ -1322,21 +1326,23 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   // Save to master backup snapshot
   saveMasterSnapshotBackup({ usersList: storedUsers, transactions: storedTxs });
 
-  // 2. Fire non-blocking asynchronous Firestore write in background so UI never waits or hangs
+  // 2. Write to Firestore database immediately with race protection for instant registration
   try {
     const userDocRef = doc(db, "users", newUserId);
     const txDocRef = doc(db, "transactions", signupTx.id);
 
-    Promise.all([
+    const writeTask = Promise.all([
       setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
       setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
-    ]).then(() => {
-      console.log("Asynchronously registered user record in Firestore:", newUserId);
-    }).catch(err => {
-      console.warn("Background Firestore user write notice:", err);
-    });
+    ]);
+
+    // Race to attempt synchronous save (up to 1200ms), falling back to asynchronous background save if network is slow
+    await Promise.race([
+      writeTask,
+      new Promise(resolve => setTimeout(resolve, 1200))
+    ]);
   } catch (err: any) {
-    console.warn("Firestore setup notice:", err);
+    console.warn("Firestore registration setup notice:", err);
   }
 
   return {
