@@ -44,6 +44,7 @@ import {
   getStoredUsers,
   scanAndMergeAllUsers,
   cleanUndefined,
+  writeFirestoreViaRest,
   isQuotaExceeded,
   markQuotaExceeded
 } from './lib/db';
@@ -375,10 +376,38 @@ export default function App() {
   // Handle referral links & social media ad clicks (e.g. ?code=12345, ?fbclid=..., or /register)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code') || params.get('ref') || params.get('invite');
-      const isRegisterPath = window.location.pathname.toLowerCase().includes('register');
-      const isSocialMediaAd = params.has('fbclid') || params.has('utm_source') || params.has('ttclid') || params.get('mode') === 'register' || window.location.hash.toLowerCase().includes('register');
+      let code = '';
+      let isSocialMediaAd = false;
+      let isRegisterPath = false;
+
+      try {
+        const fullUrl = window.location.href;
+        const searchParams = new URLSearchParams(window.location.search);
+
+        let hashQuery = '';
+        if (window.location.hash) {
+          const qIdx = window.location.hash.indexOf('?');
+          if (qIdx !== -1) {
+            hashQuery = window.location.hash.substring(qIdx);
+          } else if (window.location.hash.includes('=')) {
+            hashQuery = '?' + window.location.hash.replace(/^#\/?/, '');
+          }
+        }
+        const hashParams = new URLSearchParams(hashQuery);
+
+        code = searchParams.get('code') || searchParams.get('ref') || searchParams.get('invite') || searchParams.get('inviterCode') || searchParams.get('invitationCode') ||
+               hashParams.get('code') || hashParams.get('ref') || hashParams.get('invite') || hashParams.get('inviterCode') || hashParams.get('invitationCode') || '';
+
+        if (!code) {
+          const match = fullUrl.match(/(?:code|ref|invite|inviter)[=/](\d{4,6})/i);
+          if (match && match[1]) {
+            code = match[1];
+          }
+        }
+
+        isRegisterPath = window.location.pathname.toLowerCase().includes('register') || window.location.hash.toLowerCase().includes('register');
+        isSocialMediaAd = searchParams.has('fbclid') || searchParams.has('utm_source') || searchParams.has('ttclid') || searchParams.has('gclid') || searchParams.get('mode') === 'register' || hashParams.has('fbclid') || isRegisterPath || fullUrl.toLowerCase().includes('instagram') || fullUrl.toLowerCase().includes('meta');
+      } catch (e) {}
 
       let finalCode = '';
       const hasReferralInUrl = !!code;
@@ -1578,14 +1607,38 @@ export default function App() {
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
       saveMasterSnapshotBackup({ usersList: updatedUsersList, transactions: regData.transactions });
 
-      // Direct, explicit Firestore setDoc write for new registration to guarantee real-time reflection in Admin Panel across Meta Ads browser / Mobile / Desktop
+      // Direct, explicit HTTP & Firestore setDoc write for new registration to guarantee real-time reflection in Admin Panel across Meta Ads browser / Mobile / Desktop
       try {
+        fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: serverUser.id,
+            name: serverUser.name,
+            phone: serverUser.phone,
+            password: serverUser.password,
+            inviterCode: serverUser.inviterCode
+          })
+        }).catch(() => {});
+
+        fetch('/api/save-state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: serverUser.id,
+            usersList: updatedUsersList,
+            transactions: regData.transactions
+          })
+        }).catch(() => {});
+
         const cleanServerUser = cleanUndefined(serverUser);
+        writeFirestoreViaRest("users", serverUser.id, cleanServerUser);
         setDoc(doc(db, "users", serverUser.id), cleanServerUser, { merge: true }).catch((err) => {
           console.warn("Background setDoc notice on registration:", err);
         });
         if (regData.transactions && regData.transactions.length > 0) {
           const cleanTx = cleanUndefined(regData.transactions[0]);
+          writeFirestoreViaRest("transactions", cleanTx.id, cleanTx);
           setDoc(doc(db, "transactions", cleanTx.id), cleanTx, { merge: true }).catch(() => {});
         }
       } catch (e) {}

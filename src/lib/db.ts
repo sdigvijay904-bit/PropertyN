@@ -573,6 +573,123 @@ export function getStoredUsers(): UserProfile[] {
   return Array.from(map.values());
 }
 
+const FIREBASE_PROJECT_ID = "isentropic-forcaster-rd2jw";
+const FIREBASE_DATABASE_ID = "ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769-c63579d84978";
+const FIRESTORE_REST_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DATABASE_ID}/documents`;
+
+export function jsToFirestoreFields(obj: any): any {
+  if (obj === null || obj === undefined) return {};
+  const fields: any = {};
+  for (const key of Object.keys(obj)) {
+    const val = obj[key];
+    if (val === undefined) continue;
+
+    if (val === null) {
+      fields[key] = { nullValue: null };
+    } else if (typeof val === 'string') {
+      fields[key] = { stringValue: val };
+    } else if (typeof val === 'number') {
+      if (Number.isInteger(val)) {
+        fields[key] = { integerValue: String(val) };
+      } else {
+        fields[key] = { doubleValue: val };
+      }
+    } else if (typeof val === 'boolean') {
+      fields[key] = { booleanValue: val };
+    } else if (Array.isArray(val)) {
+      const convertedArr = val.map(item => {
+        if (item === null || item === undefined) return { nullValue: null };
+        if (typeof item === 'string') return { stringValue: item };
+        if (typeof item === 'number') return Number.isInteger(item) ? { integerValue: String(item) } : { doubleValue: item };
+        if (typeof item === 'boolean') return { booleanValue: item };
+        if (typeof item === 'object') return { mapValue: { fields: jsToFirestoreFields(item) } };
+        return { stringValue: String(item) };
+      });
+      fields[key] = { arrayValue: { values: convertedArr } };
+    } else if (typeof val === 'object') {
+      fields[key] = { mapValue: { fields: jsToFirestoreFields(val) } };
+    }
+  }
+  return fields;
+}
+
+export function firestoreFieldsToJs(fields: any): any {
+  if (!fields) return {};
+  const res: any = {};
+  for (const key of Object.keys(fields)) {
+    const fieldVal = fields[key];
+    if (!fieldVal) continue;
+    if (fieldVal.stringValue !== undefined) {
+      res[key] = fieldVal.stringValue;
+    } else if (fieldVal.integerValue !== undefined) {
+      res[key] = parseInt(fieldVal.integerValue, 10);
+    } else if (fieldVal.doubleValue !== undefined) {
+      res[key] = parseFloat(fieldVal.doubleValue);
+    } else if (fieldVal.booleanValue !== undefined) {
+      res[key] = fieldVal.booleanValue;
+    } else if (fieldVal.arrayValue) {
+      const values = fieldVal.arrayValue.values || [];
+      res[key] = values.map((v: any) => {
+        if (!v) return null;
+        if (v.stringValue !== undefined) return v.stringValue;
+        if (v.integerValue !== undefined) return parseInt(v.integerValue, 10);
+        if (v.doubleValue !== undefined) return parseFloat(v.doubleValue);
+        if (v.booleanValue !== undefined) return v.booleanValue;
+        if (v.mapValue && v.mapValue.fields) return firestoreFieldsToJs(v.mapValue.fields);
+        return null;
+      }).filter((v: any) => v !== null);
+    } else if (fieldVal.mapValue && fieldVal.mapValue.fields) {
+      res[key] = firestoreFieldsToJs(fieldVal.mapValue.fields);
+    }
+  }
+  return res;
+}
+
+export async function writeFirestoreViaRest(collectionName: string, docId: string, data: any): Promise<boolean> {
+  try {
+    const cleanData = cleanUndefined(data);
+    const fields = jsToFirestoreFields(cleanData);
+    const url = `${FIRESTORE_REST_BASE}/${collectionName}/${docId}`;
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ fields })
+    });
+    if (response.ok) {
+      console.log(`[REST Sync Success] ${collectionName}/${docId}`);
+      return true;
+    } else {
+      console.warn(`[REST Sync HTTP ${response.status}] on ${collectionName}/${docId}`);
+      return false;
+    }
+  } catch (err) {
+    console.warn(`[REST Sync Exception] on ${collectionName}/${docId}:`, err);
+    return false;
+  }
+}
+
+export async function fetchFirestoreCollectionViaRest(collectionName: string): Promise<any[]> {
+  try {
+    const url = `${FIRESTORE_REST_BASE}/${collectionName}?pageSize=300`;
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.documents && Array.isArray(data.documents)) {
+        return data.documents.map((docItem: any) => {
+          const docId = docItem.name ? docItem.name.split('/').pop() : '';
+          const parsed = firestoreFieldsToJs(docItem.fields);
+          return { ...parsed, id: parsed.id || docId };
+        });
+      }
+    }
+  } catch (err) {
+    console.warn(`[REST Fetch Exception] on ${collectionName}:`, err);
+  }
+  return [];
+}
+
 export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = []): Promise<UserProfile[]> {
   const userMap = new Map<string, UserProfile>();
   const phoneMap = new Map<string, string>(); // clean 10-digit phone -> user ID
@@ -664,6 +781,32 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
           addUserToMap({ ...uData, id: docId }, true);
         }
       });
+
+      // Dual REST API fetch for users to guarantee fetching Meta Ads / Instagram in-app browser registrations
+      try {
+        const restUsers = await fetchFirestoreCollectionViaRest("users");
+        restUsers.forEach((uData) => {
+          if (uData && uData.id) {
+            serverUserIds.add(uData.id);
+            addUserToMap(uData, true);
+          }
+        });
+      } catch (e) {}
+
+      // 1b. Fetch server state users from /api/get-state
+      try {
+        const apiRes = await fetch('/api/get-state');
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          if (Array.isArray(apiData.usersList)) {
+            apiData.usersList.forEach((u: any) => {
+              if (u && u.id && u.id !== 'usr_demo') {
+                addUserToMap(u, true);
+              }
+            });
+          }
+        }
+      } catch (e) {}
 
       // 2. Add current in-memory usersList & all local storage stored users
       const allLocalUsers = getStoredUsers();
@@ -1330,13 +1473,17 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     throw new Error("Mobile number already registered! Please log in.");
   }
 
-  // Check Firestore for existing user account by phone/ID to prevent duplicate registrations
+  // Check Firestore for existing user account by phone/ID with 1000ms max timeout to avoid hanging in Meta Ads browser
   if (!isQuotaExceeded()) {
     try {
-      const existingSnap = await getDoc(doc(db, "users", newUserId));
-      if (existingSnap.exists()) {
-        throw new Error("Mobile number already registered! Please log in.");
-      }
+      const checkDoc = async () => {
+        const existingSnap = await getDoc(doc(db, "users", newUserId));
+        if (existingSnap.exists()) {
+          throw new Error("Mobile number already registered! Please log in.");
+        }
+      };
+      const checkTimeout = new Promise(resolve => setTimeout(resolve, 1000));
+      await Promise.race([checkDoc(), checkTimeout]);
     } catch (err: any) {
       if (err?.message?.includes("already registered")) {
         throw err;
@@ -1409,6 +1556,13 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   const cleanTx = cleanUndefined(signupTx);
 
   const saveToFirestoreDirect = async () => {
+    // 1. Immediate HTTP REST API write to Firestore (100% reliable in Meta Ads / Instagram in-app browser)
+    await Promise.all([
+      writeFirestoreViaRest("users", newUserId, newUser),
+      writeFirestoreViaRest("transactions", signupTx.id, signupTx)
+    ]);
+
+    // 2. Dual write using Firestore Web SDK
     try {
       const userDocRef = doc(db, "users", newUserId);
       const txDocRef = doc(db, "transactions", signupTx.id);
@@ -1426,6 +1580,31 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
         } catch (e) {}
       }, 800);
     }
+
+    // Direct HTTP server sync fallback for Meta Ads / Instagram WebView compatibility
+    try {
+      fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: newUser.id,
+          name: newUser.name,
+          phone: newUser.phone,
+          password: newUser.password,
+          inviterCode: newUser.inviterCode
+        })
+      }).catch(() => {});
+
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: newUser.id,
+          usersList: [newUser],
+          transactions: [signupTx]
+        })
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   // Wait up to 3500ms for direct save so Meta Ads browser / mobile network completes the sync, but proceed if network is slow

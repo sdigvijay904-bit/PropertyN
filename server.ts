@@ -156,30 +156,41 @@ app.post("/api/login", (req, res) => {
 
 // API: Server-side Registration
 app.post("/api/register", (req, res) => {
-  const { name, phone, password, inviterCode } = req.body;
+  const { id, name, phone, password, inviterCode } = req.body;
   if (!name || !phone || !password) {
     return res.status(400).json({ error: "Required fields missing." });
   }
   
   const db = readDb();
-  const exists = (db.usersList || []).some((u: any) => u.phone === phone);
-  if (exists) {
-    return res.status(400).json({ error: "Mobile number already registered! Please log in. (यह मोबाइल नंबर पहले से ही पंजीकृत है! कृपया लॉगिन करें)" });
+  const digitsOnly = phone.replace(/\D/g, '').slice(-10);
+  const targetPhone = `+91 ${digitsOnly}`;
+  const existingUser = (db.usersList || []).find((u: any) => {
+    const uDigits = u.phone ? u.phone.replace(/\D/g, '').slice(-10) : '';
+    return uDigits.length >= 10 && uDigits === digitsOnly;
+  });
+  
+  if (existingUser) {
+    return res.json({
+      user: existingUser,
+      purchases: db.purchasesByUserId[existingUser.id] || [],
+      transactions: db.transactions
+    });
   }
   
-  const newUserId = `usr_${Date.now()}`;
+  const newUserId = id || (digitsOnly.length >= 10 ? `usr_${digitsOnly}` : `usr_${Date.now()}`);
   const newUser = {
     id: newUserId,
     name,
-    phone,
+    phone: targetPhone,
     balance: 100, // free signup bonus
-    totalEarnings: 100,
+    totalEarnings: 0,
     dailyEarned: 0,
     checkedInToday: false,
     inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
-    inviterCode,
+    inviterCode: inviterCode || '',
     role: 'user',
     password,
+    status: 'active',
     kycStatus: 'none',
     notifications: [
       {
