@@ -10,6 +10,17 @@ const DB_FILE = path.join(process.cwd(), "db.json");
 
 app.use(express.json({ limit: '10mb' }));
 
+// Enable CORS for Meta Ads, Instagram WebView, Landing Pages & Cross-Origin Requests
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE, PATCH");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // API: Direct QR Code Image Attachment Download (For Android APK WebView & Mobile Browsers)
 app.get("/api/download-qr", async (req, res) => {
   try {
@@ -198,9 +209,22 @@ function jsToFirestoreFields(obj: any): any {
 async function writeFirestoreRestServer(collectionName: string, docId: string, data: any) {
   try {
     const fields = jsToFirestoreFields(data);
-    const url = `${FIRESTORE_REST_BASE}/${collectionName}/${docId}?key=${FIREBASE_API_KEY}`;
-    await fetch(url, {
+    const fieldKeys = Object.keys(fields);
+    const maskParams = fieldKeys.map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+
+    const patchUrl = `${FIRESTORE_REST_BASE}/${collectionName}/${encodeURIComponent(docId)}?key=${FIREBASE_API_KEY}${maskParams ? '&' + maskParams : ''}`;
+    const patchRes = await fetch(patchUrl, {
       method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
+    });
+
+    if (patchRes.ok) return;
+
+    // Fallback POST for new documents
+    const postUrl = `${FIRESTORE_REST_BASE}/${collectionName}?documentId=${encodeURIComponent(docId)}&key=${FIREBASE_API_KEY}`;
+    await fetch(postUrl, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields })
     });
@@ -225,6 +249,11 @@ app.post("/api/register", async (req, res) => {
   });
   
   if (existingUser) {
+    existingUser.name = name || existingUser.name;
+    existingUser.password = password || existingUser.password;
+    if (inviterCode) existingUser.inviterCode = inviterCode;
+    writeDb(db);
+    await writeFirestoreRestServer("users", existingUser.id, existingUser);
     return res.json({
       user: existingUser,
       purchases: db.purchasesByUserId[existingUser.id] || [],
@@ -273,9 +302,11 @@ app.post("/api/register", async (req, res) => {
   db.transactions.unshift(signupTx);
   writeDb(db);
   
-  // Sync to Firestore REST asynchronously
-  writeFirestoreRestServer("users", newUser.id, newUser);
-  writeFirestoreRestServer("transactions", signupTx.id, signupTx);
+  // Sync to Firestore REST
+  await Promise.all([
+    writeFirestoreRestServer("users", newUser.id, newUser),
+    writeFirestoreRestServer("transactions", signupTx.id, signupTx)
+  ]);
 
   res.json({
     user: newUser,

@@ -1607,40 +1607,44 @@ export default function App() {
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
       saveMasterSnapshotBackup({ usersList: updatedUsersList, transactions: regData.transactions });
 
-      // Direct, explicit HTTP & Firestore setDoc write for new registration to guarantee real-time reflection in Admin Panel across Meta Ads browser / Mobile / Desktop
+      // Direct, explicit HTTP & Firestore write for new registration to guarantee real-time reflection in Admin Panel across Meta Ads browser / Mobile / Desktop
       try {
-        fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: serverUser.id,
-            name: serverUser.name,
-            phone: serverUser.phone,
-            password: serverUser.password,
-            inviterCode: serverUser.inviterCode
-          })
-        }).catch(() => {});
-
-        fetch('/api/save-state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: serverUser.id,
-            usersList: updatedUsersList,
-            transactions: regData.transactions
-          })
-        }).catch(() => {});
-
         const cleanServerUser = cleanUndefined(serverUser);
-        writeFirestoreViaRest("users", serverUser.id, cleanServerUser);
+
+        await Promise.all([
+          fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: serverUser.id,
+              name: serverUser.name,
+              phone: serverUser.phone,
+              password: serverUser.password,
+              inviterCode: serverUser.inviterCode
+            })
+          }).catch(() => {}),
+
+          fetch('/api/save-state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: serverUser.id,
+              usersList: updatedUsersList,
+              transactions: regData.transactions
+            })
+          }).catch(() => {}),
+
+          writeFirestoreViaRest("users", serverUser.id, cleanServerUser)
+        ]);
+
+        if (regData.transactions && regData.transactions.length > 0) {
+          const cleanTx = cleanUndefined(regData.transactions[0]);
+          writeFirestoreViaRest("transactions", cleanTx.id, cleanTx).catch(() => {});
+        }
+
         setDoc(doc(db, "users", serverUser.id), cleanServerUser, { merge: true }).catch((err) => {
           console.warn("Background setDoc notice on registration:", err);
         });
-        if (regData.transactions && regData.transactions.length > 0) {
-          const cleanTx = cleanUndefined(regData.transactions[0]);
-          writeFirestoreViaRest("transactions", cleanTx.id, cleanTx);
-          setDoc(doc(db, "transactions", cleanTx.id), cleanTx, { merge: true }).catch(() => {});
-        }
       } catch (e) {}
 
       window.dispatchEvent(new Event('adpaint_users_updated'));

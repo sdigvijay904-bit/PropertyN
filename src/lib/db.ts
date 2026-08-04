@@ -650,21 +650,41 @@ export async function writeFirestoreViaRest(collectionName: string, docId: strin
   try {
     const cleanData = cleanUndefined(data);
     const fields = jsToFirestoreFields(cleanData);
-    const url = `${FIRESTORE_REST_BASE}/${collectionName}/${docId}?key=${FIREBASE_API_KEY}`;
-    const response = await fetch(url, {
+    const fieldKeys = Object.keys(fields);
+    const maskParams = fieldKeys.map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
+
+    // Method 1: PATCH with updateMask (Upsert)
+    const patchUrl = `${FIRESTORE_REST_BASE}/${collectionName}/${encodeURIComponent(docId)}?key=${FIREBASE_API_KEY}${maskParams ? '&' + maskParams : ''}`;
+    const response = await fetch(patchUrl, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ fields })
     });
+
     if (response.ok) {
-      console.log(`[REST Sync Success] ${collectionName}/${docId}`);
+      console.log(`[REST Upsert Success] ${collectionName}/${docId}`);
       return true;
-    } else {
-      console.warn(`[REST Sync HTTP ${response.status}] on ${collectionName}/${docId}`);
-      return false;
     }
+
+    // Method 2: POST createDocument fallback for brand new documents
+    const postUrl = `${FIRESTORE_REST_BASE}/${collectionName}?documentId=${encodeURIComponent(docId)}&key=${FIREBASE_API_KEY}`;
+    const postResponse = await fetch(postUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ fields })
+    });
+
+    if (postResponse.ok || postResponse.status === 409) {
+      console.log(`[REST Create Success] ${collectionName}/${docId}`);
+      return true;
+    }
+
+    console.warn(`[REST Sync Warning] ${collectionName}/${docId}: patch=${response.status}, post=${postResponse.status}`);
+    return false;
   } catch (err) {
     console.warn(`[REST Sync Exception] on ${collectionName}/${docId}:`, err);
     return false;
