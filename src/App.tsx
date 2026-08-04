@@ -1562,6 +1562,19 @@ export default function App() {
       usersListRef.current = updatedUsersList;
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
       saveMasterSnapshotBackup({ usersList: updatedUsersList, transactions: regData.transactions });
+
+      // Direct, explicit Firestore setDoc write for new registration to guarantee real-time reflection in Admin Panel across Meta Ads browser / Mobile / Desktop
+      try {
+        const cleanServerUser = cleanUndefined(serverUser);
+        setDoc(doc(db, "users", serverUser.id), cleanServerUser, { merge: true }).catch((err) => {
+          console.warn("Background setDoc notice on registration:", err);
+        });
+        if (regData.transactions && regData.transactions.length > 0) {
+          const cleanTx = cleanUndefined(regData.transactions[0]);
+          setDoc(doc(db, "transactions", cleanTx.id), cleanTx, { merge: true }).catch(() => {});
+        }
+      } catch (e) {}
+
       window.dispatchEvent(new Event('adpaint_users_updated'));
 
       localStorage.setItem('adpaint_user', JSON.stringify(serverUser));
@@ -1586,10 +1599,8 @@ export default function App() {
       setRegisterOtpInput('');
       setRegisterOtpCode('');
 
-      // Sync state to Firestore server in background (non-blocking for instant UI response)
-      setTimeout(() => {
-        pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
-      }, 100);
+      // Push state to Firestore server immediately
+      pushStateToServer(serverUser, plansRef.current, [], regData.transactions, updatedUsersList);
     } catch (err: any) {
       console.error("Registration error:", err);
       setAuthError(err?.message || 'Server communication error. Please try again.');

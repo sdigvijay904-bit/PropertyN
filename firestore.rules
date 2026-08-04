@@ -1,8 +1,44 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Default deny for unmapped paths
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if isValidId(userId);
+    }
+
+    // Plans collection
+    match /plans/{planId} {
+      allow read, write: if isValidId(planId);
+    }
+
+    // Transactions collection
+    match /transactions/{txId} {
+      allow read, write: if isValidId(txId);
+    }
+
+    // Deposits collection
+    match /deposits/{depId} {
+      allow read, write: if isValidId(depId);
+    }
+
+    // Purchases collection
+    match /purchases/{purId} {
+      allow read, write: if isValidId(purId);
+    }
+
+    // Global configuration and system tracking collection
+    match /global/{docId} {
+      allow read, write: if isValidId(docId);
     }
   }
 }

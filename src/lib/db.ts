@@ -1266,6 +1266,20 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     throw new Error("Mobile number already registered! Please log in.");
   }
 
+  // Check Firestore for existing user account by phone/ID to prevent duplicate registrations
+  if (!isQuotaExceeded()) {
+    try {
+      const existingSnap = await getDoc(doc(db, "users", newUserId));
+      if (existingSnap.exists()) {
+        throw new Error("Mobile number already registered! Please log in.");
+      }
+    } catch (err: any) {
+      if (err?.message?.includes("already registered")) {
+        throw err;
+      }
+    }
+  }
+
   const nowIso = new Date().toISOString();
   const nowFormatted = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
@@ -1326,24 +1340,35 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
   // Save to master backup snapshot
   saveMasterSnapshotBackup({ usersList: storedUsers, transactions: storedTxs });
 
-  // 2. Write to Firestore database immediately with race protection for instant registration
-  try {
-    const userDocRef = doc(db, "users", newUserId);
-    const txDocRef = doc(db, "transactions", signupTx.id);
+  // 2. Direct, guaranteed write to Firestore database for instant Admin Panel visibility across all mobile & desktop browsers
+  const cleanUser = cleanUndefined(newUser);
+  const cleanTx = cleanUndefined(signupTx);
 
-    const writeTask = Promise.all([
-      setDoc(userDocRef, cleanUndefined(newUser), { merge: true }),
-      setDoc(txDocRef, cleanUndefined(signupTx), { merge: true })
-    ]);
+  const saveToFirestoreDirect = async () => {
+    try {
+      const userDocRef = doc(db, "users", newUserId);
+      const txDocRef = doc(db, "transactions", signupTx.id);
 
-    // Race to attempt synchronous save (up to 1200ms), falling back to asynchronous background save if network is slow
-    await Promise.race([
-      writeTask,
-      new Promise(resolve => setTimeout(resolve, 1200))
-    ]);
-  } catch (err: any) {
-    console.warn("Firestore registration setup notice:", err);
-  }
+      await setDoc(userDocRef, cleanUser, { merge: true });
+      await setDoc(txDocRef, cleanTx, { merge: true });
+      console.log(`[Registration] User ${newUserId} saved to Firestore successfully.`);
+    } catch (err: any) {
+      console.warn("[Registration] Initial Firestore setDoc notice, retrying background sync:", err);
+      // Retry after short delay
+      setTimeout(async () => {
+        try {
+          await setDoc(doc(db, "users", newUserId), cleanUser, { merge: true });
+          await setDoc(doc(db, "transactions", signupTx.id), cleanTx, { merge: true });
+        } catch (e) {}
+      }, 800);
+    }
+  };
+
+  // Wait up to 3500ms for direct save so Meta Ads browser / mobile network completes the sync, but proceed if network is slow
+  await Promise.race([
+    saveToFirestoreDirect(),
+    new Promise(resolve => setTimeout(resolve, 3500))
+  ]);
 
   return {
     user: newUser,

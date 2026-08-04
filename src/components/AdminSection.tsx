@@ -93,6 +93,13 @@ export default function AdminSection({
 
     doScan();
 
+    // Poll every 5 seconds while Admin Panel is active to catch new registrations from Meta Ads / Mobile / Desktop instantly
+    const pollInterval = setInterval(() => {
+      if (isMounted) {
+        doScan();
+      }
+    }, 5000);
+
     const handleUsersUpdated = async () => {
       if (isMounted) {
         doScan();
@@ -102,6 +109,7 @@ export default function AdminSection({
     window.addEventListener('adpaint_users_updated', handleUsersUpdated);
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
       window.removeEventListener('adpaint_users_updated', handleUsersUpdated);
     };
   }, []);
