@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
@@ -238,9 +238,14 @@ export default function AdminSection({
   const [savedMinRecharge, setSavedMinRecharge] = useState<string>(() => localStorage.getItem('adpaint_min_recharge') || '250');
   const [savedRechargePresets, setSavedRechargePresets] = useState<string>(() => localStorage.getItem('adpaint_recharge_presets') || '280, 530, 750, 1000, 2200, 4840');
 
-  // User search & balance edit states
+  // User search & pagination states
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [userFilterType, setUserFilterType] = useState<'all' | 'referral' | 'direct' | 'vip'>('all');
+  const [userPage, setUserPage] = useState<number>(1);
+  const [userPageSize, setUserPageSize] = useState<number>(20);
+
+  useEffect(() => {
+    setUserPage(1);
+  }, [searchQuery]);
   const [approvalSearchQuery, setApprovalSearchQuery] = useState<string>('');
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [viewingReferralsUser, setViewingReferralsUser] = useState<UserProfile | null>(null);
@@ -1394,18 +1399,9 @@ export default function AdminSection({
     setTickerMessage('');
   };
 
-  // Filter users by search query & category filter safely
+  // Filter users by search query safely across ALL accounts
   const filteredUsers = usersList.filter(u => {
     if (!u) return false;
-
-    // Filter by tab category first
-    if (userFilterType === 'referral' && !u.inviterCode) return false;
-    if (userFilterType === 'direct' && u.inviterCode) return false;
-    if (userFilterType === 'vip') {
-      const uPurchases = getUserPurchases(u.id, u.phone);
-      const uDeposits = getUserDeposits(u.id, u.phone);
-      if (uPurchases.length === 0 && uDeposits.approvedDeposit <= 0) return false;
-    }
 
     const searchTrim = searchQuery.trim();
     if (!searchTrim) return true;
@@ -1448,6 +1444,14 @@ export default function AdminSection({
       matchesSponsorPhone
     );
   });
+
+  // Pagination calculation for Admin Users list
+  const totalUsersCount = filteredUsers.length;
+  const effectivePageSize = userPageSize === -1 ? (totalUsersCount || 1) : userPageSize;
+  const totalUserPages = Math.ceil(totalUsersCount / effectivePageSize) || 1;
+  const activeUserPage = Math.min(Math.max(1, userPage), totalUserPages);
+  const userStartIndex = userPageSize === -1 ? 0 : (activeUserPage - 1) * effectivePageSize;
+  const paginatedUsers = userPageSize === -1 ? filteredUsers : filteredUsers.slice(userStartIndex, userStartIndex + effectivePageSize);
 
   const getDownlineTree = (targetUser: UserProfile) => {
     const list: { id: string; name: string; phone: string; level: number; totalInvested: number; inviterName: string }[] = [];
@@ -1842,65 +1846,23 @@ export default function AdminSection({
                   </button>
                 </div>
 
-                {/* Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    onClick={() => setUserFilterType('all')}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
-                      userFilterType === 'all'
-                        ? 'bg-emerald-600 text-white shadow-md'
-                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    <span>All Accounts</span>
-                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">{usersList.length}</span>
-                  </button>
-
-                  <button
-                    onClick={() => setUserFilterType('referral')}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
-                      userFilterType === 'referral'
-                        ? 'bg-teal-600 text-white shadow-md'
-                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    <span>🔗 Referral Link Accounts</span>
-                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
-                      {usersList.filter(u => Boolean(u.inviterCode)).length}
+                {/* Total Accounts Header */}
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 p-2.5 rounded-2xl border border-slate-800/80">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black text-white flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-emerald-400" />
+                      <span>Total Registered Accounts:</span>
                     </span>
-                  </button>
-
-                  <button
-                    onClick={() => setUserFilterType('direct')}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
-                      userFilterType === 'direct'
-                        ? 'bg-cyan-600 text-white shadow-md'
-                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    <span>👤 Direct Registered</span>
-                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
-                      {usersList.filter(u => !u.inviterCode).length}
+                    <span className="bg-emerald-600 text-white px-2.5 py-0.5 rounded-full text-xs font-black font-mono shadow-sm">
+                      {usersList.length}
                     </span>
-                  </button>
+                  </div>
 
-                  <button
-                    onClick={() => setUserFilterType('vip')}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
-                      userFilterType === 'vip'
-                        ? 'bg-amber-600 text-white shadow-md'
-                        : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    <span>👑 VIP Investors</span>
-                    <span className="bg-slate-900/80 px-1.5 py-0.5 rounded-md text-[9px] font-mono">
-                      {usersList.filter(u => {
-                        const dep = getUserDeposits(u.id, u.phone);
-                        const pur = getUserPurchases(u.id, u.phone);
-                        return pur.length > 0 || dep.approvedDeposit > 0;
-                      }).length}
+                  {searchQuery.trim() && (
+                    <span className="text-xs font-mono text-amber-300 bg-amber-950/60 border border-amber-800/60 px-2.5 py-0.5 rounded-xl font-bold">
+                      Found {filteredUsers.length} matching result{filteredUsers.length === 1 ? '' : 's'}
                     </span>
-                  </button>
+                  )}
                 </div>
               </div>
 
@@ -2506,14 +2468,96 @@ export default function AdminSection({
                 </motion.div>
               ) : (
                 // Users list
-                <div className="space-y-2.5">
+                <div className="space-y-3">
+                  {/* Top Pagination Controls */}
+                  {totalUsersCount > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-slate-900/90 p-3 rounded-2xl border border-slate-800/80 text-xs">
+                      <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px]">
+                        <span>Showing <strong className="text-emerald-400 font-extrabold">{userStartIndex + 1}–{Math.min(userStartIndex + (userPageSize === -1 ? totalUsersCount : userPageSize), totalUsersCount)}</strong> of <strong className="text-white font-black">{totalUsersCount}</strong> Accounts</span>
+                        <span className="text-slate-700">|</span>
+                        <span>Page <strong className="text-teal-300 font-extrabold">{activeUserPage}</strong> of {totalUserPages}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono">
+                          <span>Show:</span>
+                          {[10, 20, 50, 100, -1].map((sz) => (
+                            <button
+                              key={sz}
+                              type="button"
+                              onClick={() => {
+                                setUserPageSize(sz);
+                                setUserPage(1);
+                              }}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold font-mono transition-all cursor-pointer ${
+                                userPageSize === sz
+                                  ? 'bg-emerald-600 text-white shadow-sm'
+                                  : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                              }`}
+                            >
+                              {sz === -1 ? 'All' : sz}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={activeUserPage <= 1}
+                            onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                            className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[10px] font-extrabold text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            ◀ Prev
+                          </button>
+
+                          {Array.from({ length: totalUserPages }, (_, i) => i + 1)
+                            .filter(pNum => pNum === 1 || pNum === totalUserPages || Math.abs(pNum - activeUserPage) <= 2)
+                            .reduce<(number | string)[]>((acc, pNum, idx, arr) => {
+                              if (idx > 0 && pNum - (arr[idx - 1] as number) > 1) {
+                                acc.push('...');
+                              }
+                              acc.push(pNum);
+                              return acc;
+                            }, [])
+                            .map((item, idx) => item === '...' ? (
+                              <span key={`dots-${idx}`} className="text-slate-600 text-[10px] px-0.5 font-mono">..</span>
+                            ) : (
+                              <button
+                                key={`p-${item}`}
+                                type="button"
+                                onClick={() => setUserPage(item as number)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-black transition-all cursor-pointer ${
+                                  activeUserPage === item
+                                    ? 'bg-emerald-600 text-white shadow-md'
+                                    : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {item}
+                              </button>
+                            ))
+                          }
+
+                          <button
+                            type="button"
+                            disabled={activeUserPage >= totalUserPages}
+                            onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                            className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[10px] font-extrabold text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            Next ▶
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {filteredUsers.length === 0 ? (
                     <div className="text-center py-10 bg-slate-850 rounded-3xl border border-slate-800">
                       <Users className="w-10 h-10 text-slate-600 mx-auto mb-2 animate-pulse" />
                       <p className="text-xs font-extrabold text-slate-500">No users found matching query</p>
                     </div>
                   ) : (
-                    filteredUsers.map(user => {
+                    paginatedUsers.map((user, idx) => {
+                      const serialNum = userStartIndex + idx + 1;
                       const isCurrent = currentProfile?.id === user.id;
                       const userPurchasesList = getUserPurchases(user.id, user.phone);
                       const userDep = getUserDeposits(user.id, user.phone);
@@ -2530,6 +2574,9 @@ export default function AdminSection({
                         >
                           <div className="flex-1 min-w-0 space-y-2">
                             <div className="flex items-center gap-2">
+                              <span className="text-xs font-black text-amber-300 bg-amber-950/80 border border-amber-600/50 px-2 py-0.5 rounded-lg font-mono shrink-0 shadow-sm">
+                                #{serialNum}
+                              </span>
                               <span className="text-xs font-black text-white">{user.name}</span>
                               {isCurrent && (
                                 <span className="bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
@@ -2683,6 +2730,62 @@ export default function AdminSection({
                         </div>
                       );
                     })
+                  )}
+
+                  {/* Bottom Pagination Controls */}
+                  {totalUsersCount > 0 && totalUserPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-slate-900/90 p-3 rounded-2xl border border-slate-800/80 text-xs">
+                      <div className="flex items-center gap-2 text-slate-300 font-mono text-[11px]">
+                        <span>Showing <strong className="text-emerald-400 font-extrabold">{userStartIndex + 1}–{Math.min(userStartIndex + (userPageSize === -1 ? totalUsersCount : userPageSize), totalUsersCount)}</strong> of <strong className="text-white font-black">{totalUsersCount}</strong> Accounts</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          disabled={activeUserPage <= 1}
+                          onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                          className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[10px] font-extrabold text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          ◀ Prev
+                        </button>
+
+                        {Array.from({ length: totalUserPages }, (_, i) => i + 1)
+                          .filter(pNum => pNum === 1 || pNum === totalUserPages || Math.abs(pNum - activeUserPage) <= 2)
+                          .reduce<(number | string)[]>((acc, pNum, idx, arr) => {
+                            if (idx > 0 && pNum - (arr[idx - 1] as number) > 1) {
+                              acc.push('...');
+                            }
+                            acc.push(pNum);
+                            return acc;
+                          }, [])
+                          .map((item, idx) => item === '...' ? (
+                            <span key={`dots-b-${idx}`} className="text-slate-600 text-[10px] px-0.5 font-mono">..</span>
+                          ) : (
+                            <button
+                              key={`pb-${item}`}
+                              type="button"
+                              onClick={() => setUserPage(item as number)}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-black transition-all cursor-pointer ${
+                                activeUserPage === item
+                                  ? 'bg-emerald-600 text-white shadow-md'
+                                  : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
+                              }`}
+                            >
+                              {item}
+                            </button>
+                          ))
+                        }
+
+                        <button
+                          type="button"
+                          disabled={activeUserPage >= totalUserPages}
+                          onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                          className="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-[10px] font-extrabold text-slate-300 hover:text-white disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                        >
+                          Next ▶
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
