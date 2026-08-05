@@ -53,6 +53,42 @@ import { db } from './lib/firebase';
 import { doc, setDoc, getDoc, onSnapshot, collection } from 'firebase/firestore';
 import { firebaseService } from './firebase/config';
 
+function ensureCanonicalPlans(incoming: InvestmentPlan[]): InvestmentPlan[] {
+  let rawDelP: string[] = [];
+  try {
+    const raw = localStorage.getItem('adpaint_deleted_plans');
+    if (raw) rawDelP = JSON.parse(raw);
+  } catch (e) {}
+
+  const planMap = new Map<string, InvestmentPlan>();
+
+  if (Array.isArray(incoming)) {
+    incoming.forEach(p => {
+      if (!p || !p.id || rawDelP.includes(p.id)) return;
+      let upgraded = { ...p };
+      const initMatch = INITIAL_PLANS.find(ip => ip.id === p.id);
+      if (initMatch) {
+        upgraded = {
+          ...upgraded,
+          price: initMatch.price,
+          dailyIncome: initMatch.dailyIncome,
+          durationDays: initMatch.durationDays,
+          totalProfit: initMatch.totalProfit
+        };
+      }
+      planMap.set(upgraded.id, upgraded);
+    });
+  }
+
+  INITIAL_PLANS.forEach(initP => {
+    if (!planMap.has(initP.id) && !rawDelP.includes(initP.id)) {
+      planMap.set(initP.id, initP);
+    }
+  });
+
+  return Array.from(planMap.values());
+}
+
 export default function App() {
   // Navigation & Authentication states
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -103,7 +139,7 @@ export default function App() {
       if (storedPlans) {
         const parsedPlans = JSON.parse(storedPlans);
         if (Array.isArray(parsedPlans) && parsedPlans.length > 0) {
-          return parsedPlans;
+          return ensureCanonicalPlans(parsedPlans);
         }
       }
     } catch {}
@@ -353,22 +389,23 @@ export default function App() {
       try {
         const parsedPlans = JSON.parse(storedPlans);
         if (Array.isArray(parsedPlans) && parsedPlans.length > 0) {
-          loadedPlans = parsedPlans;
+          loadedPlans = ensureCanonicalPlans(parsedPlans);
         }
       } catch (e) {
         console.warn("Failed to parse stored plans", e);
       }
-    } else {
-      localStorage.setItem('adpaint_plans', JSON.stringify(INITIAL_PLANS));
     }
+    loadedPlans = ensureCanonicalPlans(loadedPlans);
     setPlans(loadedPlans);
+    localStorage.setItem('adpaint_plans', JSON.stringify(loadedPlans));
 
     // Asynchronously scan and merge plans across Express server, Firestore REST & Web SDK on startup
     scanAndMergeAllPlans(loadedPlans).then(scannedPlans => {
       if (scannedPlans && scannedPlans.length > 0) {
-        setPlans(scannedPlans);
-        plansRef.current = scannedPlans;
-        localStorage.setItem('adpaint_plans', JSON.stringify(scannedPlans));
+        const canonical = ensureCanonicalPlans(scannedPlans);
+        setPlans(canonical);
+        plansRef.current = canonical;
+        localStorage.setItem('adpaint_plans', JSON.stringify(canonical));
       }
     }).catch(() => {});
     
@@ -538,20 +575,7 @@ export default function App() {
         let finalPlans = currentPlans;
         const isAdminUser = activeUser?.role === 'admin' || activeUser?.id === 'usr_admin' || activeUser?.phone?.includes('9999999999');
         if (data.plans && data.plans.length > 0) {
-          const upgradedServerPlans = data.plans.map((p: any) => {
-            if (!p || !p.id) return p;
-            const initMatch = INITIAL_PLANS.find(ip => ip.id === p.id);
-            if (initMatch && (p.durationDays !== initMatch.durationDays || p.price !== initMatch.price || p.dailyIncome !== initMatch.dailyIncome)) {
-              return {
-                ...p,
-                price: initMatch.price,
-                dailyIncome: initMatch.dailyIncome,
-                durationDays: initMatch.durationDays,
-                totalProfit: initMatch.totalProfit
-              };
-            }
-            return p;
-          });
+          const upgradedServerPlans = ensureCanonicalPlans(data.plans);
           const isDifferent = JSON.stringify(upgradedServerPlans) !== JSON.stringify(currentPlans);
           if (isDifferent) {
             setPlans(upgradedServerPlans);
@@ -1148,34 +1172,17 @@ export default function App() {
           const pData = docSnap.data() as InvestmentPlan;
           const planId = pData?.id || docSnap.id;
           if (pData && planId && !rawDelP.includes(planId)) {
-            let planObj: InvestmentPlan = { ...pData, id: planId };
-            const initMatch = INITIAL_PLANS.find(ip => ip.id === planId);
-            if (initMatch && (planObj.durationDays !== initMatch.durationDays || planObj.price !== initMatch.price || planObj.dailyIncome !== initMatch.dailyIncome)) {
-              planObj = {
-                ...planObj,
-                price: initMatch.price,
-                dailyIncome: initMatch.dailyIncome,
-                durationDays: initMatch.durationDays,
-                totalProfit: initMatch.totalProfit
-              };
-              // Asynchronously fix the document in Firestore
-              setDoc(doc(db, "plans", planId), cleanUndefined(planObj), { merge: true }).catch(() => {});
-            }
-            livePlans.push(planObj);
+            livePlans.push({ ...pData, id: planId });
           }
         });
 
-        if (livePlans.length > 0) {
-          const pMap = new Map<string, InvestmentPlan>();
-          livePlans.forEach(p => { if (p && p.id) pMap.set(p.id, p); });
-          const mergedPlans = Array.from(pMap.values());
-          const isDiff = JSON.stringify(mergedPlans) !== JSON.stringify(plansRef.current);
-          if (isDiff) {
-            setPlans(mergedPlans);
-            plansRef.current = mergedPlans;
-            localStorage.removeItem('adpaint_plans');
-            localStorage.setItem('adpaint_plans', JSON.stringify(mergedPlans));
-          }
+        const mergedPlans = ensureCanonicalPlans(livePlans);
+        const isDiff = JSON.stringify(mergedPlans) !== JSON.stringify(plansRef.current);
+        if (isDiff) {
+          setPlans(mergedPlans);
+          plansRef.current = mergedPlans;
+          localStorage.removeItem('adpaint_plans');
+          localStorage.setItem('adpaint_plans', JSON.stringify(mergedPlans));
         }
       }, (err) => {
         console.warn("Real-time plans snapshot listener notice:", err?.message || err);

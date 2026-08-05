@@ -1068,6 +1068,13 @@ export async function scanAndMergeAllPlans(currentPlans: InvestmentPlan[] = []):
     }
   }
 
+  // Guarantee all default seed plans exist if not deleted
+  SEED_PLANS.forEach(sp => {
+    if (!planMap.has(sp.id) && !deletedPlans.includes(sp.id)) {
+      planMap.set(sp.id, sp);
+    }
+  });
+
   const finalPlans = Array.from(planMap.values()).filter(p => !deletedPlans.includes(p.id));
   if (finalPlans.length > 0) {
     localStorage.setItem('adpaint_plans', JSON.stringify(finalPlans));
@@ -1285,30 +1292,39 @@ function getStoredPlans(): InvestmentPlan[] {
     if (rawDel) deletedPlans = JSON.parse(rawDel);
   } catch (e) {}
 
+  const planMap = new Map<string, InvestmentPlan>();
+
   try {
     const raw = localStorage.getItem('adpaint_plans');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const upgraded = parsed.map((p: InvestmentPlan) => {
-          if (!p || !p.id) return p;
+        parsed.forEach((p: InvestmentPlan) => {
+          if (!p || !p.id || deletedPlans.includes(p.id)) return;
+          let upgraded = { ...p };
           const seed = SEED_PLANS.find(sp => sp.id === p.id);
-          if (seed && (p.durationDays !== seed.durationDays || p.price !== seed.price || p.dailyIncome !== seed.dailyIncome)) {
-            return {
-              ...p,
+          if (seed) {
+            upgraded = {
+              ...upgraded,
               price: seed.price,
               dailyIncome: seed.dailyIncome,
               durationDays: seed.durationDays,
               totalProfit: seed.totalProfit
             };
           }
-          return p;
+          planMap.set(upgraded.id, upgraded);
         });
-        return upgraded.filter((p: InvestmentPlan) => p && p.id && !deletedPlans.includes(p.id));
       }
     }
   } catch (e) {}
-  return SEED_PLANS.filter(p => !deletedPlans.includes(p.id));
+
+  SEED_PLANS.forEach(sp => {
+    if (!planMap.has(sp.id) && !deletedPlans.includes(sp.id)) {
+      planMap.set(sp.id, sp);
+    }
+  });
+
+  return Array.from(planMap.values());
 }
 
 export function cleanPhoneNumber(phone: string): string {

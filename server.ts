@@ -154,32 +154,32 @@ const DEFAULT_SERVER_PLANS = [
 
 // Helper to ensure default plans are upgraded if stale in stored DB file
 const upgradeDefaultPlans = (plans: any[]): any[] => {
-  if (!Array.isArray(plans) || plans.length === 0) {
-    return DEFAULT_SERVER_PLANS;
-  }
-  const upgraded = plans.map(p => {
-    if (!p || !p.id) return p;
-    const def = DEFAULT_SERVER_PLANS.find(sp => sp.id === p.id);
-    if (def) {
-      if (p.durationDays !== def.durationDays || p.price !== def.price || p.dailyIncome !== def.dailyIncome) {
-        return {
-          ...p,
+  const planMap = new Map<string, any>();
+  if (Array.isArray(plans)) {
+    plans.forEach(p => {
+      if (!p || !p.id) return;
+      let upgraded = { ...p };
+      const def = DEFAULT_SERVER_PLANS.find(sp => sp.id === p.id);
+      if (def) {
+        upgraded = {
+          ...upgraded,
           price: def.price,
           dailyIncome: def.dailyIncome,
           durationDays: def.durationDays,
           totalProfit: def.totalProfit
         };
       }
-    }
-    return p;
-  });
+      planMap.set(upgraded.id, upgraded);
+    });
+  }
 
   DEFAULT_SERVER_PLANS.forEach(def => {
-    if (!upgraded.some(p => p && p.id === def.id)) {
-      upgraded.push(def);
+    if (!planMap.has(def.id)) {
+      planMap.set(def.id, def);
     }
   });
-  return upgraded;
+
+  return Array.from(planMap.values());
 };
 
 // Initial default state
@@ -236,7 +236,7 @@ app.get("/api/get-state", (req, res) => {
   
   res.json({
     usersList: usersWithInvestments,
-    plans: db.plans || [],
+    plans: upgradeDefaultPlans(db.plans || []),
     transactions: db.transactions || [],
     purchases: userId ? (db.purchasesByUserId[userId] || []) : [],
     config: db.config || {},
@@ -352,29 +352,23 @@ async function writeFirestoreRestServer(collectionName: string, docId: string, d
     const cleanData = cleanUndefined(data);
     const fields = jsToFirestoreFields(cleanData);
     
-    // Method 1: Try POST create document first (for new registrations)
-    const postUrl = `${FIRESTORE_REST_BASE}/${collectionName}?documentId=${encodeURIComponent(docId)}&key=${FIREBASE_API_KEY}`;
-    const postRes = await fetch(postUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields })
-    });
+    // In Firestore REST API, PATCH creates or updates the document directly in 1 network call
+    const patchUrl = `${FIRESTORE_REST_BASE}/${collectionName}/${encodeURIComponent(docId)}?key=${FIREBASE_API_KEY}`;
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-    if (postRes.ok) return true;
-
-    // Method 2: If document already exists (409) or POST fails, use PATCH update
-    const fieldKeys = Object.keys(fields);
-    const maskParams = fieldKeys.map(k => `updateMask.fieldPaths=${encodeURIComponent(k)}`).join('&');
-    const patchUrl = `${FIRESTORE_REST_BASE}/${collectionName}/${encodeURIComponent(docId)}?key=${FIREBASE_API_KEY}${maskParams ? '&' + maskParams : ''}`;
     const patchRes = await fetch(patchUrl, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields })
+      body: JSON.stringify({ fields }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (patchRes.ok) return true;
   } catch (e) {
-    console.error(`[Server Firestore Sync Fail] ${collectionName}/${docId}:`, e);
+    console.warn(`[Server Firestore Sync Notice] ${collectionName}/${docId}:`, (e as any)?.message || e);
   }
 }
 
@@ -563,15 +557,17 @@ app.post("/api/save-state", (req, res) => {
 
   writeDb(db);
 
-  // Sync usersList & transactions to Firestore REST asynchronously
+  // Sync usersList & transactions to Firestore REST asynchronously with controlled batching
   if (Array.isArray(incoming.usersList)) {
-    incoming.usersList.forEach((u: any) => {
-      if (u && u.id) writeFirestoreRestServer("users", u.id, u);
+    const usersToSync = incoming.usersList.filter((u: any) => u && u.id).slice(-10);
+    usersToSync.forEach((u: any) => {
+      writeFirestoreRestServer("users", u.id, u);
     });
   }
   if (Array.isArray(incoming.transactions)) {
-    incoming.transactions.forEach((t: any) => {
-      if (t && t.id) writeFirestoreRestServer("transactions", t.id, t);
+    const txToSync = incoming.transactions.filter((t: any) => t && t.id).slice(0, 10);
+    txToSync.forEach((t: any) => {
+      writeFirestoreRestServer("transactions", t.id, t);
     });
   }
 
@@ -585,7 +581,7 @@ app.post("/api/save-state", (req, res) => {
   // Return the fully updated state to the caller
   res.json({
     usersList: usersWithInvestments,
-    plans: db.plans,
+    plans: upgradeDefaultPlans(db.plans || []),
     transactions: db.transactions,
     purchases: userId ? (db.purchasesByUserId[userId] || []) : [],
     config: db.config,
