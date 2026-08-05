@@ -480,7 +480,7 @@ export function getStoredUsers(): UserProfile[] {
         password: existing.password || u.password,
         bankAccount: existing.bankAccount || u.bankAccount,
         inviterCode: existing.inviterCode || u.inviterCode,
-        balance: Math.max(existing.balance || 0, u.balance || 0)
+        balance: typeof u.balance === 'number' ? u.balance : (existing.balance || 0)
       });
     }
   };

@@ -685,9 +685,9 @@ export default function App() {
               const isRecentlyUpdatedLocally = (Date.now() - lastLocalUpdateRef.current < 15000);
               const finalMe = {
                 ...sanitizedMe,
-                balance: Math.max(sanitizedMe.balance ?? 0, currentLocal?.balance ?? 0),
-                totalEarnings: Math.max(sanitizedMe.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0),
-                totalInvested: Math.max(sanitizedMe.totalInvested ?? 0, currentLocal?.totalInvested ?? 0),
+                balance: isRecentlyUpdatedLocally && currentLocal ? currentLocal.balance : (sanitizedMe.balance ?? currentLocal?.balance ?? 0),
+                totalEarnings: isRecentlyUpdatedLocally && currentLocal ? currentLocal.totalEarnings : Math.max(sanitizedMe.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0),
+                totalInvested: isRecentlyUpdatedLocally && currentLocal ? currentLocal.totalInvested : Math.max(sanitizedMe.totalInvested ?? 0, currentLocal?.totalInvested ?? 0),
                 inviterCode: sanitizedMe.inviterCode || currentLocal?.inviterCode,
                 bankAccount: sanitizedMe.bankAccount || currentLocal?.bankAccount
               };
@@ -939,9 +939,17 @@ export default function App() {
               });
 
               if (latestMe) {
-                setUserProfile(latestMe);
-                localStorage.setItem('adpaint_user', JSON.stringify(latestMe));
-                userProfileRef.current = latestMe;
+                const isRecentlyUpdatedLocally = (Date.now() - lastLocalUpdateRef.current < 15000);
+                const activeLocal = userProfileRef.current || targetUser;
+                const finalUser = {
+                  ...latestMe,
+                  balance: isRecentlyUpdatedLocally && activeLocal ? activeLocal.balance : latestMe.balance,
+                  totalEarnings: isRecentlyUpdatedLocally && activeLocal ? activeLocal.totalEarnings : Math.max(latestMe.totalEarnings ?? 0, activeLocal?.totalEarnings ?? 0),
+                  totalInvested: isRecentlyUpdatedLocally && activeLocal ? activeLocal.totalInvested : Math.max(latestMe.totalInvested ?? 0, activeLocal?.totalInvested ?? 0),
+                };
+                setUserProfile(finalUser);
+                localStorage.setItem('adpaint_user', JSON.stringify(finalUser));
+                userProfileRef.current = finalUser;
               }
             }
           }

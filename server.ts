@@ -525,10 +525,10 @@ app.post("/api/save-state", (req, res) => {
         } else {
           const mergedUser = { ...existing, ...u };
 
-          // Protect balance & earnings: Never let a client overwrite higher server/admin-credited balance
-          mergedUser.balance = Math.max(existing.balance ?? 0, u.balance ?? 0);
-          mergedUser.totalEarnings = Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0);
-          mergedUser.totalInvested = Math.max(existing.totalInvested ?? 0, u.totalInvested ?? 0);
+          // Allow client balance updates (e.g., plan purchases, claims, withdrawals) for the calling user
+          mergedUser.balance = typeof u.balance === 'number' ? u.balance : (existing.balance ?? 0);
+          mergedUser.totalEarnings = typeof u.totalEarnings === 'number' ? u.totalEarnings : (existing.totalEarnings ?? 0);
+          mergedUser.totalInvested = typeof u.totalInvested === 'number' ? u.totalInvested : (existing.totalInvested ?? 0);
 
           // Preserve admin role and active status
           mergedUser.role = existing.role || u.role;
