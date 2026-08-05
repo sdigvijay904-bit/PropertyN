@@ -2083,10 +2083,30 @@ export async function firestoreGetState(userId: string): Promise<any> {
 
       if (fsPurchases.length > 0 || purchases.length > 0) {
         const pMap = new Map<string, PurchaseRecord>();
-        // Add local purchases first
-        purchases.forEach(p => pMap.set(p.id, p));
-        // Server purchases take master precedence
-        fsPurchases.forEach(p => pMap.set(p.id, p));
+        // Add local purchases
+        purchases.forEach(p => {
+          if (p && p.id) pMap.set(p.id, p);
+        });
+        // Merge server purchases cleanly without regressing lastClaimedAt or totalClaimed
+        fsPurchases.forEach(p => {
+          if (!p || !p.id) return;
+          const localP = pMap.get(p.id);
+          if (localP) {
+            const localClaimTime = localP.lastClaimedAt ? new Date(localP.lastClaimedAt).getTime() : 0;
+            const serverClaimTime = p.lastClaimedAt ? new Date(p.lastClaimedAt).getTime() : 0;
+
+            const mergedP: PurchaseRecord = {
+              ...p,
+              ...localP,
+              lastClaimedAt: localClaimTime >= serverClaimTime ? localP.lastClaimedAt : p.lastClaimedAt,
+              totalClaimed: Math.max(localP.totalClaimed || 0, p.totalClaimed || 0),
+              completed: Boolean(localP.completed || p.completed)
+            };
+            pMap.set(p.id, mergedP);
+          } else {
+            pMap.set(p.id, p);
+          }
+        });
         purchases = Array.from(pMap.values());
         if (userId) {
           localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(purchases));

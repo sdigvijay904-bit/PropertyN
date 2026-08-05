@@ -633,8 +633,14 @@ export default function App() {
             if (latestMe) {
               const sanitizedMe = sanitizeUserCheckIn(latestMe)!;
               const currentLocal = userProfileRef.current || activeUser;
+              const isRecentlyUpdatedLocally = (Date.now() - lastLocalUpdateRef.current < 15000);
               const finalMe = {
                 ...sanitizedMe,
+                balance: isRecentlyUpdatedLocally
+                  ? Math.max(sanitizedMe.balance ?? 0, currentLocal?.balance ?? 0)
+                  : (typeof sanitizedMe.balance === 'number' ? sanitizedMe.balance : (currentLocal?.balance ?? 0)),
+                totalEarnings: Math.max(sanitizedMe.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0),
+                totalInvested: Math.max(sanitizedMe.totalInvested ?? 0, currentLocal?.totalInvested ?? 0),
                 inviterCode: sanitizedMe.inviterCode || currentLocal?.inviterCode,
                 bankAccount: sanitizedMe.bankAccount || currentLocal?.bankAccount
               };
@@ -738,7 +744,20 @@ export default function App() {
 
           currentPurchases.forEach((localPurchase: any) => {
             if (deletedPurchasesList.includes(localPurchase.id)) return;
-            if (!serverPurchasesMap.has(localPurchase.id)) {
+            const serverP = serverPurchasesMap.get(localPurchase.id);
+            if (serverP) {
+              const localClaimTime = localPurchase.lastClaimedAt ? new Date(localPurchase.lastClaimedAt).getTime() : 0;
+              const serverClaimTime = serverP.lastClaimedAt ? new Date(serverP.lastClaimedAt).getTime() : 0;
+
+              const mergedP: PurchaseRecord = {
+                ...serverP,
+                ...localPurchase,
+                lastClaimedAt: localClaimTime >= serverClaimTime ? localPurchase.lastClaimedAt : serverP.lastClaimedAt,
+                totalClaimed: Math.max(localPurchase.totalClaimed || 0, serverP.totalClaimed || 0),
+                completed: Boolean(localPurchase.completed || serverP.completed)
+              };
+              serverPurchasesMap.set(localPurchase.id, mergedP);
+            } else {
               serverPurchasesMap.set(localPurchase.id, localPurchase);
               hasMissingPurchases = true;
             }
@@ -2106,6 +2125,22 @@ export default function App() {
     const earningRatePerSec = purchase.dailyIncome / 86400;
     const accrued = elapsedSecs * earningRatePerSec;
 
+    console.log("[handleClaimOrderEarnings] Calculated claim stats:", {
+      purchaseId,
+      planTitle: purchase.planTitle,
+      dailyIncome: purchase.dailyIncome,
+      lastClaimedAt: purchase.lastClaimedAt,
+      claimUntilIso: new Date(claimUntil).toISOString(),
+      elapsedSecs: elapsedSecs.toFixed(2),
+      earningRatePerSec: earningRatePerSec.toFixed(6),
+      accruedAmount: accrued,
+      prevTotalClaimed: purchase.totalClaimed,
+      newTotalClaimed: (purchase.totalClaimed || 0) + accrued,
+      prevUserBalance: userProfile.balance,
+      newUserBalance: (userProfile.balance || 0) + accrued,
+      isCompleting
+    });
+
     if (accrued < 0.01) {
       triggerToast('Accumulated yield too small. Please wait a few seconds.', 'error');
       return;
@@ -2150,8 +2185,9 @@ export default function App() {
           setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx), { merge: true }),
           setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser), { merge: true })
         ]);
+        console.log("[handleClaimOrderEarnings] Server Firestore sync succeeded for purchase:", targetUpdatedPurchase);
       } catch (e) {
-        console.warn("Direct claim Firestore write error:", e);
+        console.warn("[handleClaimOrderEarnings] Direct claim Firestore write error:", e);
         markQuotaExceeded(e);
       }
     }
@@ -2161,6 +2197,7 @@ export default function App() {
     userProfileRef.current = updatedUser;
 
     saveStateToStorage(updatedUser, plans, updatedPurchases, [...transactions, claimTx], teamMembers);
+    console.log("[handleClaimOrderEarnings] Local state & localStorage updated. New Balance:", updatedUser.balance);
     triggerToast(
       isCompleting 
         ? `Successfully claimed final ₹${accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)} ad revenues! Investment completed.` 

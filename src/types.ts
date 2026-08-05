@@ -55,6 +55,7 @@ export interface InvestmentPlan {
 export interface PurchaseRecord {
   id: string;
   userId?: string; // Optional so it matches existing local storage gracefully, but populated for firestore syncing
+  userPhone?: string;
   planId: string;
   planTitle: string;
   price: number;

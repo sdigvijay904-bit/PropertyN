@@ -16,6 +16,17 @@ interface OrdersSectionProps {
 export default function OrdersSection({ purchases, onClaimOrderEarnings }: OrdersSectionProps) {
   // Local calculation of real-time accrued earnings per active plan
   const [accruedMap, setAccruedMap] = useState<Record<string, number>>({});
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
+  const handleClaim = async (purchaseId: string) => {
+    setClaimingId(purchaseId);
+    console.log("[OrdersSection] Claim button clicked for purchase ID:", purchaseId, "| Displayed accrued in UI:", accruedMap[purchaseId]);
+    try {
+      await onClaimOrderEarnings(purchaseId);
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   // Periodically compute real-time second-by-second accrued balance for the active plans in the UI
   useEffect(() => {
@@ -25,7 +36,11 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
         if (!p.completed) {
           const now = new Date().getTime();
           const lastClaim = new Date(p.lastClaimedAt).getTime();
-          const elapsedSecs = Math.max(0, (now - lastClaim) / 1000);
+          const purchaseTime = new Date(p.datePurchased).getTime();
+          const totalDurationMs = (p.durationDays || 1) * 24 * 60 * 60 * 1000;
+          const planExpiryTime = purchaseTime + totalDurationMs;
+          const claimUntil = Math.min(now, planExpiryTime);
+          const elapsedSecs = Math.max(0, (claimUntil - lastClaim) / 1000);
           const perSecondEarnings = p.dailyIncome / 86400;
           const accrued = elapsedSecs * perSecondEarnings;
           updated[p.id] = accrued;
@@ -144,12 +159,17 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
                   <div className="relative z-10 pt-1">
                     <button
                       type="button"
-                      onClick={() => onClaimOrderEarnings(item.id)}
-                      disabled={!canClaim}
+                      onClick={() => handleClaim(item.id)}
+                      disabled={!canClaim || claimingId === item.id}
                       className="w-full py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 disabled:from-gray-100 disabled:to-gray-150 disabled:text-gray-400 disabled:shadow-none text-white text-xs font-black rounded-xl shadow-md shadow-emerald-100/30 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
                     >
-                      <TrendingUp className="w-3.5 h-3.5 animate-bounce" />
-                      <span>Claim Accumulated ₹{accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)}</span>
+                      <TrendingUp className={`w-3.5 h-3.5 ${claimingId === item.id ? 'animate-spin' : 'animate-bounce'}`} />
+                      <span>
+                        {claimingId === item.id 
+                          ? 'Claiming Yield...' 
+                          : `Claim Accumulated ₹${accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)}`
+                        }
+                      </span>
                     </button>
                   </div>
                 </div>

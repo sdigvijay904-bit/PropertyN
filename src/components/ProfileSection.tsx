@@ -52,18 +52,23 @@ export default function ProfileSection({
   const [isCertOpen, setIsCertOpen] = useState<boolean>(false);
 
   // Sum successful recharge transactions
+  const approvedRechargesSum = transactions
+    .filter((t) => t.type === 'recharge' && (
+      String(t.status || '').toLowerCase() === 'success' || 
+      String(t.status || '').toLowerCase() === 'approved'
+    ))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
   const totalRecharged = Math.max(
     user.totalInvested || 0,
-    transactions
-      .filter((t) => t.type === 'recharge' && (t.status === 'success' || (t as any).status === 'APPROVED' || (t as any).status === 'approved'))
-      .reduce((sum, t) => sum + t.amount, 0)
+    approvedRechargesSum
   );
 
   // Sum successful claim transactions & purchase totalClaimed (only plan earnings!)
-  const totalClaimedFromPurchases = purchases.reduce((acc, p) => acc + (p.totalClaimed || 0), 0);
+  const totalClaimedFromPurchases = purchases ? purchases.reduce((acc, p) => acc + (p.totalClaimed || 0), 0) : 0;
   const totalClaimedFromTx = transactions
-    .filter((t) => t.type === 'claim' && t.status === 'success')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t) => t.type === 'claim' && String(t.status || '').toLowerCase() === 'success')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
   const totalPlanEarnings = Math.max(
     user.totalEarnings || 0,
     totalClaimedFromPurchases,

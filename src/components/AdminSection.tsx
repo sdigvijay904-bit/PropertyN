@@ -56,8 +56,181 @@ export default function AdminSection({
   onRefreshData,
   onSyncConfig
 }: AdminSectionProps) {
-  const [adminTab, setAdminTab] = useState<'stats' | 'users' | 'approvals' | 'plans' | 'custom_notif' | 'upi_config'>('stats');
+  const [adminTab, setAdminTab] = useState<'stats' | 'users' | 'approvals' | 'plans' | 'custom_notif' | 'upi_config' | 'activity_logs'>('stats');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Activity Log states
+  const [adminCustomLogs, setAdminCustomLogs] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('adpaint_admin_logs');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [logFilterCategory, setLogFilterCategory] = useState<'all' | 'registration' | 'withdrawal' | 'recharge' | 'plan' | 'admin'>('all');
+  const [logSearchQuery, setLogSearchQuery] = useState<string>('');
+
+  // Helper to record admin audit actions
+  const logAdminAction = (
+    category: 'registration' | 'withdrawal' | 'recharge' | 'plan' | 'admin',
+    title: string,
+    description: string,
+    details?: { amount?: number; userPhone?: string; userName?: string; utr?: string; status?: string }
+  ) => {
+    const newEntry = {
+      id: `admin_log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      category,
+      typeLabel: 'Admin Action',
+      title,
+      description,
+      timestamp: new Date().toLocaleString(),
+      epoch: Date.now(),
+      status: details?.status || 'success',
+      actor: currentProfile?.name || 'Admin',
+      amount: details?.amount,
+      userPhone: details?.userPhone,
+      userName: details?.userName,
+      utr: details?.utr
+    };
+
+    setAdminCustomLogs(prev => {
+      const updated = [newEntry, ...prev].slice(0, 250);
+      localStorage.setItem('adpaint_admin_logs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Combine all activity log streams into a single chronologically sorted list
+  const allActivityLogs = useMemo(() => {
+    const items: {
+      id: string;
+      category: 'registration' | 'withdrawal' | 'recharge' | 'plan' | 'admin';
+      typeLabel: string;
+      title: string;
+      description: string;
+      timestamp: string;
+      epoch: number;
+      status: string;
+      actor?: string;
+      userPhone?: string;
+      userName?: string;
+      amount?: number;
+      utr?: string;
+    }[] = [];
+
+    // 1. Explicit Admin Audit logs
+    adminCustomLogs.forEach(item => {
+      items.push({
+        ...item,
+        category: item.category || 'admin'
+      });
+    });
+
+    // 2. User Registrations from usersList
+    usersList.forEach(u => {
+      const rawDate = u.createdAt || u.registrationDate;
+      const epoch = rawDate ? new Date(rawDate).getTime() : (parseInt(u.id.replace(/\D/g, '')) || Date.now());
+      const formattedDate = rawDate ? new Date(rawDate).toLocaleString() : 'Recent';
+      items.push({
+        id: `reg_log_${u.id}`,
+        category: 'registration',
+        typeLabel: 'User Registration',
+        title: `Account Registered: ${u.name || 'User'}`,
+        description: `Mobile: +91 ${u.phone ? u.phone.replace('+91 ', '') : 'N/A'} | Sponsor: ${u.inviterCode || 'Direct'}`,
+        timestamp: formattedDate,
+        epoch: isNaN(epoch) ? Date.now() : epoch,
+        status: u.status === 'blocked' ? 'blocked' : 'active',
+        userName: u.name,
+        userPhone: u.phone,
+        actor: 'System'
+      });
+    });
+
+    // 3. Transactions (Withdrawals, Recharges, Claims)
+    transactions.forEach(t => {
+      let cat: 'withdrawal' | 'recharge' | 'admin' | 'plan' = 'admin';
+      let label = 'Transaction';
+      if (t.type === 'withdraw') {
+        cat = 'withdrawal';
+        label = 'Withdrawal Request';
+      } else if (t.type === 'recharge') {
+        cat = 'recharge';
+        label = 'Recharge Deposit';
+      } else if (t.type === 'claim') {
+        cat = 'plan';
+        label = 'Ad Yield Claim';
+      } else if (t.type === 'purchase') {
+        cat = 'plan';
+        label = 'Plan Purchase';
+      }
+
+      const epoch = new Date(t.date).getTime() || Date.now();
+      items.push({
+        id: `tx_log_${t.id}`,
+        category: cat,
+        typeLabel: label,
+        title: `${label}: ₹${t.amount % 1 === 0 ? t.amount.toLocaleString('en-IN') : t.amount.toFixed(2)}`,
+        description: `${t.description || ''} ${t.utr ? `(UTR: ${t.utr})` : ''}`.trim(),
+        timestamp: t.date,
+        epoch: isNaN(epoch) ? Date.now() : epoch,
+        status: t.status || 'success',
+        amount: t.amount,
+        userPhone: t.userPhone,
+        utr: t.utr,
+        actor: 'User'
+      });
+    });
+
+    // 4. Plan Purchases
+    purchases.forEach(p => {
+      const epoch = new Date(p.datePurchased).getTime() || Date.now();
+      items.push({
+        id: `purchase_log_${p.id}`,
+        category: 'plan',
+        typeLabel: 'Ad Plan Bought',
+        title: `Investment: ${p.planTitle}`,
+        description: `Slot Price: ₹${p.price.toLocaleString('en-IN')} | Daily Yield: ₹${p.dailyIncome} | Total Earned: ₹${Math.round(p.totalClaimed || 0).toLocaleString('en-IN')}`,
+        timestamp: new Date(p.datePurchased).toLocaleString(),
+        epoch: isNaN(epoch) ? Date.now() : epoch,
+        status: p.completed ? 'completed' : 'active',
+        amount: p.price,
+        userPhone: p.userPhone,
+        actor: 'User'
+      });
+    });
+
+    // Deduplicate by ID and sort descending by epoch
+    const map = new Map<string, typeof items[0]>();
+    items.forEach(item => map.set(item.id, item));
+    const sorted = Array.from(map.values()).sort((a, b) => b.epoch - a.epoch);
+    return sorted;
+  }, [adminCustomLogs, usersList, transactions, purchases]);
+
+  const filteredActivityLogs = useMemo(() => {
+    return allActivityLogs.filter(log => {
+      if (logFilterCategory !== 'all') {
+        if (logFilterCategory === 'withdrawal' && log.category !== 'withdrawal') return false;
+        if (logFilterCategory === 'recharge' && log.category !== 'recharge') return false;
+        if (logFilterCategory === 'registration' && log.category !== 'registration') return false;
+        if (logFilterCategory === 'plan' && log.category !== 'plan') return false;
+        if (logFilterCategory === 'admin' && log.category !== 'admin') return false;
+      }
+
+      if (logSearchQuery.trim()) {
+        const q = logSearchQuery.toLowerCase().trim();
+        const titleMatch = log.title.toLowerCase().includes(q);
+        const descMatch = log.description.toLowerCase().includes(q);
+        const phoneMatch = log.userPhone ? log.userPhone.toLowerCase().includes(q) : false;
+        const nameMatch = log.userName ? log.userName.toLowerCase().includes(q) : false;
+        const utrMatch = log.utr ? log.utr.toLowerCase().includes(q) : false;
+        const actorMatch = log.actor ? log.actor.toLowerCase().includes(q) : false;
+        return titleMatch || descMatch || phoneMatch || nameMatch || utrMatch || actorMatch;
+      }
+
+      return true;
+    });
+  }, [allActivityLogs, logFilterCategory, logSearchQuery]);
   
   // UPI / QR code config states
   const [upiIdInput, setUpiIdInput] = useState<string>(() => {
@@ -850,6 +1023,13 @@ export default function AdminSection({
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
     
     onSyncConfig?.(undefined, undefined, finalUsers, updatedTx);
+    logAdminAction('recharge', 'Recharge Approved', `Approved deposit of ₹${tx.amount} for user +91 ${targetUser.phone.replace('+91 ', '')}`, {
+      amount: tx.amount,
+      userPhone: targetUser.phone,
+      userName: targetUser.name,
+      utr: tx.utr,
+      status: 'approved'
+    });
     triggerToast(`Approved ₹${tx.amount} recharge for +91 ${targetUser.phone.replace('+91 ', '')}`, 'success');
   };
 
@@ -890,6 +1070,12 @@ export default function AdminSection({
     setTransactions(updatedTx);
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
     onSyncConfig?.(undefined, undefined, undefined, updatedTx);
+    logAdminAction('recharge', 'Recharge Rejected', `Rejected deposit of ₹${tx.amount} for user +91 ${tx.userPhone ? tx.userPhone.replace('+91 ', '') : 'N/A'}`, {
+      amount: tx.amount,
+      userPhone: tx.userPhone,
+      utr: tx.utr,
+      status: 'rejected'
+    });
     triggerToast('Recharge request rejected.', 'info');
   };
 
@@ -922,6 +1108,11 @@ export default function AdminSection({
     setTransactions(updatedTx);
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
     onSyncConfig?.(undefined, undefined, undefined, updatedTx);
+    logAdminAction('withdrawal', 'Withdrawal Approved', `Approved payout of ₹${tx.amount} for user +91 ${tx.userPhone ? tx.userPhone.replace('+91 ', '') : 'N/A'}`, {
+      amount: tx.amount,
+      userPhone: tx.userPhone,
+      status: 'approved'
+    });
     triggerToast(`Withdrawal of ₹${tx.amount} approved and settled!`, 'success');
   };
 
@@ -986,6 +1177,12 @@ export default function AdminSection({
     localStorage.setItem('adpaint_transactions', JSON.stringify(updatedTx));
 
     onSyncConfig?.(undefined, undefined, updatedUsers, updatedTx);
+    logAdminAction('withdrawal', 'Withdrawal Rejected', `Rejected payout of ₹${tx.amount} & refunded user +91 ${targetUser.phone.replace('+91 ', '')}`, {
+      amount: tx.amount,
+      userPhone: targetUser.phone,
+      userName: targetUser.name,
+      status: 'rejected'
+    });
     triggerToast(`Withdrawal rejected! ₹${tx.amount} refunded to user's balance.`, 'info');
   };
 
@@ -1380,6 +1577,12 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(updatedPlansList);
+    logAdminAction(
+      'plan',
+      editingPlan ? 'Ad Plan Updated' : 'New Ad Plan Published',
+      `${editingPlan ? 'Updated' : 'Created'} ad slot "${planTitle}" (Price: ₹${price}, Daily Yield: ₹${dailyIncome}, Duration: ${duration}d)`,
+      { amount: price, status: 'success' }
+    );
 
     // Reset states
     setIsCreatingPlan(false);
@@ -1422,6 +1625,11 @@ export default function AdminSection({
       }
 
       onSyncConfig?.(updatedPlans);
+      const targetPlan = plans.find(p => p.id === planId);
+      logAdminAction('plan', 'Ad Plan Removed', `Permanently deleted ad plan "${targetPlan?.title || planId}"`, {
+        amount: targetPlan?.price,
+        status: 'success'
+      });
       triggerToast('Advertisement plan deleted.', 'info');
     }
   };
@@ -1434,6 +1642,7 @@ export default function AdminSection({
     localStorage.setItem('adpaint_custom_ticker', tickerMessage.trim());
     window.dispatchEvent(new Event('adpaint_notice_updated'));
     syncConfigDirectToFirestore();
+    logAdminAction('admin', 'Ticker Alert Published', `Published notice: "${tickerMessage.trim()}"`, { status: 'success' });
     triggerToast('Custom alert published live!', 'success');
     setTickerMessage('');
   };
@@ -1667,7 +1876,8 @@ export default function AdminSection({
           { id: 'approvals', label: 'Approvals', icon: ShieldCheck, badge: pendingRecharges.length + pendingWithdrawals.length },
           { id: 'plans', label: 'Ad Plans', icon: FileText },
           { id: 'custom_notif', label: 'Ticker Control', icon: Send },
-          { id: 'upi_config', label: 'Gateway & Telegram', icon: QrCode }
+          { id: 'upi_config', label: 'Gateway & Telegram', icon: QrCode },
+          { id: 'activity_logs', label: 'Activity Logs', icon: Database, badge: allActivityLogs.length }
         ].map(tab => {
           const Icon = tab.icon;
           const isSelected = adminTab === tab.id;
@@ -3984,6 +4194,268 @@ export default function AdminSection({
                   <p>4. Users clicking "Channel" on the main dashboard will instantly open the configured Telegram channel URL in a new browser tab.</p>
                   <p>5. Users clicking "Service" on the main dashboard will open the customer support telegram link directly.</p>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* TAB 7: SYSTEM-WIDE ACTIVITY LOGS PANEL */}
+          {adminTab === 'activity_logs' && (
+            <motion.div
+              key="activity_logs-tab"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6 font-sans"
+            >
+              {/* Header Banner */}
+              <div className="bg-slate-850 p-5 rounded-[2rem] border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-teal-950 text-teal-400 border border-teal-800 text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-teal-400" /> Live Audit Trail
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono font-bold">
+                      {filteredActivityLogs.length} Events Listed
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                    <Database className="w-5 h-5 text-teal-400" />
+                    <span>System Activity Logs</span>
+                  </h2>
+                  <p className="text-xs text-slate-400 font-medium">
+                    Chronological real-time record of all registrations, withdrawals, recharges, ad plan updates, and administrative actions.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => {
+                      setIsRefreshing(true);
+                      onRefreshData?.();
+                      setTimeout(() => setIsRefreshing(false), 800);
+                      triggerToast('Activity logs refreshed!', 'info');
+                    }}
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-teal-400' : ''}`} />
+                    <span>Refresh</span>
+                  </button>
+
+                  {adminCustomLogs.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm('Clear custom admin audit logs history? (System transactions & registrations remain safely in database)')) {
+                          setAdminCustomLogs([]);
+                          localStorage.removeItem('adpaint_admin_logs');
+                          triggerToast('Custom admin logs history cleared', 'info');
+                        }
+                      }}
+                      className="px-3 py-2 bg-slate-800 hover:bg-rose-950/80 text-rose-300 rounded-xl text-xs font-bold border border-rose-900/50 flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Clear custom admin action history"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear Audit History</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Summary Stat Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Logged</span>
+                    <Database className="w-4 h-4 text-teal-400" />
+                  </div>
+                  <p className="text-xl font-black text-white font-mono">{allActivityLogs.length}</p>
+                  <p className="text-[9px] text-slate-500 font-medium">All events recorded</p>
+                </div>
+
+                <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registrations</span>
+                    <Users className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <p className="text-xl font-black text-emerald-400 font-mono">
+                    {allActivityLogs.filter(l => l.category === 'registration').length}
+                  </p>
+                  <p className="text-[9px] text-slate-500 font-medium">Total user accounts</p>
+                </div>
+
+                <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Financial Ops</span>
+                    <Wallet className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <p className="text-xl font-black text-purple-300 font-mono">
+                    {allActivityLogs.filter(l => l.category === 'withdrawal' || l.category === 'recharge').length}
+                  </p>
+                  <p className="text-[9px] text-slate-500 font-medium">Deposits & Payouts</p>
+                </div>
+
+                <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Plan & Admin</span>
+                    <FileText className="w-4 h-4 text-amber-400" />
+                  </div>
+                  <p className="text-xl font-black text-amber-300 font-mono">
+                    {allActivityLogs.filter(l => l.category === 'plan' || l.category === 'admin').length}
+                  </p>
+                  <p className="text-[9px] text-slate-500 font-medium">System updates</p>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="bg-slate-850 p-4 rounded-2xl border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Category Filter Chips */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {[
+                      { id: 'all', label: 'All Logs' },
+                      { id: 'registration', label: 'Registrations' },
+                      { id: 'withdrawal', label: 'Withdrawals' },
+                      { id: 'recharge', label: 'Recharges' },
+                      { id: 'plan', label: 'Plan Actions' },
+                      { id: 'admin', label: 'Admin Audits' }
+                    ].map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setLogFilterCategory(cat.id as any)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                          logFilterCategory === cat.id
+                            ? 'bg-teal-500 text-slate-950 font-black shadow-sm'
+                            : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="relative shrink-0 sm:w-64">
+                    <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={logSearchQuery}
+                      onChange={e => setLogSearchQuery(e.target.value)}
+                      placeholder="Search phone, action, UTR..."
+                      className="w-full pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-200 placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                    {logSearchQuery && (
+                      <button
+                        onClick={() => setLogSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs font-bold"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Chronological Activity Log Stream */}
+              <div className="bg-slate-850 p-4 rounded-3xl border border-slate-800 space-y-2.5">
+                {filteredActivityLogs.length === 0 ? (
+                  <div className="text-center py-12 space-y-2">
+                    <Database className="w-10 h-10 text-slate-700 mx-auto" />
+                    <p className="text-xs font-bold text-slate-400">No activity logs found</p>
+                    <p className="text-[10px] text-slate-600">Try adjusting your category filter or search terms.</p>
+                  </div>
+                ) : (
+                  filteredActivityLogs.map((log) => {
+                    let IconComponent = Database;
+                    let iconBgClass = 'bg-slate-800 text-slate-300 border-slate-700';
+                    let statusBgClass = 'bg-slate-800 text-slate-300 border-slate-700';
+
+                    if (log.category === 'registration') {
+                      IconComponent = Users;
+                      iconBgClass = 'bg-emerald-950 text-emerald-400 border-emerald-800';
+                      statusBgClass = log.status === 'blocked' ? 'bg-rose-950 text-rose-300 border-rose-800' : 'bg-emerald-950 text-emerald-300 border-emerald-800';
+                    } else if (log.category === 'withdrawal') {
+                      IconComponent = ArrowUpRight;
+                      iconBgClass = 'bg-purple-950 text-purple-300 border-purple-800';
+                      statusBgClass = String(log.status).toLowerCase().includes('approve') || log.status === 'success'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                        : String(log.status).toLowerCase().includes('reject') || log.status === 'failed'
+                        ? 'bg-rose-950 text-rose-300 border-rose-800'
+                        : 'bg-amber-950 text-amber-300 border-amber-800';
+                    } else if (log.category === 'recharge') {
+                      IconComponent = ArrowDownLeft;
+                      iconBgClass = 'bg-teal-950 text-teal-300 border-teal-800';
+                      statusBgClass = String(log.status).toLowerCase().includes('approve') || log.status === 'success'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                        : String(log.status).toLowerCase().includes('reject') || log.status === 'failed'
+                        ? 'bg-rose-950 text-rose-300 border-rose-800'
+                        : 'bg-amber-950 text-amber-300 border-amber-800';
+                    } else if (log.category === 'plan') {
+                      IconComponent = FileText;
+                      iconBgClass = 'bg-amber-950 text-amber-300 border-amber-800';
+                      statusBgClass = 'bg-amber-950 text-amber-300 border-amber-800';
+                    } else if (log.category === 'admin') {
+                      IconComponent = ShieldCheck;
+                      iconBgClass = 'bg-blue-950 text-blue-300 border-blue-800';
+                      statusBgClass = 'bg-blue-950 text-blue-300 border-blue-800';
+                    }
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="p-3.5 bg-slate-950/70 hover:bg-slate-950 rounded-2xl border border-slate-800/80 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2.5 rounded-xl border shrink-0 mt-0.5 ${iconBgClass}`}>
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-extrabold text-white text-xs">{log.title}</span>
+                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${statusBgClass}`}>
+                                {log.status}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-slate-900 text-slate-400 text-[9px] font-bold border border-slate-800">
+                                {log.typeLabel}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-slate-300 font-medium leading-relaxed break-all">
+                              {log.description}
+                            </p>
+
+                            <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 font-mono pt-0.5">
+                              {log.userPhone && (
+                                <span className="text-teal-400 font-semibold">
+                                  User: +91 {log.userPhone.replace('+91 ', '')}
+                                </span>
+                              )}
+                              {log.userName && log.userName !== 'User' && (
+                                <span>({log.userName})</span>
+                              )}
+                              {log.actor && (
+                                <span className="text-slate-400">By: {log.actor}</span>
+                              )}
+                              {log.utr && (
+                                <span className="text-slate-400">UTR: <strong className="text-slate-200 select-all">{log.utr}</strong></span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="sm:text-right shrink-0 flex sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 border-slate-800/60 pt-2 sm:pt-0">
+                          {typeof log.amount === 'number' && (
+                            <span className={`font-mono font-black text-sm ${log.category === 'withdrawal' ? 'text-purple-300' : 'text-emerald-400'}`}>
+                              ₹{log.amount % 1 === 0 ? log.amount.toLocaleString('en-IN') : log.amount.toFixed(2)}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                            {log.timestamp}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </motion.div>
           )}
