@@ -31,6 +31,25 @@ interface ProfileSectionProps {
   isSyncing?: boolean;
 }
 
+function computeProfileAccruedMap(purchasesList: PurchaseRecord[]): Record<string, number> {
+  const updated: Record<string, number> = {};
+  purchasesList.forEach((p) => {
+    if (!p.completed) {
+      const now = new Date().getTime();
+      const lastClaim = new Date(p.lastClaimedAt).getTime();
+      const purchaseTime = new Date(p.datePurchased).getTime();
+      const totalDurationMs = (p.durationDays || 1) * 24 * 60 * 60 * 1000;
+      const planExpiryTime = purchaseTime + totalDurationMs;
+      const claimUntil = Math.min(now, planExpiryTime);
+      const elapsedSecs = Math.max(0, (claimUntil - lastClaim) / 1000);
+      const perSecondEarnings = (p.dailyIncome || 0) / 86400;
+      const accrued = elapsedSecs * perSecondEarnings;
+      updated[p.id] = Math.max(0, accrued);
+    }
+  });
+  return updated;
+}
+
 export default function ProfileSection({
   user,
   purchases,
@@ -104,23 +123,26 @@ export default function ProfileSection({
   const [passwordError, setPasswordError] = useState<string>('');
 
   // Local calculation of real-time accrued earnings per active plan
-  const [accruedMap, setAccruedMap] = useState<Record<string, number>>({});
+  const [accruedMap, setAccruedMap] = useState<Record<string, number>>(() => computeProfileAccruedMap(purchases));
+  const [claimingId, setClaimingId] = useState<string | null>(null);
 
-  // Periodically compute real-time second-by-second accrued balance for the active plans in the UI
+  const handleClaim = async (purchaseId: string) => {
+    setClaimingId(purchaseId);
+    setAccruedMap((prev) => ({ ...prev, [purchaseId]: 0 }));
+    try {
+      await onClaimOrderEarnings(purchaseId);
+    } finally {
+      setClaimingId(null);
+      setAccruedMap(computeProfileAccruedMap(purchases));
+    }
+  };
+
+  // Synchronously sync & periodically compute real-time second-by-second accrued balance
   useEffect(() => {
+    setAccruedMap(computeProfileAccruedMap(purchases));
+
     const timer = setInterval(() => {
-      const updated: Record<string, number> = {};
-      purchases.forEach((p) => {
-        if (!p.completed) {
-          const now = new Date().getTime();
-          const lastClaim = new Date(p.lastClaimedAt).getTime();
-          const elapsedSecs = Math.max(0, (now - lastClaim) / 1000);
-          const perSecondEarnings = p.dailyIncome / 86400;
-          const accrued = elapsedSecs * perSecondEarnings;
-          updated[p.id] = accrued;
-        }
-      });
-      setAccruedMap(updated);
+      setAccruedMap(computeProfileAccruedMap(purchases));
     }, 1000);
 
     return () => clearInterval(timer);
@@ -248,12 +270,17 @@ export default function ProfileSection({
                       {!item.completed && (
                         <button
                           type="button"
-                          onClick={() => onClaimOrderEarnings(item.id)}
-                          disabled={!canClaim}
+                          onClick={() => handleClaim(item.id)}
+                          disabled={!canClaim || claimingId === item.id}
                           className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 disabled:from-gray-100 disabled:to-gray-150 disabled:text-gray-400 disabled:shadow-none text-white text-xs font-black rounded-xl shadow-md shadow-emerald-100 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
                         >
-                          <TrendingUp className="w-4 h-4 animate-bounce" />
-                          <span>Claim Accumulated ₹{accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)}</span>
+                          <TrendingUp className={`w-4 h-4 ${claimingId === item.id ? 'animate-spin' : 'animate-bounce'}`} />
+                          <span>
+                            {claimingId === item.id
+                              ? 'Claiming Yield...'
+                              : `Claim Accumulated ₹${accrued % 1 === 0 ? accrued.toLocaleString('en-IN') : accrued.toFixed(2)}`
+                            }
+                          </span>
                         </button>
                       )}
                     </div>

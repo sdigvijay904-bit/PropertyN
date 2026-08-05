@@ -2178,25 +2178,22 @@ export default function App() {
       description: `Claimed accrued advertisement rewards from: ${purchase.planTitle}${isCompleting ? ' (Plan Completed)' : ''}`
     };
 
-    if (!isQuotaExceeded() && targetUpdatedPurchase) {
-      try {
-        await Promise.all([
-          setDoc(doc(db, "purchases", (targetUpdatedPurchase as PurchaseRecord).id), cleanUndefined(targetUpdatedPurchase), { merge: true }),
-          setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx), { merge: true }),
-          setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser), { merge: true })
-        ]);
-        console.log("[handleClaimOrderEarnings] Server Firestore sync succeeded for purchase:", targetUpdatedPurchase);
-      } catch (e) {
-        console.warn("[handleClaimOrderEarnings] Direct claim Firestore write error:", e);
-        markQuotaExceeded(e);
-      }
-    }
-
-    // Immediately update local refs to prevent background sync from overwriting
+    // Immediately update local refs and save state to local storage/React state in 0ms
     purchasesRef.current = updatedPurchases;
     userProfileRef.current = updatedUser;
 
     saveStateToStorage(updatedUser, plans, updatedPurchases, [...transactions, claimTx], teamMembers);
+
+    if (!isQuotaExceeded() && targetUpdatedPurchase) {
+      Promise.all([
+        setDoc(doc(db, "purchases", (targetUpdatedPurchase as PurchaseRecord).id), cleanUndefined(targetUpdatedPurchase), { merge: true }),
+        setDoc(doc(db, "transactions", claimTx.id), cleanUndefined(claimTx), { merge: true }),
+        setDoc(doc(db, "users", updatedUser.id), cleanUndefined(updatedUser), { merge: true })
+      ]).catch((e) => {
+        console.warn("[handleClaimOrderEarnings] Direct claim Firestore write error:", e);
+        markQuotaExceeded(e);
+      });
+    }
     console.log("[handleClaimOrderEarnings] Local state & localStorage updated. New Balance:", updatedUser.balance);
     triggerToast(
       isCompleting 

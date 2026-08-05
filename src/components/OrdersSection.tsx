@@ -13,40 +13,50 @@ interface OrdersSectionProps {
   onClaimOrderEarnings: (purchaseId: string) => void;
 }
 
+// Helper to compute accrued earnings synchronously
+function computeAccruedMap(purchasesList: PurchaseRecord[]): Record<string, number> {
+  const updated: Record<string, number> = {};
+  purchasesList.forEach((p) => {
+    if (!p.completed) {
+      const now = new Date().getTime();
+      const lastClaim = new Date(p.lastClaimedAt).getTime();
+      const purchaseTime = new Date(p.datePurchased).getTime();
+      const totalDurationMs = (p.durationDays || 1) * 24 * 60 * 60 * 1000;
+      const planExpiryTime = purchaseTime + totalDurationMs;
+      const claimUntil = Math.min(now, planExpiryTime);
+      const elapsedSecs = Math.max(0, (claimUntil - lastClaim) / 1000);
+      const perSecondEarnings = (p.dailyIncome || 0) / 86400;
+      const accrued = elapsedSecs * perSecondEarnings;
+      updated[p.id] = Math.max(0, accrued);
+    }
+  });
+  return updated;
+}
+
 export default function OrdersSection({ purchases, onClaimOrderEarnings }: OrdersSectionProps) {
   // Local calculation of real-time accrued earnings per active plan
-  const [accruedMap, setAccruedMap] = useState<Record<string, number>>({});
+  const [accruedMap, setAccruedMap] = useState<Record<string, number>>(() => computeAccruedMap(purchases));
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
   const handleClaim = async (purchaseId: string) => {
     setClaimingId(purchaseId);
-    console.log("[OrdersSection] Claim button clicked for purchase ID:", purchaseId, "| Displayed accrued in UI:", accruedMap[purchaseId]);
+    // Optimistically reset this purchase's accrued value in state immediately (0ms response)
+    setAccruedMap((prev) => ({ ...prev, [purchaseId]: 0 }));
     try {
       await onClaimOrderEarnings(purchaseId);
     } finally {
       setClaimingId(null);
+      setAccruedMap(computeAccruedMap(purchases));
     }
   };
 
-  // Periodically compute real-time second-by-second accrued balance for the active plans in the UI
+  // Synchronously sync & periodically compute real-time second-by-second accrued balance
   useEffect(() => {
+    // Fire immediately on purchases change so UI resets instantly without 1000ms delay!
+    setAccruedMap(computeAccruedMap(purchases));
+
     const timer = setInterval(() => {
-      const updated: Record<string, number> = {};
-      purchases.forEach((p) => {
-        if (!p.completed) {
-          const now = new Date().getTime();
-          const lastClaim = new Date(p.lastClaimedAt).getTime();
-          const purchaseTime = new Date(p.datePurchased).getTime();
-          const totalDurationMs = (p.durationDays || 1) * 24 * 60 * 60 * 1000;
-          const planExpiryTime = purchaseTime + totalDurationMs;
-          const claimUntil = Math.min(now, planExpiryTime);
-          const elapsedSecs = Math.max(0, (claimUntil - lastClaim) / 1000);
-          const perSecondEarnings = p.dailyIncome / 86400;
-          const accrued = elapsedSecs * perSecondEarnings;
-          updated[p.id] = accrued;
-        }
-      });
-      setAccruedMap(updated);
+      setAccruedMap(computeAccruedMap(purchases));
     }, 1000);
 
     return () => clearInterval(timer);
