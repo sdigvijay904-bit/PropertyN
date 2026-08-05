@@ -835,7 +835,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
   const allLocalUsers = getStoredUsers();
   currentUsersList.forEach(u => {
     if (u && u.id && u.id !== 'usr_demo') {
-      addUserToMap(u, true);
+      addUserToMap(u, false);
     }
   });
 

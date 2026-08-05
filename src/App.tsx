@@ -1236,8 +1236,8 @@ export default function App() {
               const mergedMe = {
                 ...currentLocal,
                 ...sanitized,
-                balance: Math.max(currentLocal?.balance ?? 0, sanitized.balance ?? 0),
-                totalEarnings: Math.max(currentLocal?.totalEarnings ?? 0, sanitized.totalEarnings ?? 0)
+                balance: typeof sanitized.balance === 'number' ? sanitized.balance : (currentLocal?.balance ?? 0),
+                totalEarnings: typeof sanitized.totalEarnings === 'number' ? sanitized.totalEarnings : (currentLocal?.totalEarnings ?? 0)
               };
               if (JSON.stringify(mergedMe) !== JSON.stringify(userProfileRef.current)) {
                 setUserProfile(mergedMe);

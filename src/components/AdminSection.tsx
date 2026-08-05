@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Users, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
+  Users, UserPlus, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
   ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag, Power, PauseCircle, Coins
 } from 'lucide-react';
 import SupportAgentAvatar from './SupportAgentAvatar';
@@ -443,6 +443,15 @@ export default function AdminSection({
   const [editTotalEarnings, setEditTotalEarnings] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Add User modal states
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState<boolean>(false);
+  const [newUserName, setNewUserName] = useState<string>('');
+  const [newUserPhone, setNewUserPhone] = useState<string>('');
+  const [newUserPassword, setNewUserPassword] = useState<string>('password123');
+  const [newUserBalance, setNewUserBalance] = useState<string>('0');
+  const [newUserRole, setNewUserRole] = useState<'user' | 'admin'>('user');
+  const [newUserInviterCode, setNewUserInviterCode] = useState<string>('');
 
   const syncConfigDirectToFirestore = async (overrides?: Record<string, string>) => {
     const keysToSync = [
@@ -1297,6 +1306,86 @@ export default function AdminSection({
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
 
+  // Add New User Handler
+  const handleCreateNewUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUserName.trim()) {
+      triggerToast('Please enter full name', 'error');
+      return;
+    }
+    const rawDigits = newUserPhone.replace(/\D/g, '');
+    if (rawDigits.length < 10) {
+      triggerToast('Please enter a valid 10-digit mobile number', 'error');
+      return;
+    }
+    const clean10 = rawDigits.slice(-10);
+    const formattedPhone = `+91 ${clean10}`;
+    const userId = `usr_${clean10}`;
+
+    // Check existing
+    const phoneExists = usersList.some(u => {
+      if (u.id === userId) return true;
+      const uDigits = u.phone ? u.phone.replace(/\D/g, '') : '';
+      return uDigits.endsWith(clean10);
+    });
+
+    if (phoneExists) {
+      triggerToast(`User account for +91 ${clean10} already exists! Search in list to edit.`, 'error');
+      return;
+    }
+
+    const initialBal = parseFloat(newUserBalance) || 0;
+    const newUser: UserProfile = {
+      id: userId,
+      name: newUserName.trim(),
+      phone: formattedPhone,
+      password: newUserPassword.trim() || 'password123',
+      role: newUserRole,
+      balance: initialBal,
+      totalEarnings: initialBal,
+      totalInvested: 0,
+      dailyEarned: 0,
+      checkedInToday: false,
+      inviteCode: Math.floor(10000 + Math.random() * 90000).toString(),
+      inviterCode: newUserInviterCode.trim(),
+      kycStatus: 'none',
+      notifications: []
+    };
+
+    const updatedUsers = [newUser, ...usersList];
+    setUsersList(updatedUsers);
+    localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+
+    if (!isQuotaExceeded()) {
+      try {
+        setDoc(doc(db, "users", newUser.id), cleanUndefined(newUser)).catch(markQuotaExceeded);
+      } catch (err) {
+        markQuotaExceeded(err);
+      }
+    }
+
+    window.dispatchEvent(new Event('adpaint_users_updated'));
+    onSyncConfig?.(undefined, undefined, updatedUsers);
+
+    logAdminAction('registration', 'Admin Created User', `Created account +91 ${clean10} with balance ₹${initialBal}`, {
+      userName: newUser.name,
+      userPhone: newUser.phone,
+      amount: initialBal
+    });
+
+    triggerToast(`User account +91 ${clean10} created successfully!`, 'success');
+    setIsAddUserModalOpen(false);
+    setNewUserName('');
+    setNewUserPhone('');
+    setNewUserPassword('password123');
+    setNewUserBalance('0');
+    setNewUserRole('user');
+    setNewUserInviterCode('');
+
+    // Open editing panel for newly created user
+    handleOpenUserEdit(newUser);
+  };
+
   // Open User Panel for editing
   const handleOpenUserEdit = (user: UserProfile) => {
     setEditingUser(user);
@@ -2105,6 +2194,15 @@ export default function AdminSection({
                   </div>
                   <button
                     type="button"
+                    onClick={() => setIsAddUserModalOpen(true)}
+                    className="px-3.5 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-emerald-500/20 shrink-0"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Add User</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={async () => {
                       setIsRefreshing(true);
                       try {
@@ -2150,6 +2248,137 @@ export default function AdminSection({
                   )}
                 </div>
               </div>
+
+              {/* ADD USER MODAL */}
+              <AnimatePresence>
+                {isAddUserModalOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl p-5 space-y-4 shadow-2xl relative"
+                    >
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400 border border-emerald-500/20">
+                            <UserPlus className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-white">Create New User Account</h3>
+                            <p className="text-[10px] text-slate-400 font-mono">Manually add user data & initial balance</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsAddUserModalOpen(false)}
+                          className="p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-800/60 hover:bg-slate-800 transition-colors cursor-pointer"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleCreateNewUser} className="space-y-3.5">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Full Name *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Ramesh Kumar"
+                            value={newUserName}
+                            onChange={(e) => setNewUserName(e.target.value)}
+                            className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Mobile Number (10 Digits) *</label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-slate-400">+91</span>
+                            <input
+                              type="tel"
+                              required
+                              maxLength={10}
+                              placeholder="7798044426"
+                              value={newUserPhone}
+                              onChange={(e) => setNewUserPhone(e.target.value.replace(/\D/g, ''))}
+                              className="w-full pl-12 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 placeholder:text-slate-600"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Password *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="password123"
+                              value={newUserPassword}
+                              onChange={(e) => setNewUserPassword(e.target.value)}
+                              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Initial Balance (₹)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              placeholder="0"
+                              value={newUserBalance}
+                              onChange={(e) => setNewUserBalance(e.target.value)}
+                              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono font-bold text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Role</label>
+                            <select
+                              value={newUserRole}
+                              onChange={(e) => setNewUserRole(e.target.value as 'user' | 'admin')}
+                              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            >
+                              <option value="user">User</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Inviter Code (Optional)</label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 12345"
+                              value={newUserInviterCode}
+                              onChange={(e) => setNewUserInviterCode(e.target.value)}
+                              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => setIsAddUserModalOpen(false)}
+                            className="flex-1 py-3 bg-slate-800 hover:bg-slate-750 text-slate-300 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl text-xs transition-colors cursor-pointer shadow-lg shadow-emerald-500/20"
+                          >
+                            Create Account
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
 
               {/* User management panel or user list */}
               {editingUser ? (
