@@ -1607,7 +1607,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     throw new Error("Mobile number already registered! Please log in.");
   }
 
-  // Check Firestore for existing user account by phone/ID with 1000ms max timeout to avoid hanging in Meta Ads browser
+  // Check Firestore for existing user account by phone/ID with 250ms max timeout to avoid blocking registration on slow network
   if (!isQuotaExceeded()) {
     try {
       const checkDoc = async () => {
@@ -1616,7 +1616,7 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
           throw new Error("Mobile number already registered! Please log in.");
         }
       };
-      const checkTimeout = new Promise(resolve => setTimeout(resolve, 1000));
+      const checkTimeout = new Promise(resolve => setTimeout(resolve, 250));
       await Promise.race([checkDoc(), checkTimeout]);
     } catch (err: any) {
       if (err?.message?.includes("already registered")) {
@@ -1750,11 +1750,10 @@ export async function firestoreRegister(payload: { name: string; phone: string; 
     } catch (e) {}
   };
 
-  // Wait up to 3500ms for direct save so Meta Ads browser / mobile network completes the sync, but proceed if network is slow
-  await Promise.race([
-    saveToFirestoreDirect(),
-    new Promise(resolve => setTimeout(resolve, 3500))
-  ]);
+  // Fire direct save in background non-blocking so registration completes instantly (<50ms)
+  saveToFirestoreDirect().catch(err => {
+    console.warn("Background registration sync notice:", err);
+  });
 
   return {
     user: newUser,

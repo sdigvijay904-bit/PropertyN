@@ -1653,11 +1653,11 @@ export default function App() {
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsersList));
       saveMasterSnapshotBackup({ usersList: updatedUsersList, transactions: regData.transactions });
 
-      // Direct, explicit HTTP & Firestore write for new registration to guarantee real-time reflection in Admin Panel across Meta Ads browser / Mobile / Desktop
+      // Direct, explicit HTTP & Firestore write for new registration in background (non-blocking)
       try {
         const cleanServerUser = cleanUndefined(serverUser);
 
-        await Promise.all([
+        Promise.all([
           fetch('/api/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1681,7 +1681,7 @@ export default function App() {
           }).catch(() => {}),
 
           writeFirestoreViaRest("users", serverUser.id, cleanServerUser)
-        ]);
+        ]).catch(() => {});
 
         if (regData.transactions && regData.transactions.length > 0) {
           const cleanTx = cleanUndefined(regData.transactions[0]);

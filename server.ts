@@ -334,11 +334,11 @@ app.post("/api/register", async (req, res) => {
   db.transactions.unshift(signupTx);
   writeDb(db);
   
-  // Sync to Firestore REST
-  await Promise.all([
+  // Sync to Firestore REST asynchronously in background
+  Promise.all([
     writeFirestoreRestServer("users", newUser.id, newUser),
     writeFirestoreRestServer("transactions", signupTx.id, signupTx)
-  ]);
+  ]).catch(() => {});
 
   res.json({
     user: newUser,
