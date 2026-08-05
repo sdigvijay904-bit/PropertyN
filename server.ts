@@ -125,8 +125,62 @@ const DEFAULT_SERVER_PLANS = [
     image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80',
     slotsMax: 8,
     slotsPurchased: 1,
+  },
+  {
+    id: 'plan_vip_elite',
+    type: 'vip',
+    title: 'Emaar Premium Penthouse Syndicate',
+    price: 15000,
+    dailyIncome: 1200,
+    durationDays: 120,
+    totalProfit: 144000,
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
+    slotsMax: 5,
+    slotsPurchased: 1,
+  },
+  {
+    id: 'plan_vip_mega',
+    type: 'vip',
+    title: 'Grand Metro Mall Equity Venture',
+    price: 50000,
+    dailyIncome: 4500,
+    durationDays: 120,
+    totalProfit: 540000,
+    image: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=600&q=80',
+    slotsMax: 5,
+    slotsPurchased: 0,
   }
 ];
+
+// Helper to ensure default plans are upgraded if stale in stored DB file
+const upgradeDefaultPlans = (plans: any[]): any[] => {
+  if (!Array.isArray(plans) || plans.length === 0) {
+    return DEFAULT_SERVER_PLANS;
+  }
+  const upgraded = plans.map(p => {
+    if (!p || !p.id) return p;
+    const def = DEFAULT_SERVER_PLANS.find(sp => sp.id === p.id);
+    if (def) {
+      if (p.durationDays !== def.durationDays || p.price !== def.price || p.dailyIncome !== def.dailyIncome) {
+        return {
+          ...p,
+          price: def.price,
+          dailyIncome: def.dailyIncome,
+          durationDays: def.durationDays,
+          totalProfit: def.totalProfit
+        };
+      }
+    }
+    return p;
+  });
+
+  DEFAULT_SERVER_PLANS.forEach(def => {
+    if (!upgraded.some(p => p && p.id === def.id)) {
+      upgraded.push(def);
+    }
+  });
+  return upgraded;
+};
 
 // Initial default state
 const getInitialState = (): DbState => {
@@ -146,10 +200,12 @@ const readDb = (): DbState => {
     if (fs.existsSync(DB_FILE)) {
       const content = fs.readFileSync(DB_FILE, "utf-8");
       const parsed = JSON.parse(content);
-      return {
+      const state = {
         ...getInitialState(),
         ...parsed
       };
+      state.plans = upgradeDefaultPlans(state.plans);
+      return state;
     }
   } catch (e) {
     console.error("Error reading DB file, resetting:", e);

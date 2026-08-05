@@ -1004,11 +1004,24 @@ export async function scanAndMergeAllPlans(currentPlans: InvestmentPlan[] = []):
 
   const addPlanToMap = (p: InvestmentPlan) => {
     if (!p || !p.id || deletedPlans.includes(p.id)) return;
-    const existing = planMap.get(p.id);
+    const seed = SEED_PLANS.find(sp => sp.id === p.id);
+    let planToAdd = p;
+    if (seed) {
+      if (p.durationDays !== seed.durationDays || p.price !== seed.price || p.dailyIncome !== seed.dailyIncome) {
+        planToAdd = {
+          ...p,
+          price: seed.price,
+          dailyIncome: seed.dailyIncome,
+          durationDays: seed.durationDays,
+          totalProfit: seed.totalProfit
+        };
+      }
+    }
+    const existing = planMap.get(planToAdd.id);
     if (!existing) {
-      planMap.set(p.id, p);
+      planMap.set(planToAdd.id, planToAdd);
     } else {
-      planMap.set(p.id, { ...existing, ...p });
+      planMap.set(planToAdd.id, { ...existing, ...planToAdd });
     }
   };
 
@@ -1277,7 +1290,21 @@ function getStoredPlans(): InvestmentPlan[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.filter((p: InvestmentPlan) => p && p.id && !deletedPlans.includes(p.id));
+        const upgraded = parsed.map((p: InvestmentPlan) => {
+          if (!p || !p.id) return p;
+          const seed = SEED_PLANS.find(sp => sp.id === p.id);
+          if (seed && (p.durationDays !== seed.durationDays || p.price !== seed.price || p.dailyIncome !== seed.dailyIncome)) {
+            return {
+              ...p,
+              price: seed.price,
+              dailyIncome: seed.dailyIncome,
+              durationDays: seed.durationDays,
+              totalProfit: seed.totalProfit
+            };
+          }
+          return p;
+        });
+        return upgraded.filter((p: InvestmentPlan) => p && p.id && !deletedPlans.includes(p.id));
       }
     }
   } catch (e) {}

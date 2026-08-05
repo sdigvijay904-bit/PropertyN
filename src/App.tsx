@@ -533,17 +533,31 @@ export default function App() {
         const currentTransactions = transactionsRef.current;
         const currentUsersList = usersListRef.current;
 
-        // 1. Sync plans (Admin changes source of truth)
+        // 1. Sync plans (Admin changes source of truth, upgrade stale default plans)
         let plansUpdated = false;
         let finalPlans = currentPlans;
         const isAdminUser = activeUser?.role === 'admin' || activeUser?.id === 'usr_admin' || activeUser?.phone?.includes('9999999999');
         if (data.plans && data.plans.length > 0) {
-          const isDifferent = JSON.stringify(data.plans) !== JSON.stringify(currentPlans);
+          const upgradedServerPlans = data.plans.map((p: any) => {
+            if (!p || !p.id) return p;
+            const initMatch = INITIAL_PLANS.find(ip => ip.id === p.id);
+            if (initMatch && (p.durationDays !== initMatch.durationDays || p.price !== initMatch.price || p.dailyIncome !== initMatch.dailyIncome)) {
+              return {
+                ...p,
+                price: initMatch.price,
+                dailyIncome: initMatch.dailyIncome,
+                durationDays: initMatch.durationDays,
+                totalProfit: initMatch.totalProfit
+              };
+            }
+            return p;
+          });
+          const isDifferent = JSON.stringify(upgradedServerPlans) !== JSON.stringify(currentPlans);
           if (isDifferent) {
-            setPlans(data.plans);
-            plansRef.current = data.plans;
-            localStorage.setItem('adpaint_plans', JSON.stringify(data.plans));
-            finalPlans = data.plans;
+            setPlans(upgradedServerPlans);
+            plansRef.current = upgradedServerPlans;
+            localStorage.setItem('adpaint_plans', JSON.stringify(upgradedServerPlans));
+            finalPlans = upgradedServerPlans;
           }
         } else if (isAdminUser && currentPlans && currentPlans.length > 0) {
           // Admin can initialize server plans if server plans are empty
@@ -1134,7 +1148,20 @@ export default function App() {
           const pData = docSnap.data() as InvestmentPlan;
           const planId = pData?.id || docSnap.id;
           if (pData && planId && !rawDelP.includes(planId)) {
-            livePlans.push({ ...pData, id: planId });
+            let planObj: InvestmentPlan = { ...pData, id: planId };
+            const initMatch = INITIAL_PLANS.find(ip => ip.id === planId);
+            if (initMatch && (planObj.durationDays !== initMatch.durationDays || planObj.price !== initMatch.price || planObj.dailyIncome !== initMatch.dailyIncome)) {
+              planObj = {
+                ...planObj,
+                price: initMatch.price,
+                dailyIncome: initMatch.dailyIncome,
+                durationDays: initMatch.durationDays,
+                totalProfit: initMatch.totalProfit
+              };
+              // Asynchronously fix the document in Firestore
+              setDoc(doc(db, "plans", planId), cleanUndefined(planObj), { merge: true }).catch(() => {});
+            }
+            livePlans.push(planObj);
           }
         });
 
