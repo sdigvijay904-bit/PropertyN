@@ -43,6 +43,7 @@ import {
   getStoredPurchases,
   getStoredUsers,
   scanAndMergeAllUsers,
+  scanAndMergeAllPlans,
   cleanUndefined,
   writeFirestoreViaRest,
   isQuotaExceeded,
@@ -361,6 +362,15 @@ export default function App() {
       localStorage.setItem('adpaint_plans', JSON.stringify(INITIAL_PLANS));
     }
     setPlans(loadedPlans);
+
+    // Asynchronously scan and merge plans across Express server, Firestore REST & Web SDK on startup
+    scanAndMergeAllPlans(loadedPlans).then(scannedPlans => {
+      if (scannedPlans && scannedPlans.length > 0) {
+        setPlans(scannedPlans);
+        plansRef.current = scannedPlans;
+        localStorage.setItem('adpaint_plans', JSON.stringify(scannedPlans));
+      }
+    }).catch(() => {});
     
     if (storedTransactions) {
       setTransactions(JSON.parse(storedTransactions));

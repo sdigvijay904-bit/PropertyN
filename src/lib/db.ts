@@ -92,61 +92,61 @@ const SEED_USERS: UserProfile[] = [
 
 const SEED_PLANS: InvestmentPlan[] = [
   {
-    id: "plan_special_offer",
-    type: "vip",
-    title: "DLF Luxury Residencies Fund",
-    price: 750,
-    dailyIncome: 4536,
-    durationDays: 2,
-    totalProfit: 9072,
-    image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80",
-    slotsMax: 10,
-    slotsPurchased: 0
-  },
-  {
-    id: "plan_product_a",
-    type: "daily",
-    title: "Urban Smart Studio Fund",
-    price: 280,
-    dailyIncome: 240,
-    durationDays: 50,
-    totalProfit: 12000,
-    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80",
-    slotsMax: 10,
-    slotsPurchased: 3
-  },
-  {
     id: "plan_apex_ultima",
     type: "daily",
     title: "Sovereign Commercial Plaza Fund",
-    price: 1200,
-    dailyIncome: 510,
-    durationDays: 45,
-    totalProfit: 22950,
+    price: 500,
+    dailyIncome: 25,
+    durationDays: 120,
+    totalProfit: 3000,
     image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80",
     slotsMax: 15,
     slotsPurchased: 5
   },
   {
+    id: "plan_product_a",
+    type: "daily",
+    title: "Urban Smart Studio Fund",
+    price: 1000,
+    dailyIncome: 60,
+    durationDays: 120,
+    totalProfit: 7200,
+    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80",
+    slotsMax: 10,
+    slotsPurchased: 3
+  },
+  {
     id: "plan_royale_luxury",
     type: "daily",
     title: "Prestige Waterfront Villa Fund",
-    price: 3500,
-    dailyIncome: 1580,
-    durationDays: 40,
-    totalProfit: 63200,
+    price: 2000,
+    dailyIncome: 135,
+    durationDays: 120,
+    totalProfit: 16200,
     image: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=600&q=80",
     slotsMax: 12,
     slotsPurchased: 2
   },
   {
+    id: "plan_special_offer",
+    type: "vip",
+    title: "DLF Luxury Residencies Fund",
+    price: 10000,
+    dailyIncome: 750,
+    durationDays: 120,
+    totalProfit: 90000,
+    image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80",
+    slotsMax: 10,
+    slotsPurchased: 0
+  },
+  {
     id: "plan_tractor_emulsion",
     type: "daily",
     title: "Affordable Housing Prime Fund",
-    price: 8000,
-    dailyIncome: 3850,
-    durationDays: 35,
-    totalProfit: 134750,
+    price: 5000,
+    dailyIncome: 360,
+    durationDays: 120,
+    totalProfit: 43200,
     image: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80",
     slotsMax: 8,
     slotsPurchased: 1
@@ -156,9 +156,9 @@ const SEED_PLANS: InvestmentPlan[] = [
     type: "vip",
     title: "Emaar Premium Penthouse Syndicate",
     price: 15000,
-    dailyIncome: 9500,
-    durationDays: 4,
-    totalProfit: 38000,
+    dailyIncome: 1200,
+    durationDays: 120,
+    totalProfit: 144000,
     image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80",
     slotsMax: 5,
     slotsPurchased: 1
@@ -168,9 +168,9 @@ const SEED_PLANS: InvestmentPlan[] = [
     type: "vip",
     title: "Grand Metro Mall Equity Venture",
     price: 50000,
-    dailyIncome: 35000,
-    durationDays: 3,
-    totalProfit: 105000,
+    dailyIncome: 4500,
+    durationDays: 120,
+    totalProfit: 540000,
     image: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=600&q=80",
     slotsMax: 5,
     slotsPurchased: 0
@@ -992,6 +992,74 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
 export async function syncAllLocalUsersToFirestore(): Promise<{ users: UserProfile[]; migratedCount: number }> {
   const users = await scanAndMergeAllUsers();
   return { users, migratedCount: users.length };
+}
+
+export async function scanAndMergeAllPlans(currentPlans: InvestmentPlan[] = []): Promise<InvestmentPlan[]> {
+  const planMap = new Map<string, InvestmentPlan>();
+  let deletedPlans: string[] = [];
+  try {
+    const rawDelP = localStorage.getItem('adpaint_deleted_plans');
+    if (rawDelP) deletedPlans = JSON.parse(rawDelP);
+  } catch (e) {}
+
+  const addPlanToMap = (p: InvestmentPlan) => {
+    if (!p || !p.id || deletedPlans.includes(p.id)) return;
+    const existing = planMap.get(p.id);
+    if (!existing) {
+      planMap.set(p.id, p);
+    } else {
+      planMap.set(p.id, { ...existing, ...p });
+    }
+  };
+
+  // 1. Add current local & stored plans
+  const storedPlans = getStoredPlans();
+  storedPlans.forEach(addPlanToMap);
+  currentPlans.forEach(addPlanToMap);
+
+  // 2. Fetch plans from Express /api/get-state
+  try {
+    const apiRes = await fetch('/api/get-state');
+    if (apiRes.ok) {
+      const apiData = await apiRes.json();
+      if (Array.isArray(apiData.plans) && apiData.plans.length > 0) {
+        apiData.plans.forEach((p: any) => {
+          if (p && p.id) addPlanToMap(p);
+        });
+      }
+    }
+  } catch (e) {}
+
+  // 3. Fetch plans via Firestore REST API
+  try {
+    const restPlans = await fetchFirestoreCollectionViaRest("plans");
+    restPlans.forEach((pData) => {
+      if (pData && pData.id) {
+        addPlanToMap(pData as InvestmentPlan);
+      }
+    });
+  } catch (e) {}
+
+  // 4. Fetch plans via Firestore Web SDK (if quota not exceeded)
+  if (!isQuotaExceeded()) {
+    try {
+      const plansSnap = await getDocs(collection(db, "plans"));
+      plansSnap.forEach((docSnap) => {
+        const pData = docSnap.data() as InvestmentPlan;
+        if (pData && (pData.id || docSnap.id)) {
+          addPlanToMap({ ...pData, id: pData.id || docSnap.id });
+        }
+      });
+    } catch (e) {
+      markQuotaExceeded(e);
+    }
+  }
+
+  const finalPlans = Array.from(planMap.values()).filter(p => !deletedPlans.includes(p.id));
+  if (finalPlans.length > 0) {
+    localStorage.setItem('adpaint_plans', JSON.stringify(finalPlans));
+  }
+  return finalPlans;
 }
 
 function getStoredTransactions(): TransactionRecord[] {
@@ -1973,24 +2041,14 @@ export async function firestoreGetState(userId: string): Promise<any> {
         localStorage.setItem('adpaint_users_list', JSON.stringify(usersList));
       }
 
-      // 2. Fetch Plans
-      const plansSnap = await getDocs(collection(db, "plans"));
-      const fsPlans: InvestmentPlan[] = [];
-      plansSnap.forEach((docSnap) => {
-        const pData = docSnap.data() as InvestmentPlan;
-        if (pData) {
-          fsPlans.push({ ...pData, id: pData.id || docSnap.id });
-        }
-      });
-      let rawDelP: string[] = [];
+      // 2. Fetch & Merge Plans across Server, Firestore REST & Web SDK
       try {
-        const raw = localStorage.getItem('adpaint_deleted_plans');
-        if (raw) rawDelP = JSON.parse(raw);
-      } catch (e) {}
-
-      if (fsPlans.length > 0) {
-        plans = fsPlans.filter(p => p && p.id && !rawDelP.includes(p.id));
-        localStorage.setItem('adpaint_plans', JSON.stringify(plans));
+        const mergedPlans = await scanAndMergeAllPlans(plans);
+        if (mergedPlans && mergedPlans.length > 0) {
+          plans = mergedPlans;
+        }
+      } catch (e) {
+        console.warn("Notice scanning plans in firestoreGetState:", e);
       }
 
       // 3. Fetch Transactions

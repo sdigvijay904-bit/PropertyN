@@ -65,11 +65,74 @@ interface DbState {
   customTicker: string | null;
 }
 
+const DEFAULT_SERVER_PLANS = [
+  {
+    id: 'plan_apex_ultima',
+    type: 'daily',
+    title: 'Sovereign Commercial Plaza Fund',
+    price: 500,
+    dailyIncome: 25,
+    durationDays: 120,
+    totalProfit: 3000,
+    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80',
+    slotsMax: 15,
+    slotsPurchased: 5,
+  },
+  {
+    id: 'plan_product_a',
+    type: 'daily',
+    title: 'Urban Smart Studio Fund',
+    price: 1000,
+    dailyIncome: 60,
+    durationDays: 120,
+    totalProfit: 7200,
+    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80',
+    slotsMax: 10,
+    slotsPurchased: 3,
+  },
+  {
+    id: 'plan_royale_luxury',
+    type: 'daily',
+    title: 'Prestige Waterfront Villa Fund',
+    price: 2000,
+    dailyIncome: 135,
+    durationDays: 120,
+    totalProfit: 16200,
+    image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=600&q=80',
+    slotsMax: 12,
+    slotsPurchased: 2,
+  },
+  {
+    id: 'plan_special_offer',
+    type: 'vip',
+    title: 'DLF Luxury Residencies Fund',
+    price: 10000,
+    dailyIncome: 750,
+    durationDays: 120,
+    totalProfit: 90000,
+    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80',
+    slotsMax: 10,
+    slotsPurchased: 0,
+  },
+  {
+    id: 'plan_tractor_emulsion',
+    type: 'daily',
+    title: 'Affordable Housing Prime Fund',
+    price: 5000,
+    dailyIncome: 360,
+    durationDays: 120,
+    totalProfit: 43200,
+    image: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=600&q=80',
+    slotsMax: 8,
+    slotsPurchased: 1,
+  }
+];
+
 // Initial default state
 const getInitialState = (): DbState => {
   return {
     usersList: [],
-    plans: [],
+    plans: DEFAULT_SERVER_PLANS,
     transactions: [],
     purchasesByUserId: {},
     config: {},
