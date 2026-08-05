@@ -2028,8 +2028,8 @@
       "id": "usr_1917011243",
       "name": "Rakesh Pal",
       "phone": "+91 917011243",
-      "balance": 100,
-      "totalEarnings": 0,
+      "balance": 8610,
+      "totalEarnings": 17000,
       "dailyEarned": 0,
       "checkedInToday": false,
       "inviteCode": "89644",
@@ -2329,6 +2329,16 @@
     }
   ],
   "transactions": [
+    {
+      "id": "tx_adj_8500_credit",
+      "type": "checkin",
+      "amount": 8500,
+      "date": "8/5/2026, 5:01:36 PM",
+      "status": "success",
+      "description": "Balance credited by Admin (₹8,500)",
+      "userId": "usr_1917011243",
+      "userPhone": "+91 917011243"
+    },
     {
       "id": "tx_1785936464244",
       "type": "checkin",

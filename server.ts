@@ -490,40 +490,64 @@ app.post("/api/save-state", (req, res) => {
   const db = readDb();
   const userId = incoming.userId as string;
 
-  // 1. Merge usersList
-  if (Array.isArray(incoming.usersList)) {
-    const userMap = new Map(db.usersList.map(u => [u.id, u]));
-    incoming.usersList.forEach((u: any) => {
-      const existing = userMap.get(u.id);
-      if (!existing) {
-        userMap.set(u.id, u);
-      } else {
-        // Overwrite existing with any updated values from current save request
-        const mergedUser = { ...existing, ...u };
-        
-        // SECURITY / STABILITY PROTECTIONS:
-        // 1. Prevent non-owner/non-admin clients from overwriting other users' passwords
-        if (u.id !== userId && userId !== 'usr_admin') {
-          mergedUser.password = existing.password;
-        }
-        
-        // 2. Prevent overwriting a custom password with the default 'password123'
-        if (existing.password && existing.password !== 'password123' && u.password === 'password123') {
-          mergedUser.password = existing.password;
-        }
-        
-        userMap.set(u.id, mergedUser);
-      }
-    });
-    db.usersList = Array.from(userMap.values());
-  }
-
-  // 2. Merge plans (ONLY Admin changes are source of truth)
+  // Determine if this is an admin save request FIRST
   const callerUser = userId ? (db.usersList || []).find((u: any) => u.id === userId) : null;
   const isAdminRequest = userId === 'usr_admin' || 
                          (callerUser && (callerUser.role === 'admin' || (callerUser.phone && callerUser.phone.includes('9999999999')))) ||
                          (Array.isArray(incoming.usersList) && incoming.usersList.some((u: any) => u.id === userId && (u.role === 'admin' || (u.phone && u.phone.includes('9999999999')))));
 
+  // 1. Merge usersList safely
+  if (Array.isArray(incoming.usersList)) {
+    const userMap = new Map(db.usersList.map(u => [u.id, u]));
+
+    incoming.usersList.forEach((u: any) => {
+      if (!u || !u.id) return;
+      const existing = userMap.get(u.id);
+
+      if (isAdminRequest) {
+        // Admin requests are authoritative for any user
+        if (!existing) {
+          userMap.set(u.id, u);
+        } else {
+          userMap.set(u.id, { ...existing, ...u });
+        }
+      } else {
+        // NON-ADMIN REQUESTS:
+        // 1. Non-admin users are STRICTLY FORBIDDEN from modifying other users
+        if (u.id !== userId) {
+          // Keep existing user as-is, do not overwrite
+          return;
+        }
+
+        // 2. For the calling user themselves:
+        if (!existing) {
+          userMap.set(u.id, u);
+        } else {
+          const mergedUser = { ...existing, ...u };
+
+          // Protect balance & earnings: Never let a client overwrite higher server/admin-credited balance
+          mergedUser.balance = Math.max(existing.balance ?? 0, u.balance ?? 0);
+          mergedUser.totalEarnings = Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0);
+          mergedUser.totalInvested = Math.max(existing.totalInvested ?? 0, u.totalInvested ?? 0);
+
+          // Preserve admin role and active status
+          mergedUser.role = existing.role || u.role;
+          mergedUser.status = existing.status || u.status;
+
+          // Prevent overwriting custom password with default 'password123'
+          if (existing.password && existing.password !== 'password123' && u.password === 'password123') {
+            mergedUser.password = existing.password;
+          }
+
+          userMap.set(u.id, mergedUser);
+        }
+      }
+    });
+
+    db.usersList = Array.from(userMap.values());
+  }
+
+  // 2. Merge plans (ONLY Admin changes are source of truth)
   if (isAdminRequest && Array.isArray(incoming.plans) && incoming.plans.length > 0) {
     db.plans = incoming.plans;
     incoming.plans.forEach((p: any) => {

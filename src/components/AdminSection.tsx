@@ -1270,6 +1270,7 @@ export default function AdminSection({
     } catch (e) {}
 
     onSyncConfig?.(undefined, undefined, updatedUsers, updatedTx);
+    window.dispatchEvent(new Event('adpaint_users_updated'));
     triggerToast(`Successfully ${adjustType === 'add' ? 'added' : 'deducted'} ₹${amt} from user balance`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
     setAmountAdjust('');

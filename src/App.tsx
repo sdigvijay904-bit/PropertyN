@@ -685,9 +685,7 @@ export default function App() {
               const isRecentlyUpdatedLocally = (Date.now() - lastLocalUpdateRef.current < 15000);
               const finalMe = {
                 ...sanitizedMe,
-                balance: isRecentlyUpdatedLocally
-                  ? Math.max(sanitizedMe.balance ?? 0, currentLocal?.balance ?? 0)
-                  : (typeof sanitizedMe.balance === 'number' ? sanitizedMe.balance : (currentLocal?.balance ?? 0)),
+                balance: Math.max(sanitizedMe.balance ?? 0, currentLocal?.balance ?? 0),
                 totalEarnings: Math.max(sanitizedMe.totalEarnings ?? 0, currentLocal?.totalEarnings ?? 0),
                 totalInvested: Math.max(sanitizedMe.totalInvested ?? 0, currentLocal?.totalInvested ?? 0),
                 inviterCode: sanitizedMe.inviterCode || currentLocal?.inviterCode,
