@@ -133,7 +133,6 @@ export default function ProfileSection({
       await onClaimOrderEarnings(purchaseId);
     } finally {
       setClaimingId(null);
-      setAccruedMap(computeProfileAccruedMap(purchases));
     }
   };
 
@@ -803,7 +802,7 @@ export default function ProfileSection({
                   TOTAL INCOME
                 </span>
                 <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
-                  ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
+                  ₹{totalPlanEarnings % 1 === 0 ? totalPlanEarnings.toLocaleString('en-IN') : totalPlanEarnings.toFixed(2)}
                 </span>
               </div>
             </div>

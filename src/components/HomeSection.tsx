@@ -6,13 +6,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, Wallet, Landmark, Send, HelpCircle, ShieldCheck, Sparkles, ShoppingBag, Coins, BadgeAlert, ArrowUpRight, TrendingUp, Calendar, Award, Heart, Search, X, Star, Info, ChevronRight, MapPin, Percent, Plus, Minus, Check, Smartphone, Download, Banknote, Settings, Volume2, Megaphone } from 'lucide-react';
-import { UserProfile, InvestmentPlan, TransactionRecord } from '../types';
+import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord } from '../types';
 import { openTelegramUrl } from '../lib/telegram';
 import { Real3DWalletIcon, Real3DRechargedBadgeIcon, Real3DIncomeIcon, Real3DRechargeActionIcon, Real3DWithdrawActionIcon, Real3DTelegramIcon, Real3DAppIcon } from './RealIcons';
 
 interface HomeSectionProps {
   user: UserProfile;
   plans: InvestmentPlan[];
+  purchases?: PurchaseRecord[];
   transactions: TransactionRecord[];
   onOpenRecharge: () => void;
   onOpenWithdraw: () => void;
@@ -50,6 +51,7 @@ const SLIDE_METADATA = [
 export default function HomeSection({
   user,
   plans,
+  purchases = [],
   transactions = [],
   onOpenRecharge,
   onOpenWithdraw,
@@ -126,12 +128,14 @@ export default function HomeSection({
     approvedRechargesSum
   );
 
-  // Sum successful claim transactions (only plan earnings!)
+  // Sum successful claim transactions & purchase totalClaimed (only plan earnings!)
+  const totalClaimedFromPurchases = purchases ? purchases.reduce((acc, p) => acc + (p.totalClaimed || 0), 0) : 0;
   const totalClaimedFromTx = transactions
     .filter((t) => t.type === 'claim' && String(t.status || '').toLowerCase() === 'success')
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
   const totalPlanEarnings = Math.max(
     user.totalEarnings || 0,
+    totalClaimedFromPurchases,
     totalClaimedFromTx
   );
 
@@ -325,7 +329,7 @@ export default function HomeSection({
             TOTAL INCOME
           </span>
           <span className="text-xs min-[360px]:text-sm font-black text-slate-900 tracking-tight mt-0.5 w-full px-0.5 break-all text-center">
-            ₹{Math.round(totalPlanEarnings).toLocaleString('en-IN')}
+            ₹{totalPlanEarnings % 1 === 0 ? totalPlanEarnings.toLocaleString('en-IN') : totalPlanEarnings.toFixed(2)}
           </span>
         </div>
       </div>

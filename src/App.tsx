@@ -526,6 +526,7 @@ export default function App() {
         // 1. Sync plans (Admin changes source of truth)
         let plansUpdated = false;
         let finalPlans = currentPlans;
+        const isAdminUser = activeUser?.role === 'admin' || activeUser?.id === 'usr_admin' || activeUser?.phone?.includes('9999999999');
         if (data.plans && data.plans.length > 0) {
           const isDifferent = JSON.stringify(data.plans) !== JSON.stringify(currentPlans);
           if (isDifferent) {
@@ -534,8 +535,8 @@ export default function App() {
             localStorage.setItem('adpaint_plans', JSON.stringify(data.plans));
             finalPlans = data.plans;
           }
-        } else if (currentPlans && currentPlans.length > 0) {
-          // Server plans are empty but we have custom/saved plans locally! Restore them.
+        } else if (isAdminUser && currentPlans && currentPlans.length > 0) {
+          // Admin can initialize server plans if server plans are empty
           plansUpdated = true;
         }
 
@@ -946,6 +947,7 @@ export default function App() {
 
     if (updatedPlans) {
       localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
+      plansRef.current = updatedPlans;
       setPlans(updatedPlans);
     }
     if (updatedPurchases) {
@@ -969,12 +971,40 @@ export default function App() {
 
       const userMap = new Map<string, PurchaseRecord>();
       existingUserP.forEach(p => userMap.set(p.id, p));
-      refinedPurchases.forEach(p => userMap.set(p.id, p));
+      refinedPurchases.forEach(p => {
+        const existing = userMap.get(p.id);
+        if (existing) {
+          userMap.set(p.id, {
+            ...existing,
+            ...p,
+            totalClaimed: Math.max(existing.totalClaimed || 0, p.totalClaimed || 0),
+            lastClaimedAt: (new Date(p.lastClaimedAt || 0).getTime() >= new Date(existing.lastClaimedAt || 0).getTime())
+              ? p.lastClaimedAt
+              : existing.lastClaimedAt
+          });
+        } else {
+          userMap.set(p.id, p);
+        }
+      });
       const finalUserPurchases = Array.from(userMap.values());
 
       const mainMap = new Map<string, PurchaseRecord>();
       existingMainP.forEach(p => mainMap.set(p.id, p));
-      refinedPurchases.forEach(p => mainMap.set(p.id, p));
+      refinedPurchases.forEach(p => {
+        const existing = mainMap.get(p.id);
+        if (existing) {
+          mainMap.set(p.id, {
+            ...existing,
+            ...p,
+            totalClaimed: Math.max(existing.totalClaimed || 0, p.totalClaimed || 0),
+            lastClaimedAt: (new Date(p.lastClaimedAt || 0).getTime() >= new Date(existing.lastClaimedAt || 0).getTime())
+              ? p.lastClaimedAt
+              : existing.lastClaimedAt
+          });
+        } else {
+          mainMap.set(p.id, p);
+        }
+      });
       const finalMainPurchases = Array.from(mainMap.values());
 
       if (userId) {
@@ -1091,8 +1121,9 @@ export default function App() {
         const livePlans: InvestmentPlan[] = [];
         snapshot.forEach(docSnap => {
           const pData = docSnap.data() as InvestmentPlan;
-          if (pData && pData.id && !rawDelP.includes(pData.id)) {
-            livePlans.push(pData);
+          const planId = pData?.id || docSnap.id;
+          if (pData && planId && !rawDelP.includes(planId)) {
+            livePlans.push({ ...pData, id: planId });
           }
         });
 
@@ -1104,6 +1135,7 @@ export default function App() {
           if (isDiff) {
             setPlans(mergedPlans);
             plansRef.current = mergedPlans;
+            localStorage.removeItem('adpaint_plans');
             localStorage.setItem('adpaint_plans', JSON.stringify(mergedPlans));
           }
         }
@@ -1203,7 +1235,9 @@ export default function App() {
               const currentLocal = userProfileRef.current;
               const mergedMe = {
                 ...currentLocal,
-                ...sanitized
+                ...sanitized,
+                balance: Math.max(currentLocal?.balance ?? 0, sanitized.balance ?? 0),
+                totalEarnings: Math.max(currentLocal?.totalEarnings ?? 0, sanitized.totalEarnings ?? 0)
               };
               if (JSON.stringify(mergedMe) !== JSON.stringify(userProfileRef.current)) {
                 setUserProfile(mergedMe);
@@ -2101,7 +2135,8 @@ export default function App() {
 
   // Claim Order Accrued Earnings
   const handleClaimOrderEarnings = async (purchaseId: string) => {
-    if (!userProfile) return;
+    const activeUser = userProfileRef.current || userProfile;
+    if (!activeUser) return;
 
     const purchase = purchases.find((p) => p.id === purchaseId);
     if (!purchase || purchase.completed) return;
@@ -2136,8 +2171,8 @@ export default function App() {
       accruedAmount: accrued,
       prevTotalClaimed: purchase.totalClaimed,
       newTotalClaimed: (purchase.totalClaimed || 0) + accrued,
-      prevUserBalance: userProfile.balance,
-      newUserBalance: (userProfile.balance || 0) + accrued,
+      prevUserBalance: activeUser.balance,
+      newUserBalance: (activeUser.balance || 0) + accrued,
       isCompleting
     });
 
@@ -2146,10 +2181,10 @@ export default function App() {
       return;
     }
 
-    const updatedUser = {
-      ...userProfile,
-      balance: (userProfile.balance || 0) + accrued,
-      totalEarnings: (userProfile.totalEarnings || 0) + accrued
+    const updatedUser: UserProfile = {
+      ...activeUser,
+      balance: (activeUser.balance || 0) + accrued,
+      totalEarnings: (activeUser.totalEarnings || 0) + accrued
     };
 
     let targetUpdatedPurchase: PurchaseRecord | null = null;
@@ -2169,8 +2204,8 @@ export default function App() {
 
     const claimTx: TransactionRecord = {
       id: `tx_claim_${Date.now()}`,
-      userId: userProfile.id,
-      userPhone: userProfile.phone,
+      userId: activeUser.id,
+      userPhone: activeUser.phone,
       type: 'claim',
       amount: accrued,
       date: new Date().toLocaleString(),
@@ -2178,7 +2213,17 @@ export default function App() {
       description: `Claimed accrued advertisement rewards from: ${purchase.planTitle}${isCompleting ? ' (Plan Completed)' : ''}`
     };
 
-    // Immediately update local refs and save state to local storage/React state in 0ms
+    // Update userProfile state using functional state update
+    setUserProfile((prev) => {
+      if (!prev) return updatedUser;
+      return {
+        ...prev,
+        balance: (prev.balance || 0) + accrued,
+        totalEarnings: (prev.totalEarnings || 0) + accrued
+      };
+    });
+
+    // Immediately update local refs BEFORE saveStateToStorage call to prevent race conditions
     purchasesRef.current = updatedPurchases;
     userProfileRef.current = updatedUser;
 
@@ -2465,6 +2510,7 @@ export default function App() {
                       setIsPurchaseOpen(true);
                     }}
                     liveNotification={liveNotif}
+                    purchases={purchases}
                     onOpenDownloadApp={() => setIsDownloadAppOpen(true)}
                   />
                 )}
@@ -2479,6 +2525,7 @@ export default function App() {
                 {activeTab === 'orders' && (
                   <OrdersSection
                     purchases={purchases}
+                    user={userProfile}
                     onClaimOrderEarnings={handleClaimOrderEarnings}
                   />
                 )}

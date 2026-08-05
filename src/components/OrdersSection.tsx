@@ -6,10 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ShoppingBag, TrendingUp, Sparkles, CheckCircle2, Clock, Landmark, Gift } from 'lucide-react';
-import { PurchaseRecord } from '../types';
+import { PurchaseRecord, UserProfile } from '../types';
 
 interface OrdersSectionProps {
   purchases: PurchaseRecord[];
+  user?: UserProfile | null;
   onClaimOrderEarnings: (purchaseId: string) => void;
 }
 
@@ -33,7 +34,7 @@ function computeAccruedMap(purchasesList: PurchaseRecord[]): Record<string, numb
   return updated;
 }
 
-export default function OrdersSection({ purchases, onClaimOrderEarnings }: OrdersSectionProps) {
+export default function OrdersSection({ purchases, user, onClaimOrderEarnings }: OrdersSectionProps) {
   // Local calculation of real-time accrued earnings per active plan
   const [accruedMap, setAccruedMap] = useState<Record<string, number>>(() => computeAccruedMap(purchases));
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -46,7 +47,6 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
       await onClaimOrderEarnings(purchaseId);
     } finally {
       setClaimingId(null);
-      setAccruedMap(computeAccruedMap(purchases));
     }
   };
 
@@ -65,7 +65,8 @@ export default function OrdersSection({ purchases, onClaimOrderEarnings }: Order
   const activePurchases = purchases.filter(p => !p.completed);
   const completedPurchases = purchases.filter(p => p.completed);
 
-  const totalClaimed = purchases.reduce((acc: number, p: PurchaseRecord) => acc + p.totalClaimed, 0);
+  const sumPurchasesClaimed = purchases.reduce((acc: number, p: PurchaseRecord) => acc + (p.totalClaimed || 0), 0);
+  const totalClaimed = Math.max(user?.totalEarnings || 0, sumPurchasesClaimed);
   const currentUnclaimedLive = purchases.reduce((acc: number, p: PurchaseRecord) => {
     if (!p.completed) {
       return acc + (accruedMap[p.id] || 0);

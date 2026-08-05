@@ -399,9 +399,17 @@ app.post("/api/save-state", (req, res) => {
     db.usersList = Array.from(userMap.values());
   }
 
-  // 2. Merge plans (Admin changes are source of truth)
-  if (Array.isArray(incoming.plans) && incoming.plans.length > 0) {
+  // 2. Merge plans (ONLY Admin changes are source of truth)
+  const callerUser = userId ? (db.usersList || []).find((u: any) => u.id === userId) : null;
+  const isAdminRequest = userId === 'usr_admin' || 
+                         (callerUser && (callerUser.role === 'admin' || (callerUser.phone && callerUser.phone.includes('9999999999')))) ||
+                         (Array.isArray(incoming.usersList) && incoming.usersList.some((u: any) => u.id === userId && (u.role === 'admin' || (u.phone && u.phone.includes('9999999999')))));
+
+  if (isAdminRequest && Array.isArray(incoming.plans) && incoming.plans.length > 0) {
     db.plans = incoming.plans;
+    incoming.plans.forEach((p: any) => {
+      if (p && p.id) writeFirestoreRestServer("plans", p.id, p);
+    });
   }
 
   // 3. Merge transactions

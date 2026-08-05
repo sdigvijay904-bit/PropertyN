@@ -1564,12 +1564,11 @@ export default function AdminSection({
 
     if (!isQuotaExceeded()) {
       try {
-        const savedPlanObj = editingPlan
-          ? updatedPlansList.find(p => p.id === editingPlan.id)
-          : updatedPlansList[updatedPlansList.length - 1];
-        if (savedPlanObj) {
-          setDoc(doc(db, "plans", savedPlanObj.id), cleanUndefined(savedPlanObj), { merge: true }).catch(markQuotaExceeded);
-        }
+        updatedPlansList.forEach(p => {
+          if (p && p.id) {
+            setDoc(doc(db, "plans", p.id), cleanUndefined(p), { merge: true }).catch(markQuotaExceeded);
+          }
+        });
       } catch (e) {
         markQuotaExceeded(e);
         console.warn("Notice saving plan to firestore:", e);

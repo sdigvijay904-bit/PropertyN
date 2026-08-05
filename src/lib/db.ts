@@ -2189,29 +2189,6 @@ export async function firestoreSaveState(payload: {
     if (rawDelPur) deletedPurchases = JSON.parse(rawDelPur);
   } catch (e) {}
 
-  if (Array.isArray(plans)) {
-    plans = plans.filter(p => p && p.id && !deletedPlans.includes(p.id));
-  }
-  if (Array.isArray(purchases)) {
-    purchases = purchases.filter(p => p && p.id && !deletedPurchases.includes(p.id));
-  }
-
-  // Persist locally first so offline / quota-exceeded changes are never lost!
-  saveMasterSnapshotBackup({ usersList, plans, transactions, purchases, config, customTicker });
-
-  if (Array.isArray(usersList) && usersList.length > 0) {
-    localStorage.setItem('adpaint_users_list', JSON.stringify(usersList));
-  }
-  if (Array.isArray(transactions) && transactions.length > 0) {
-    localStorage.setItem('adpaint_transactions', JSON.stringify(transactions));
-  }
-  if (Array.isArray(plans) && plans.length > 0) {
-    localStorage.setItem('adpaint_plans', JSON.stringify(plans));
-  }
-  if (userId && Array.isArray(purchases)) {
-    localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(purchases));
-  }
-
   let isAdmin = false;
   if (userId) {
     const uLower = userId.toLowerCase();
@@ -2228,6 +2205,33 @@ export async function firestoreSaveState(payload: {
     if (caller && (caller.role === 'admin' || (caller.phone && caller.phone.includes('9999999999')))) {
       isAdmin = true;
     }
+  }
+
+  if (isAdmin && Array.isArray(plans)) {
+    plans = plans.filter(p => p && p.id && !deletedPlans.includes(p.id));
+  } else {
+    // Non-admin cannot mutate plans; keep current stored plans
+    plans = getStoredPlans();
+  }
+
+  if (Array.isArray(purchases)) {
+    purchases = purchases.filter(p => p && p.id && !deletedPurchases.includes(p.id));
+  }
+
+  // Persist locally first so offline / quota-exceeded changes are never lost!
+  saveMasterSnapshotBackup({ usersList, plans: isAdmin ? plans : undefined, transactions, purchases, config, customTicker });
+
+  if (Array.isArray(usersList) && usersList.length > 0) {
+    localStorage.setItem('adpaint_users_list', JSON.stringify(usersList));
+  }
+  if (Array.isArray(transactions) && transactions.length > 0) {
+    localStorage.setItem('adpaint_transactions', JSON.stringify(transactions));
+  }
+  if (isAdmin && Array.isArray(plans) && plans.length > 0) {
+    localStorage.setItem('adpaint_plans', JSON.stringify(plans));
+  }
+  if (userId && Array.isArray(purchases)) {
+    localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(purchases));
   }
 
   if (!isQuotaExceeded()) {
