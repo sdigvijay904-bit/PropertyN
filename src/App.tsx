@@ -11,7 +11,7 @@ import {
   Check, ShoppingBag
 } from 'lucide-react';
 
-import { UserProfile, InvestmentPlan, PurchaseRecord, TransactionRecord, TeamMember, BankAccount, isSponsorMatch } from './types';
+import { UserProfile, InvestmentPlan, PurchaseRecord, TransactionRecord, TeamMember, BankAccount, isSponsorMatch, validateUserProfile, validateInvestmentPlan } from './types';
 import { INITIAL_PLANS, MOCK_TEAM_MEMBERS, INITIAL_TRANSACTIONS, GENERATE_RANDOM_LIVE_NOTIF } from './data';
 
 import HomeSection from './components/HomeSection';
@@ -49,7 +49,7 @@ import {
   markQuotaExceeded
 } from './lib/db';
 import { db } from './lib/firebase';
-import { doc, setDoc, onSnapshot, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, collection } from 'firebase/firestore';
 import { firebaseService } from './firebase/config';
 
 export default function App() {
@@ -813,11 +813,12 @@ export default function App() {
       clearTimeout(pushTimeoutRef.current);
     }
 
-    const targetUser = user || userProfileRef.current;
-    const targetPlans = currentPlans || plansRef.current;
+    const rawUser = user || userProfileRef.current;
+    const targetUser = rawUser ? validateUserProfile(rawUser) : null;
+    const targetPlans = (currentPlans || plansRef.current).map(validateInvestmentPlan);
     const rawPurchases = currentPurchases || purchasesRef.current;
     const targetTransactions = currentTransactions || transactionsRef.current;
-    const targetUsersList = currentUsersList || usersListRef.current;
+    const targetUsersList = (currentUsersList || usersListRef.current).map(validateUserProfile);
 
     pushTimeoutRef.current = setTimeout(async () => {
       lastLocalUpdateRef.current = Date.now();
@@ -1664,7 +1665,47 @@ export default function App() {
     setIsSubmittingAuth(true);
 
     try {
-      // Instant success registration (0ms local-first architecture)
+      // 1. Strict Database Query Check to ensure no two accounts can ever be created using the same mobile number
+      let isDuplicate = false;
+
+      // Check Firestore REST API directly for user document or phone query
+      try {
+        const restCheckRes = await fetch(`https://firestore.googleapis.com/v1/projects/ai-studio-propertynrealest-a366a56b-05b0-4ca9-9769-c63579d84978/databases/(default)/documents/users/usr_${clean10Digits}`);
+        if (restCheckRes.ok) {
+          isDuplicate = true;
+        }
+      } catch (e) {}
+
+      // Check Express backend server DB
+      if (!isDuplicate) {
+        try {
+          const apiCheckRes = await fetch(`/api/check-phone?phone=${encodeURIComponent(targetPhone)}`);
+          if (apiCheckRes.ok) {
+            const apiCheckData = await apiCheckRes.json();
+            if (apiCheckData.exists) {
+              isDuplicate = true;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // Check Firestore Web SDK doc directly
+      if (!isDuplicate && !isQuotaExceeded()) {
+        try {
+          const userDocSnap = await getDoc(doc(db, "users", `usr_${clean10Digits}`));
+          if (userDocSnap.exists()) {
+            isDuplicate = true;
+          }
+        } catch (e) {}
+      }
+
+      if (isDuplicate) {
+        setAuthError('This mobile number is already registered! Please log in.');
+        setIsSubmittingAuth(false);
+        return;
+      }
+
+      // 2. Proceed to register account
       const finalInviterCode = invitationCode || localStorage.getItem('adpaint_pending_invite_code') || undefined;
 
       const regData = await firestoreRegister({
@@ -1981,14 +2022,15 @@ export default function App() {
 
   const handleAdminSetUsersList = (action: React.SetStateAction<UserProfile[]>) => {
     const updated = typeof action === 'function' ? (action as Function)(usersListRef.current) : action;
+    const validated = (updated || []).map((u: UserProfile) => validateUserProfile(u));
     
-    localStorage.setItem('adpaint_users_list', JSON.stringify(updated));
-    usersListRef.current = updated;
-    setUsersList(updated);
+    localStorage.setItem('adpaint_users_list', JSON.stringify(validated));
+    usersListRef.current = validated;
+    setUsersList(validated);
 
     let currentMe = userProfileRef.current;
     if (currentMe) {
-      const matching = updated.find((u: UserProfile) => u.id === currentMe!.id);
+      const matching = validated.find((u: UserProfile) => u.id === currentMe!.id);
       if (matching) {
         currentMe = matching;
         setUserProfile(matching);
@@ -1997,17 +2039,18 @@ export default function App() {
       }
     }
     
-    pushStateToServer(currentMe, plansRef.current, purchasesRef.current, transactionsRef.current, updated);
+    pushStateToServer(currentMe, plansRef.current, purchasesRef.current, transactionsRef.current, validated);
   };
 
   const handleAdminSetPlans = (action: React.SetStateAction<InvestmentPlan[]>) => {
     const updated = typeof action === 'function' ? (action as Function)(plansRef.current) : action;
+    const validated = (updated || []).map((p: InvestmentPlan) => validateInvestmentPlan(p));
     
-    localStorage.setItem('adpaint_plans', JSON.stringify(updated));
-    plansRef.current = updated;
-    setPlans(updated);
+    localStorage.setItem('adpaint_plans', JSON.stringify(validated));
+    plansRef.current = validated;
+    setPlans(validated);
     
-    pushStateToServer(userProfileRef.current, updated, purchasesRef.current, transactionsRef.current, usersListRef.current);
+    pushStateToServer(userProfileRef.current, validated, purchasesRef.current, transactionsRef.current, usersListRef.current);
   };
 
   const handleAdminSetTransactions = (action: React.SetStateAction<TransactionRecord[]>) => {
@@ -2452,23 +2495,28 @@ export default function App() {
               triggerToast={triggerToast}
               onRefreshData={handleSyncData}
               onUpdateCurrentUserProfile={(profile) => {
-                saveStateToStorage(profile);
+                if (!profile) return;
+                const validated = validateUserProfile(profile);
+                saveStateToStorage(validated);
               }}
               onSyncConfig={(updatedPlans, updatedPurchases, updatedUsers, updatedTx) => {
                 lastLocalUpdateRef.current = Date.now();
-                if (updatedPlans) {
-                  setPlans(updatedPlans);
-                  plansRef.current = updatedPlans;
-                  localStorage.setItem('adpaint_plans', JSON.stringify(updatedPlans));
+                const validatedPlans = updatedPlans ? updatedPlans.map(validateInvestmentPlan) : undefined;
+                const validatedUsers = updatedUsers ? updatedUsers.map(validateUserProfile) : undefined;
+
+                if (validatedPlans) {
+                  setPlans(validatedPlans);
+                  plansRef.current = validatedPlans;
+                  localStorage.setItem('adpaint_plans', JSON.stringify(validatedPlans));
                 }
                 if (updatedPurchases) {
                   setPurchases(updatedPurchases);
                   purchasesRef.current = updatedPurchases;
                 }
-                if (updatedUsers) {
-                  setUsersList(updatedUsers);
-                  usersListRef.current = updatedUsers;
-                  localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+                if (validatedUsers) {
+                  setUsersList(validatedUsers);
+                  usersListRef.current = validatedUsers;
+                  localStorage.setItem('adpaint_users_list', JSON.stringify(validatedUsers));
                 }
                 if (updatedTx) {
                   setTransactions(updatedTx);
@@ -2477,11 +2525,11 @@ export default function App() {
                 }
 
                 pushStateToServer(
-                  userProfile,
-                  updatedPlans || plansRef.current,
+                  userProfile ? validateUserProfile(userProfile) : null,
+                  validatedPlans || plansRef.current,
                   updatedPurchases || purchasesRef.current,
                   updatedTx || transactionsRef.current,
-                  updatedUsers || usersListRef.current
+                  validatedUsers || usersListRef.current
                 );
               }}
             />

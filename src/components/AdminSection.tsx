@@ -251,12 +251,16 @@ export default function AdminSection({
     return localStorage.getItem('adpaint_support_avatar');
   });
   const avatarFileInputRef = React.useRef<HTMLInputElement>(null);
+  const usersListRef = React.useRef(usersList);
+  React.useEffect(() => {
+    usersListRef.current = usersList;
+  }, [usersList]);
 
   React.useEffect(() => {
     let isMounted = true;
     const doScan = async () => {
       try {
-        const scanned = await scanAndMergeAllUsers();
+        const scanned = await scanAndMergeAllUsers(usersListRef.current);
         if (isMounted && scanned && scanned.length > 0) {
           setUsersList(scanned);
           onSyncConfig?.(undefined, undefined, scanned, undefined);
@@ -1256,6 +1260,14 @@ export default function AdminSection({
         markQuotaExceeded(e);
       }
     }
+
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers, transactions: updatedTx })
+      }).catch(() => {});
+    } catch (e) {}
 
     onSyncConfig?.(undefined, undefined, updatedUsers, updatedTx);
     triggerToast(`Successfully ${adjustType === 'add' ? 'added' : 'deducted'} ₹${amt} from user balance`, 'success');

@@ -119,3 +119,82 @@ export function isSponsorMatch(sponsor: UserProfile, inviterCode?: string): bool
   }
   return false;
 }
+
+export function validateUserProfile(profile: Partial<UserProfile>): UserProfile {
+  const safeNumber = (val: any, fallback = 0): number => {
+    const num = Number(val);
+    return typeof num === 'number' && !isNaN(num) && isFinite(num) && num >= 0 ? num : fallback;
+  };
+
+  const cleanPhone = String(profile.phone || '').trim();
+  const rawDigits = cleanPhone.replace(/\D/g, '').slice(-10);
+  const formattedPhone = cleanPhone.startsWith('+91')
+    ? cleanPhone
+    : (rawDigits.length >= 10 ? `+91 ${rawDigits}` : cleanPhone || '+91 0000000000');
+
+  const id = String(profile.id || (rawDigits ? `usr_${rawDigits}` : 'usr_guest')).trim();
+
+  return {
+    ...profile,
+    id,
+    name: String(profile.name || 'User').trim(),
+    phone: formattedPhone,
+    email: profile.email ? String(profile.email).trim() : undefined,
+    balance: safeNumber(profile.balance, 0),
+    totalEarnings: safeNumber(profile.totalEarnings, 0),
+    dailyEarned: safeNumber(profile.dailyEarned, 0),
+    checkedInToday: Boolean(profile.checkedInToday),
+    lastCheckInDate: profile.lastCheckInDate ? String(profile.lastCheckInDate) : undefined,
+    inviteCode: String(profile.inviteCode || Math.floor(10000 + Math.random() * 90000)).trim(),
+    inviterCode: profile.inviterCode ? String(profile.inviterCode).trim() : undefined,
+    withdrawPassword: profile.withdrawPassword ? String(profile.withdrawPassword) : undefined,
+    bankAccount: profile.bankAccount ? {
+      bankName: String(profile.bankAccount.bankName || ''),
+      accountHolder: String(profile.bankAccount.accountHolder || ''),
+      accountNumber: String(profile.bankAccount.accountNumber || ''),
+      ifscCode: String(profile.bankAccount.ifscCode || '')
+    } : undefined,
+    role: profile.role === 'admin' ? 'admin' : 'user',
+    password: profile.password ? String(profile.password) : 'password123',
+    status: profile.status === 'blocked' ? 'blocked' : 'active',
+    totalInvested: safeNumber(profile.totalInvested, 0),
+    createdAt: profile.createdAt ? String(profile.createdAt) : new Date().toISOString(),
+    registrationDate: profile.registrationDate ? String(profile.registrationDate) : new Date().toISOString(),
+    deviceInfo: profile.deviceInfo ? String(profile.deviceInfo) : undefined,
+    avatar: profile.avatar ? String(profile.avatar) : undefined,
+    kycStatus: (['none', 'pending', 'verified', 'rejected'].includes(profile.kycStatus as string))
+      ? profile.kycStatus
+      : 'none',
+    kycIdType: profile.kycIdType ? String(profile.kycIdType) : undefined,
+    kycIdNumber: profile.kycIdNumber ? String(profile.kycIdNumber) : undefined,
+    kycDocBase64: profile.kycDocBase64 ? String(profile.kycDocBase64) : undefined,
+    notifications: Array.isArray(profile.notifications) ? profile.notifications : []
+  };
+}
+
+export function validateInvestmentPlan(plan: Partial<InvestmentPlan>): InvestmentPlan {
+  const safeNumber = (val: any, fallback = 0): number => {
+    const num = Number(val);
+    return typeof num === 'number' && !isNaN(num) && isFinite(num) && num >= 0 ? num : fallback;
+  };
+
+  const price = safeNumber(plan.price, 0);
+  const dailyIncome = safeNumber(plan.dailyIncome, 0);
+  const durationDays = Math.max(1, Math.round(safeNumber(plan.durationDays, 1)));
+  const totalProfit = safeNumber(plan.totalProfit, dailyIncome * durationDays);
+  const slotsMax = Math.max(0, Math.round(safeNumber(plan.slotsMax, 100)));
+  const slotsPurchased = Math.max(0, Math.round(safeNumber(plan.slotsPurchased, 0)));
+
+  return {
+    id: String(plan.id || `plan_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`).trim(),
+    type: plan.type === 'vip' ? 'vip' : 'daily',
+    title: String(plan.title || 'Investment Plan').trim(),
+    price,
+    dailyIncome,
+    durationDays,
+    totalProfit,
+    image: String(plan.image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600'),
+    slotsMax,
+    slotsPurchased
+  };
+}

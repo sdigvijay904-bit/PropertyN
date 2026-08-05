@@ -715,7 +715,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
   const userMap = new Map<string, UserProfile>();
   const phoneMap = new Map<string, string>(); // clean 10-digit phone -> user ID
 
-  const addUserToMap = (u: Partial<UserProfile> & { id: string }, isServer = false) => {
+  const addUserToMap = (u: Partial<UserProfile> & { id: string }, isServer = false, isCurrentLocal = false) => {
     if (!u || !u.id || u.id === 'usr_demo') return;
     // Reject transactions, deposits, purchases, plans
     if ((u as any).type || (u as any).amount !== undefined || (u as any).utrNumber !== undefined || (u as any).dailyIncome !== undefined) return;
@@ -733,39 +733,49 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
 
     const existing = userMap.get(targetId);
     if (existing) {
-      if (isServer) {
-        // Server data takes master precedence as modified in Admin panel
-        const merged: UserProfile = {
-          ...existing,
-          ...u,
-          id: targetId,
-          balance: typeof u.balance === 'number' ? u.balance : (existing.balance ?? 0),
-          totalEarnings: typeof u.totalEarnings === 'number' ? u.totalEarnings : (existing.totalEarnings ?? 0),
-          totalInvested: typeof u.totalInvested === 'number' ? u.totalInvested : (existing.totalInvested ?? 0),
-          password: (u as UserProfile).password || existing.password || 'password123',
-          bankAccount: (u as UserProfile).bankAccount || existing.bankAccount,
-          inviterCode: (u as UserProfile).inviterCode || existing.inviterCode || '',
-          role: existing.role === 'admin' || u.role === 'admin' ? 'admin' : (u.role || existing.role || 'user')
-        };
-        userMap.set(targetId, merged);
-      } else {
-        const merged: UserProfile = {
-          ...u,
-          ...existing,
-          id: targetId,
-          password: existing.password || (u as UserProfile).password || 'password123',
-          bankAccount: existing.bankAccount || (u as UserProfile).bankAccount,
-          inviterCode: existing.inviterCode || (u as UserProfile).inviterCode || '',
-          role: existing.role === 'admin' || u.role === 'admin' ? 'admin' : (existing.role || u.role || 'user')
-        };
-        userMap.set(targetId, merged);
+      // Smart Balance Merging: Never let a stale 0 balance overwrite a non-zero updated balance
+      let finalBalance = existing.balance;
+      if (typeof u.balance === 'number') {
+        if (isCurrentLocal) {
+          finalBalance = u.balance;
+        } else if (existing.balance === 0 || existing.balance === 100) {
+          finalBalance = u.balance;
+        } else if (u.balance > 0 && existing.balance > 0) {
+          // If server or local has higher or updated balance, take master non-zero
+          finalBalance = isServer ? u.balance : existing.balance;
+        }
+      }
+
+      const merged: UserProfile = {
+        ...existing,
+        ...u,
+        id: targetId,
+        balance: typeof finalBalance === 'number' ? finalBalance : (existing.balance ?? 0),
+        totalEarnings: Math.max(existing.totalEarnings ?? 0, u.totalEarnings ?? 0),
+        totalInvested: Math.max(existing.totalInvested ?? 0, u.totalInvested ?? 0),
+        name: u.name && u.name !== 'User' ? u.name : (existing.name || u.name || 'User'),
+        phone: u.phone || existing.phone || (cleanPhoneDigits ? `+91 ${cleanPhoneDigits}` : ''),
+        password: (u as UserProfile).password && (u as UserProfile).password !== 'password123'
+          ? (u as UserProfile).password
+          : (existing.password || (u as UserProfile).password || 'password123'),
+        bankAccount: (u as UserProfile).bankAccount || existing.bankAccount,
+        inviterCode: (u as UserProfile).inviterCode || existing.inviterCode || '',
+        role: existing.role === 'admin' || u.role === 'admin' ? 'admin' : (u.role || existing.role || 'user'),
+        status: (u as UserProfile).status || existing.status || 'active',
+        kycStatus: (u as UserProfile).kycStatus && (u as UserProfile).kycStatus !== 'none'
+          ? (u as UserProfile).kycStatus
+          : (existing.kycStatus || 'none')
+      };
+      userMap.set(targetId, merged);
+      if (cleanPhoneDigits) {
+        phoneMap.set(cleanPhoneDigits, targetId);
       }
     } else {
       const newUserProfile: UserProfile = {
         id: targetId,
         name: u.name || `User ${cleanPhoneDigits || targetId.replace('usr_', '')}`,
         phone: u.phone || (cleanPhoneDigits ? `+91 ${cleanPhoneDigits}` : ''),
-        balance: u.balance ?? 100,
+        balance: typeof u.balance === 'number' ? u.balance : 100,
         totalEarnings: u.totalEarnings ?? 0,
         dailyEarned: u.dailyEarned ?? 0,
         checkedInToday: u.checkedInToday ?? false,
@@ -785,9 +795,23 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
     }
   };
 
+  // 1. First add current in-memory usersList & local storage users so recent edits are registered in userMap first!
+  currentUsersList.forEach(u => {
+    if (u && u.id && u.id !== 'usr_demo') {
+      addUserToMap(u, false, true);
+    }
+  });
+
+  const allLocalUsers = getStoredUsers();
+  allLocalUsers.forEach(u => {
+    if (u && u.id && u.id !== 'usr_demo') {
+      addUserToMap(u, false, false);
+    }
+  });
+
   const serverUserIds = new Set<string>();
 
-  // 1a. Fetch server state users from Express /api/get-state (100% reliable across Meta Ads WebView & Mobile)
+  // 2a. Fetch server state users from Express /api/get-state
   try {
     const apiRes = await fetch('/api/get-state');
     if (apiRes.ok) {
@@ -796,25 +820,25 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         apiData.usersList.forEach((u: any) => {
           if (u && u.id && u.id !== 'usr_demo') {
             serverUserIds.add(u.id);
-            addUserToMap(u, true);
+            addUserToMap(u, true, false);
           }
         });
       }
     }
   } catch (e) {}
 
-  // 1b. Fetch users via Firestore REST API (Works directly in all mobile browsers & Meta WebView without WebChannel issues)
+  // 2b. Fetch users via Firestore REST API
   try {
     const restUsers = await fetchFirestoreCollectionViaRest("users");
     restUsers.forEach((uData) => {
       if (uData && uData.id) {
         serverUserIds.add(uData.id);
-        addUserToMap(uData, true);
+        addUserToMap(uData, true, false);
       }
     });
   } catch (e) {}
 
-  // 1c. Fetch users via Firestore Web SDK (if quota not exceeded)
+  // 2c. Fetch users via Firestore Web SDK (if quota not exceeded)
   if (!isQuotaExceeded()) {
     try {
       const usersSnap = await getDocs(collection(db, "users"));
@@ -823,7 +847,7 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
         if (uData && (uData.id || docSnap.id)) {
           const docId = uData.id || docSnap.id;
           serverUserIds.add(docId);
-          addUserToMap({ ...uData, id: docId }, true);
+          addUserToMap({ ...uData, id: docId }, true, false);
         }
       });
     } catch (e) {
@@ -831,20 +855,10 @@ export async function scanAndMergeAllUsers(currentUsersList: UserProfile[] = [])
     }
   }
 
-  // 2. Add current in-memory usersList & all local storage stored users
-  const allLocalUsers = getStoredUsers();
-  currentUsersList.forEach(u => {
-    if (u && u.id && u.id !== 'usr_demo') {
-      addUserToMap(u, false);
-    }
-  });
-
   const unmigratedUsersToPush: UserProfile[] = [];
   allLocalUsers.forEach(u => {
     if (u && u.id && u.id !== 'usr_demo') {
       const isMissingOnServer = !serverUserIds.has(u.id);
-      addUserToMap(u, false);
-
       if (isMissingOnServer) {
         const finalU = userMap.get(u.id);
         if (finalU) unmigratedUsersToPush.push(finalU);
@@ -2233,6 +2247,15 @@ export async function firestoreSaveState(payload: {
   if (userId && Array.isArray(purchases)) {
     localStorage.setItem(`adpaint_purchases_${userId}`, JSON.stringify(purchases));
   }
+
+  // Also post state update asynchronously to Express /api/save-state endpoint to keep backend DB_FILE in sync
+  try {
+    fetch('/api/save-state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, usersList, plans: isAdmin ? plans : undefined, transactions, purchases, config, customTicker })
+    }).catch(() => {});
+  } catch (e) {}
 
   if (!isQuotaExceeded()) {
     try {

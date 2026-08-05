@@ -131,8 +131,14 @@ app.get("/api/check-phone", (req, res) => {
   if (!phone) {
     return res.status(400).json({ error: "Phone number is required." });
   }
+  const cleanQuery = phone.replace(/\D/g, '').slice(-10);
   const db = readDb();
-  const exists = (db.usersList || []).some((u: any) => u.phone === phone);
+  const exists = (db.usersList || []).some((u: any) => {
+    if (!u || !u.phone) return false;
+    if (u.phone === phone) return true;
+    const uClean = u.phone.replace(/\D/g, '').slice(-10);
+    return uClean.length >= 10 && uClean === cleanQuery;
+  });
   res.json({ exists });
 });
 
