@@ -1523,14 +1523,27 @@ export default function AdminSection({
 
     let transferredCount = 0;
     const updatedUsers = usersList.map(u => {
+      // Don't modify sourceUser or targetUser's own sponsor
+      if ((sourceUser && u.id === sourceUser.id) || (targetUser && u.id === targetUser.id)) {
+        return u;
+      }
+
       let isReferral = false;
 
       if (sourceUser && isSponsorMatch(sourceUser, u.inviterCode)) {
         isReferral = true;
-      } else if (u.inviterCode) {
+      }
+
+      if (!isReferral && u.inviterCode) {
         const invClean = u.inviterCode.trim().toLowerCase();
         const invDigits = invClean.replace(/\D/g, '').slice(-10);
-        if (invClean === sourceCode.toLowerCase() || (sourceDigits && invDigits && invDigits === sourceDigits)) {
+
+        if (
+          invClean === sourceCode.toLowerCase() ||
+          (sourceUser?.inviteCode && invClean === sourceUser.inviteCode.toLowerCase()) ||
+          (sourceUser?.id && invClean === sourceUser.id.toLowerCase()) ||
+          (sourceDigits.length >= 10 && invDigits.length >= 10 && invDigits === sourceDigits)
+        ) {
           isReferral = true;
         }
       }
@@ -1550,7 +1563,8 @@ export default function AdminSection({
     });
 
     if (transferredCount === 0) {
-      triggerToast(`No referrals found currently matching "${sourceCode}".`, 'info');
+      const sourceName = sourceUser ? `${sourceUser.name} (${sourceCode})` : sourceCode;
+      triggerToast(`No direct referrals found currently matching "${sourceName}".`, 'info');
       return;
     }
 
@@ -1562,7 +1576,7 @@ export default function AdminSection({
       try {
         updatedUsers.forEach(u => {
           if (u.inviterCode === newSponsorCode) {
-            setDoc(doc(db, "users", u.id), cleanUndefined(u)).catch(markQuotaExceeded);
+            setDoc(doc(db, "users", u.id), cleanUndefined(u), { merge: true }).catch(markQuotaExceeded);
           }
         });
       } catch (e) {
@@ -1571,8 +1585,11 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
+
+    const fromLabel = sourceUser ? sourceUser.name : sourceCode;
+    const toLabel = targetUser ? targetUser.name : targetCode;
     triggerToast(
-      `Shifted ${transferredCount} referral(s) from ${sourceUser ? sourceUser.name : sourceCode} to ${targetUser ? targetUser.name : targetCode} successfully!`,
+      `Successfully transferred ${transferredCount} referral(s) from ${fromLabel} to ${toLabel}!`,
       'success'
     );
     setShowTransferModal(false);
