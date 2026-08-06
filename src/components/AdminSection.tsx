@@ -7,7 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, UserPlus, Wallet, TrendingUp, ShieldCheck, Check, X, Edit2, Plus, Trash2, Search,
-  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag, Power, PauseCircle, Coins
+  ArrowDownLeft, ArrowUpRight, Award, Landmark, RefreshCw, Send, Sparkles, Database, FileText, QrCode, Smartphone, LogOut, Camera, Upload, Image as ImageIcon, Copy, ShoppingBag, Package, Tag, Power, PauseCircle, Coins, ArrowLeftRight
 } from 'lucide-react';
 import SupportAgentAvatar from './SupportAgentAvatar';
 import { UserProfile, InvestmentPlan, TransactionRecord, PurchaseRecord, isSponsorMatch } from '../types';
@@ -445,6 +445,8 @@ export default function AdminSection({
   const [editPassword, setEditPassword] = useState<string>('');
   const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
   const [editTotalEarnings, setEditTotalEarnings] = useState<string>('');
+  const [editInviterCode, setEditInviterCode] = useState<string>('');
+  const [editInviteCode, setEditInviteCode] = useState<string>('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -456,6 +458,11 @@ export default function AdminSection({
   const [newUserBalance, setNewUserBalance] = useState<string>('0');
   const [newUserRole, setNewUserRole] = useState<'user' | 'admin'>('user');
   const [newUserInviterCode, setNewUserInviterCode] = useState<string>('');
+
+  // Bulk Transfer Referrals modal states
+  const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
+  const [transferFromInput, setTransferFromInput] = useState<string>('7798044426');
+  const [transferToInput, setTransferToInput] = useState<string>('8087055133');
 
   const syncConfigDirectToFirestore = async (overrides?: Record<string, string>) => {
     const keysToSync = [
@@ -1411,6 +1418,164 @@ export default function AdminSection({
     setEditPassword(user.password || 'password123');
     setEditRole(user.role || 'user');
     setEditTotalEarnings(user.totalEarnings !== undefined ? user.totalEarnings.toString() : '0');
+    setEditInviterCode(user.inviterCode || '');
+    setEditInviteCode(user.inviteCode || '');
+  };
+
+  // Save Referral / Sponsor Code Handler
+  const handleSaveInviterCode = () => {
+    if (!editingUser) return;
+
+    const trimmedInviter = editInviterCode.trim();
+    const trimmedOwnCode = editInviteCode.trim();
+
+    // Prevent self-referral
+    if (trimmedInviter) {
+      const isSelf = 
+        editingUser.id === trimmedInviter || 
+        editingUser.inviteCode === trimmedInviter ||
+        (editingUser.phone && editingUser.phone.replace(/\D/g, '').slice(-10) === trimmedInviter.replace(/\D/g, '').slice(-10));
+      
+      if (isSelf) {
+        triggerToast('A user cannot be set as their own sponsor!', 'error');
+        return;
+      }
+    }
+
+    // Check if custom invite code is taken
+    if (trimmedOwnCode) {
+      const codeExists = usersList.some(u => u.id !== editingUser.id && u.inviteCode === trimmedOwnCode);
+      if (codeExists) {
+        triggerToast('This Invite Code is already assigned to another user!', 'error');
+        return;
+      }
+    }
+
+    const updatedUsers = usersList.map(u => {
+      if (u.id === editingUser.id) {
+        const updated = {
+          ...u,
+          inviterCode: trimmedInviter,
+          inviteCode: trimmedOwnCode || u.inviteCode
+        };
+
+        if (currentProfile && u.id === currentProfile.id) {
+          onUpdateCurrentUserProfile(updated);
+        }
+        return updated;
+      }
+      return u;
+    });
+
+    setUsersList(updatedUsers);
+    localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+
+    if (!isQuotaExceeded()) {
+      try {
+        const uObj = updatedUsers.find(u => u.id === editingUser.id);
+        if (uObj) {
+          setDoc(doc(db, "users", editingUser.id), cleanUndefined(uObj)).catch(markQuotaExceeded);
+        }
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
+    }
+
+    onSyncConfig?.(undefined, undefined, updatedUsers);
+    triggerToast(trimmedInviter ? `Sponsor code set to "${trimmedInviter}" successfully!` : 'Sponsor removed (Direct user)', 'success');
+    setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
+  };
+
+  // Bulk Transfer All Referrals Handler
+  const handleBulkTransferReferrals = () => {
+    const sourceCode = transferFromInput.trim();
+    const targetCode = transferToInput.trim();
+
+    if (!sourceCode || !targetCode) {
+      triggerToast('Please enter both source user ID/phone (From) and target user ID/phone (To)!', 'error');
+      return;
+    }
+
+    const sourceDigits = sourceCode.replace(/\D/g, '').slice(-10);
+    const targetDigits = targetCode.replace(/\D/g, '').slice(-10);
+
+    const sourceUser = usersList.find(u => 
+      u.id === sourceCode || 
+      (u.inviteCode && u.inviteCode.toLowerCase() === sourceCode.toLowerCase()) ||
+      (u.phone && u.phone.replace(/\D/g, '').slice(-10) === sourceDigits)
+    );
+
+    const targetUser = usersList.find(u => 
+      u.id === targetCode || 
+      (u.inviteCode && u.inviteCode.toLowerCase() === targetCode.toLowerCase()) ||
+      (u.phone && u.phone.replace(/\D/g, '').slice(-10) === targetDigits)
+    );
+
+    if (sourceUser && targetUser && sourceUser.id === targetUser.id) {
+      triggerToast('Source user and Target user cannot be the same account!', 'error');
+      return;
+    }
+
+    // Determine sponsor code to assign to transferred users
+    const newSponsorCode = targetUser 
+      ? (targetUser.inviteCode || targetUser.phone.replace(/\D/g, '').slice(-10) || targetUser.id) 
+      : targetCode;
+
+    let transferredCount = 0;
+    const updatedUsers = usersList.map(u => {
+      let isReferral = false;
+
+      if (sourceUser && isSponsorMatch(sourceUser, u.inviterCode)) {
+        isReferral = true;
+      } else if (u.inviterCode) {
+        const invClean = u.inviterCode.trim().toLowerCase();
+        const invDigits = invClean.replace(/\D/g, '').slice(-10);
+        if (invClean === sourceCode.toLowerCase() || (sourceDigits && invDigits && invDigits === sourceDigits)) {
+          isReferral = true;
+        }
+      }
+
+      if (isReferral) {
+        transferredCount++;
+        const updated = {
+          ...u,
+          inviterCode: newSponsorCode
+        };
+        if (currentProfile && u.id === currentProfile.id) {
+          onUpdateCurrentUserProfile(updated);
+        }
+        return updated;
+      }
+      return u;
+    });
+
+    if (transferredCount === 0) {
+      triggerToast(`No referrals found currently matching "${sourceCode}".`, 'info');
+      return;
+    }
+
+    setUsersList(updatedUsers);
+    localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+
+    // Sync updated users to Firestore
+    if (!isQuotaExceeded()) {
+      try {
+        updatedUsers.forEach(u => {
+          if (u.inviterCode === newSponsorCode) {
+            setDoc(doc(db, "users", u.id), cleanUndefined(u)).catch(markQuotaExceeded);
+          }
+        });
+      } catch (e) {
+        markQuotaExceeded(e);
+      }
+    }
+
+    onSyncConfig?.(undefined, undefined, updatedUsers);
+    triggerToast(
+      `Shifted ${transferredCount} referral(s) from ${sourceUser ? sourceUser.name : sourceCode} to ${targetUser ? targetUser.name : targetCode} successfully!`,
+      'success'
+    );
+    setShowTransferModal(false);
   };
 
   // Override Total Income / Plan Yield Handler
@@ -2216,6 +2381,16 @@ export default function AdminSection({
 
                   <button
                     type="button"
+                    onClick={() => setShowTransferModal(true)}
+                    className="px-3.5 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-500/20 shrink-0"
+                    title="Bulk Transfer All Referrals From One User To Another"
+                  >
+                    <ArrowLeftRight className="w-4 h-4" />
+                    <span className="hidden sm:inline">Transfer Referrals</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={async () => {
                       setIsRefreshing(true);
                       try {
@@ -2639,6 +2814,112 @@ export default function AdminSection({
                         Update Income
                       </button>
                     </div>
+                  </div>
+
+                  {/* Referral & Sponsor Override Form (स्पॉन्सर / रेफरल कोड एडिट करें) */}
+                  <div className="space-y-3.5 pt-4 border-t border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Referral & Sponsor Code Edit (रेफरल / स्पॉन्सर कोड सेट करें)</span>
+                      </h5>
+                      <span className="text-[9px] font-mono text-slate-400">
+                        Current: {editingUser.inviterCode ? (
+                          <strong className="text-emerald-400">{editingUser.inviterCode}</strong>
+                        ) : (
+                          <span className="text-slate-500 font-semibold">Direct (No Sponsor)</span>
+                        )}
+                      </span>
+                    </div>
+                    <p className="text-[9.5px] text-slate-400 leading-tight">
+                      Easily edit who referred this user or assign a new sponsor. Select from existing registered users or enter custom Invite Code / Phone number.
+                    </p>
+
+                    {/* Active Sponsor Card if present */}
+                    {editingUser.inviterCode && (() => {
+                      const sponsor = usersList.find(u => isSponsorMatch(u, editingUser.inviterCode));
+                      return (
+                        <div className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                              {sponsor ? sponsor.name.charAt(0).toUpperCase() : '?'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-white leading-none">
+                                {sponsor ? sponsor.name : 'Unknown Sponsor'}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                {sponsor ? sponsor.phone : `Code: ${editingUser.inviterCode}`} {sponsor?.inviteCode ? `(Invite Code: ${sponsor.inviteCode})` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setEditInviterCode('')}
+                            className="text-[10px] text-rose-400 hover:text-rose-300 font-bold px-2 py-1 bg-rose-500/10 border border-rose-500/20 rounded-lg cursor-pointer"
+                          >
+                            Remove Sponsor
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                          Sponsor Code or Phone Number
+                        </label>
+                        <input
+                          type="text"
+                          value={editInviterCode}
+                          onChange={(e) => setEditInviterCode(e.target.value)}
+                          placeholder="Invite Code (e.g. 47523 or 9876543210)"
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-amber-500 font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                          Select Sponsor From Users
+                        </label>
+                        <select
+                          value={editInviterCode}
+                          onChange={(e) => setEditInviterCode(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-amber-500 font-sans"
+                        >
+                          <option value="">-- No Sponsor (Direct User) --</option>
+                          {usersList
+                            .filter(u => u.id !== editingUser.id)
+                            .map(u => (
+                              <option key={u.id} value={u.inviteCode || u.phone}>
+                                {u.name} ({u.phone}) - Code: {u.inviteCode || 'N/A'}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                          User's Own Referral Code (Invite Code)
+                        </label>
+                        <input
+                          type="text"
+                          value={editInviteCode}
+                          onChange={(e) => setEditInviteCode(e.target.value)}
+                          placeholder="User's referral code"
+                          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-teal-300 focus:outline-none focus:ring-1 focus:ring-teal-500 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveInviterCode}
+                      className="w-full py-2.5 mt-1 bg-gradient-to-r from-amber-600 via-teal-600 to-emerald-600 hover:from-amber-700 hover:to-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                    >
+                      <Check className="w-4 h-4 text-white" />
+                      <span>Save Referral & Sponsor Settings</span>
+                    </button>
                   </div>
 
                   {/* Bank Details Config Form (Override channel) */}
@@ -3142,6 +3423,14 @@ export default function AdminSection({
                                     Direct Organic Registration
                                   </span>
                                 )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenUserEdit(user)}
+                                  className="text-[9px] bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 px-2 py-0.5 rounded-lg font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                >
+                                  <Edit2 className="w-2.5 h-2.5 text-amber-400" />
+                                  <span>Edit Refer / Sponsor</span>
+                                </button>
                               </div>
                             </div>
                             
@@ -4929,6 +5218,119 @@ export default function AdminSection({
                       Yes, Delete
                     </button>
                   </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {/* Bulk Transfer Referrals Modal */}
+          {showTransferModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl relative overflow-hidden space-y-4"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold">
+                      <ArrowLeftRight className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                        Bulk Referral Transfer
+                      </h3>
+                      <p className="text-[10px] text-slate-400">
+                        Transfer all referrals from one user ID to another
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowTransferModal(false)}
+                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Source User Input / Select */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>From (Source User / ID / Phone):</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={transferFromInput}
+                      onChange={(e) => setTransferFromInput(e.target.value)}
+                      placeholder="e.g. 7798044426"
+                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
+                    />
+                    <select
+                      value={transferFromInput}
+                      onChange={(e) => setTransferFromInput(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-[11px] text-slate-300 focus:outline-none"
+                    >
+                      <option value="">-- Select Source User --</option>
+                      {usersList.map(u => (
+                        <option key={`from_${u.id}`} value={u.phone.replace(/\D/g, '').slice(-10) || u.inviteCode || u.id}>
+                          {u.name} ({u.phone}) - Code: {u.inviteCode || 'N/A'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex justify-center text-amber-500 my-1">
+                    <ArrowLeftRight className="w-5 h-5" />
+                  </div>
+
+                  {/* Target User Input / Select */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                      <span>To (Target User / ID / Phone):</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={transferToInput}
+                      onChange={(e) => setTransferToInput(e.target.value)}
+                      placeholder="e.g. 8087055133"
+                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    />
+                    <select
+                      value={transferToInput}
+                      onChange={(e) => setTransferToInput(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-[11px] text-slate-300 focus:outline-none"
+                    >
+                      <option value="">-- Select Target User --</option>
+                      {usersList.map(u => (
+                        <option key={`to_${u.id}`} value={u.phone.replace(/\D/g, '').slice(-10) || u.inviteCode || u.id}>
+                          {u.name} ({u.phone}) - Code: {u.inviteCode || 'N/A'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="p-3 bg-amber-950/20 border border-amber-500/20 rounded-xl text-[10.5px] text-amber-200 leading-relaxed">
+                    💡 This will transfer all members currently referred by <strong>{transferFromInput || 'Source'}</strong> to <strong>{transferToInput || 'Target'}</strong> and update Firestore database records immediately.
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTransferModal(false)}
+                    className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold uppercase rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkTransferReferrals}
+                    className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-lg cursor-pointer"
+                  >
+                    Transfer Referrals
+                  </button>
                 </div>
               </motion.div>
             </div>
