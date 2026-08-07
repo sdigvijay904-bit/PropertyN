@@ -1233,12 +1233,27 @@ export default function App() {
           if (u && u.id !== 'usr_demo' && !u.id?.startsWith('tx_') && !u.id?.startsWith('pur_') && !u.id?.startsWith('dep_') && !(u as any).type) {
             const uid = u.id || d.id;
             const existing = liveUsersMap.get(uid);
-            liveUsersMap.set(uid, {
+            // Ensure Firestore's balance & totalEarnings are authoritative if present
+            const updatedUser: UserProfile = {
               ...existing,
               ...u,
               id: uid,
+              balance: typeof u.balance === 'number' ? u.balance : (existing?.balance ?? 0),
+              totalEarnings: typeof u.totalEarnings === 'number' ? u.totalEarnings : (existing?.totalEarnings ?? 0),
               password: u.password || existing?.password || 'password123'
-            });
+            };
+            liveUsersMap.set(uid, updatedUser);
+
+            // If this is the currently logged-in user, ensure userProfile state stays in sync!
+            if (userProfileRef.current && userProfileRef.current.id === uid) {
+              const currentLocal = userProfileRef.current;
+              if (currentLocal.balance !== updatedUser.balance || currentLocal.totalEarnings !== updatedUser.totalEarnings) {
+                const mergedMe = { ...currentLocal, ...updatedUser };
+                setUserProfile(mergedMe);
+                userProfileRef.current = mergedMe;
+                localStorage.setItem('adpaint_user', JSON.stringify(mergedMe));
+              }
+            }
           }
         });
 
