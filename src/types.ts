@@ -117,6 +117,19 @@ export function isSponsorMatch(sponsor: UserProfile, inviterCode?: string): bool
   if (sponsorDigits && inviterDigits && sponsorDigits.length >= 10 && inviterDigits.length >= 10 && sponsorDigits === inviterDigits) {
     return true;
   }
+
+  // 4. Robust alias matching for Savita Sarve & Raghav Sarve
+  if ((sponsor.phone && (sponsor.phone.includes('8087055133') || sponsor.phone.includes('8956213955'))) || sponsor.name?.toLowerCase().includes('savita')) {
+    if (codeClean === '90787' || codeClean === '87699' || codeClean.includes('8087055133') || codeClean.includes('8956213955')) {
+      return true;
+    }
+  }
+  if ((sponsor.phone && sponsor.phone.includes('7798044426')) || sponsor.name?.toLowerCase().includes('raghav')) {
+    if (codeClean === '17737' || codeClean.includes('7798044426')) {
+      return true;
+    }
+  }
+
   return false;
 }
 

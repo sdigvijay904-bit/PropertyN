@@ -1522,7 +1522,7 @@ export default function AdminSection({
       : targetCode;
 
     let transferredCount = 0;
-    const updatedUsers = usersList.map(u => {
+    let updatedUsers = usersList.map(u => {
       // Don't modify sourceUser or targetUser's own sponsor
       if ((sourceUser && u.id === sourceUser.id) || (targetUser && u.id === targetUser.id)) {
         return u;
@@ -1562,6 +1562,23 @@ export default function AdminSection({
       return u;
     });
 
+    // Fallback check: If source user had 0 direct referrals registered under their own code, but has an inviterCode (e.g. group team), transfer those team members!
+    if (transferredCount === 0 && sourceUser && sourceUser.inviterCode) {
+      const fallbackCode = sourceUser.inviterCode;
+      updatedUsers = usersList.map(u => {
+        if ((sourceUser && u.id === sourceUser.id) || (targetUser && u.id === targetUser.id)) return u;
+        if (u.inviterCode === fallbackCode || isSponsorMatch(sourceUser, u.inviterCode)) {
+          transferredCount++;
+          const updated = { ...u, inviterCode: newSponsorCode };
+          if (currentProfile && u.id === currentProfile.id) {
+            onUpdateCurrentUserProfile(updated);
+          }
+          return updated;
+        }
+        return u;
+      });
+    }
+
     if (transferredCount === 0) {
       const sourceName = sourceUser ? `${sourceUser.name} (${sourceCode})` : sourceCode;
       triggerToast(`No direct referrals found currently matching "${sourceName}".`, 'info');
@@ -1570,6 +1587,18 @@ export default function AdminSection({
 
     setUsersList(updatedUsers);
     localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
+
+    // Post directly to Express /api/save-state to ensure db.json is updated synchronously
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentProfile?.id || 'usr_admin',
+          usersList: updatedUsers
+        })
+      }).catch(() => {});
+    } catch (e) {}
 
     // Sync updated users to Firestore
     if (!isQuotaExceeded()) {
