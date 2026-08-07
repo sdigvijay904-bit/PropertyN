@@ -503,6 +503,18 @@ export default function AdminSection({
       window.dispatchEvent(new Event('adpaint_avatar_updated'));
     }
 
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: 'usr_admin',
+          config: configMap,
+          customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+        })
+      }).catch(() => {});
+    } catch (e) {}
+
     if (onSyncConfig) {
       onSyncConfig();
     }
@@ -1322,6 +1334,13 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers })
+      }).catch(() => {});
+    } catch (e) {}
     triggerToast('Bank credentials overridden successfully!', 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -1386,6 +1405,13 @@ export default function AdminSection({
 
     window.dispatchEvent(new Event('adpaint_users_updated'));
     onSyncConfig?.(undefined, undefined, updatedUsers);
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers })
+      }).catch(() => {});
+    } catch (e) {}
 
     logAdminAction('registration', 'Admin Created User', `Created account +91 ${clean10} with balance ₹${initialBal}`, {
       userName: newUser.name,
@@ -1482,6 +1508,13 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers })
+      }).catch(() => {});
+    } catch (e) {}
     triggerToast(trimmedInviter ? `Sponsor code set to "${trimmedInviter}" successfully!` : 'Sponsor removed (Direct user)', 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -1664,6 +1697,13 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers })
+      }).catch(() => {});
+    } catch (e) {}
     triggerToast(`Total Income updated to ₹${newEarnings.toLocaleString('en-IN')}`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -1727,6 +1767,13 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers })
+      }).catch(() => {});
+    } catch (e) {}
     triggerToast('User credentials updated successfully!', 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -1765,6 +1812,13 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(undefined, undefined, updatedUsers);
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers })
+      }).catch(() => {});
+    } catch (e) {}
     triggerToast(`User account status updated to ${nextStatus.toUpperCase()}!`, 'success');
     setEditingUser(updatedUsers.find(u => u.id === editingUser.id) || null);
   };
@@ -1786,6 +1840,13 @@ export default function AdminSection({
       setUsersList(updatedUsers);
       localStorage.setItem('adpaint_users_list', JSON.stringify(updatedUsers));
       onSyncConfig?.(undefined, undefined, updatedUsers);
+      try {
+        fetch('/api/save-state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: 'usr_admin', usersList: updatedUsers })
+        }).catch(() => {});
+      } catch (e) {}
 
       triggerToast(`User ${editingUser.name} permanently deleted!`, 'success');
       setEditingUser(null);
@@ -1889,6 +1950,13 @@ export default function AdminSection({
     }
 
     onSyncConfig?.(updatedPlansList);
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'usr_admin', plans: updatedPlansList })
+      }).catch(() => {});
+    } catch (e) {}
     logAdminAction(
       'plan',
       editingPlan ? 'Ad Plan Updated' : 'New Ad Plan Published',
@@ -1937,6 +2005,13 @@ export default function AdminSection({
       }
 
       onSyncConfig?.(updatedPlans);
+      try {
+        fetch('/api/save-state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: 'usr_admin', plans: updatedPlans })
+        }).catch(() => {});
+      } catch (e) {}
       const targetPlan = plans.find(p => p.id === planId);
       logAdminAction('plan', 'Ad Plan Removed', `Permanently deleted ad plan "${targetPlan?.title || planId}"`, {
         amount: targetPlan?.price,

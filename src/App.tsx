@@ -65,18 +65,7 @@ function ensureCanonicalPlans(incoming: InvestmentPlan[]): InvestmentPlan[] {
   if (Array.isArray(incoming)) {
     incoming.forEach(p => {
       if (!p || !p.id || rawDelP.includes(p.id)) return;
-      let upgraded = { ...p };
-      const initMatch = INITIAL_PLANS.find(ip => ip.id === p.id);
-      if (initMatch) {
-        upgraded = {
-          ...upgraded,
-          price: initMatch.price,
-          dailyIncome: initMatch.dailyIncome,
-          durationDays: initMatch.durationDays,
-          totalProfit: initMatch.totalProfit
-        };
-      }
-      planMap.set(upgraded.id, upgraded);
+      planMap.set(p.id, p);
     });
   }
 

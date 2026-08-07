@@ -158,18 +158,7 @@ const upgradeDefaultPlans = (plans: any[]): any[] => {
   if (Array.isArray(plans)) {
     plans.forEach(p => {
       if (!p || !p.id) return;
-      let upgraded = { ...p };
-      const def = DEFAULT_SERVER_PLANS.find(sp => sp.id === p.id);
-      if (def) {
-        upgraded = {
-          ...upgraded,
-          price: def.price,
-          dailyIncome: def.dailyIncome,
-          durationDays: def.durationDays,
-          totalProfit: def.totalProfit
-        };
-      }
-      planMap.set(upgraded.id, upgraded);
+      planMap.set(p.id, p);
     });
   }
 
@@ -502,34 +491,27 @@ app.post("/api/save-state", (req, res) => {
 
   // 1. Merge usersList safely
   if (Array.isArray(incoming.usersList)) {
-    const userMap = new Map(db.usersList.map(u => [u.id, u]));
+    if (isAdminRequest) {
+      // Admin requests are authoritative for the entire usersList
+      db.usersList = incoming.usersList;
+    } else {
+      // NON-ADMIN REQUESTS:
+      const userMap = new Map(db.usersList.map(u => [u.id, u]));
+      incoming.usersList.forEach((u: any) => {
+        if (!u || !u.id) return;
+        const existing = userMap.get(u.id);
 
-    incoming.usersList.forEach((u: any) => {
-      if (!u || !u.id) return;
-      const existing = userMap.get(u.id);
-
-      if (isAdminRequest) {
-        // Admin requests are authoritative for any user
-        if (!existing) {
-          userMap.set(u.id, u);
-        } else {
-          userMap.set(u.id, { ...existing, ...u });
-        }
-      } else {
-        // NON-ADMIN REQUESTS:
-        // 1. Non-admin users are STRICTLY FORBIDDEN from modifying other users
         if (u.id !== userId) {
-          // Keep existing user as-is, do not overwrite
+          // Non-admin users cannot modify other users
           return;
         }
 
-        // 2. For the calling user themselves:
         if (!existing) {
           userMap.set(u.id, u);
         } else {
           const mergedUser = { ...existing, ...u };
 
-          // Allow client balance updates (e.g., plan purchases, claims, withdrawals) for the calling user
+          // Allow client balance updates for the calling user
           mergedUser.balance = typeof u.balance === 'number' ? u.balance : (existing.balance ?? 0);
           mergedUser.totalEarnings = typeof u.totalEarnings === 'number' ? u.totalEarnings : (existing.totalEarnings ?? 0);
           mergedUser.totalInvested = typeof u.totalInvested === 'number' ? u.totalInvested : (existing.totalInvested ?? 0);
@@ -545,10 +527,9 @@ app.post("/api/save-state", (req, res) => {
 
           userMap.set(u.id, mergedUser);
         }
-      }
-    });
-
-    db.usersList = Array.from(userMap.values());
+      });
+      db.usersList = Array.from(userMap.values());
+    }
   }
 
   // 2. Merge plans (ONLY Admin changes are source of truth)
@@ -585,15 +566,14 @@ app.post("/api/save-state", (req, res) => {
 
   writeDb(db);
 
-  // Sync usersList & transactions to Firestore REST asynchronously with controlled batching
+  // Sync usersList & transactions to Firestore REST asynchronously
   if (Array.isArray(incoming.usersList)) {
-    const usersToSync = incoming.usersList.filter((u: any) => u && u.id).slice(-10);
-    usersToSync.forEach((u: any) => {
-      writeFirestoreRestServer("users", u.id, u);
+    incoming.usersList.forEach((u: any) => {
+      if (u && u.id) writeFirestoreRestServer("users", u.id, u);
     });
   }
   if (Array.isArray(incoming.transactions)) {
-    const txToSync = incoming.transactions.filter((t: any) => t && t.id).slice(0, 10);
+    const txToSync = incoming.transactions.filter((t: any) => t && t.id).slice(0, 20);
     txToSync.forEach((t: any) => {
       writeFirestoreRestServer("transactions", t.id, t);
     });
