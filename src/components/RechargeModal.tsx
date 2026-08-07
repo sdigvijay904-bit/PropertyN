@@ -55,22 +55,38 @@ export default function RechargeModal({
   const [qrBase64, setQrBase64] = useState<string>('');
 
   // Load configured merchant payment gateways from Admin settings or fallback
-  const [upiId, setUpiId] = useState<string>('propertyn@ybl');
-  const [upiName, setUpiName] = useState<string>('PropertyN Payments Ltd');
+  const [upiId, setUpiId] = useState<string>(() => localStorage.getItem('adpaint_upi_id') || 'digvijay990@nyes');
+  const [upiName, setUpiName] = useState<string>(() => localStorage.getItem('adpaint_upi_name') || 'PropertyN Solutions');
   const [cashierUrl, setCashierUrl] = useState<string>('');
   const [minRecharge, setMinRecharge] = useState<number>(250);
 
   useEffect(() => {
-    const syncPaymentConfig = () => {
-      const savedUpiId = localStorage.getItem('adpaint_upi_id') || 'propertyn@ybl';
-      const savedUpiName = localStorage.getItem('adpaint_upi_name') || 'PropertyN Payments Ltd';
-      const savedCashierUrl = localStorage.getItem('adpaint_cashier_url') || '';
-      const savedMinRecharge = parseFloat(localStorage.getItem('adpaint_min_recharge') || '250');
+    const syncPaymentConfig = async () => {
+      let savedUpiId = localStorage.getItem('adpaint_upi_id');
+      let savedUpiName = localStorage.getItem('adpaint_upi_name');
+      let savedCashierUrl = localStorage.getItem('adpaint_cashier_url') || '';
+      let savedMinRecharge = parseFloat(localStorage.getItem('adpaint_min_recharge') || '250');
 
-      setUpiId(savedUpiId);
-      setUpiName(savedUpiName);
+      if (savedUpiId) setUpiId(savedUpiId);
+      if (savedUpiName) setUpiName(savedUpiName);
       setCashierUrl(savedCashierUrl);
       setMinRecharge(savedMinRecharge);
+
+      // Async live fetch from Express server db.json to guarantee 100% up-to-date merchant UPI ID
+      try {
+        const apiRes = await fetch('/api/get-state');
+        if (apiRes.ok) {
+          const apiData = await apiRes.json();
+          if (apiData?.config?.adpaint_upi_id) {
+            const serverUpi = apiData.config.adpaint_upi_id;
+            const serverName = apiData.config.adpaint_upi_name || 'PropertyN Solutions';
+            localStorage.setItem('adpaint_upi_id', serverUpi);
+            localStorage.setItem('adpaint_upi_name', serverName);
+            setUpiId(serverUpi);
+            setUpiName(serverName);
+          }
+        }
+      } catch (e) {}
     };
 
     if (isOpen) {

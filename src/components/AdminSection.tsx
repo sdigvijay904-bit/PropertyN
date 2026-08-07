@@ -234,7 +234,7 @@ export default function AdminSection({
   
   // UPI / QR code config states
   const [upiIdInput, setUpiIdInput] = useState<string>(() => {
-    return localStorage.getItem('adpaint_upi_id') || 'pay-propn@ybl';
+    return localStorage.getItem('adpaint_upi_id') || 'digvijay990@nyes';
   });
   const [upiNameInput, setUpiNameInput] = useState<string>(() => {
     return localStorage.getItem('adpaint_upi_name') || 'PropertyN Solutions';
@@ -411,7 +411,7 @@ export default function AdminSection({
   });
 
   // Saved config states for UI display reactivity
-  const [savedUpiId, setSavedUpiId] = useState<string>(() => localStorage.getItem('adpaint_upi_id') || 'pay-propn@ybl');
+  const [savedUpiId, setSavedUpiId] = useState<string>(() => localStorage.getItem('adpaint_upi_id') || 'digvijay990@nyes');
   const [savedUpiName, setSavedUpiName] = useState<string>(() => localStorage.getItem('adpaint_upi_name') || 'PropertyN Solutions');
   const [savedCashierUrl, setSavedCashierUrl] = useState<string>(() => localStorage.getItem('adpaint_cashier_url') || 'https://cashiernew.blue-pay.vip/#/mobile');
   const [savedTgChannel, setSavedTgChannel] = useState<string>(() => localStorage.getItem('adpaint_tg_channel') || 'https://t.me/PropertyN_99');
