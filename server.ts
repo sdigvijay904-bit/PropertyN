@@ -178,7 +178,18 @@ const getInitialState = (): DbState => {
     plans: DEFAULT_SERVER_PLANS,
     transactions: [],
     purchasesByUserId: {},
-    config: {},
+    config: {
+      adpaint_upi_id: "digvijay990@nyes",
+      adpaint_upi_name: "PropertyN Solutions",
+      adpaint_tg_channel: "https://t.me/PropertyN_99",
+      adpaint_tg_support: "https://t.me/PropertyN_Support",
+      adpaint_platform_name: "PropertyN",
+      adpaint_daily_bonus: "10",
+      adpaint_min_withdrawal: "300",
+      adpaint_min_recharge: "250",
+      adpaint_recharge_presets: "250, 500, 750, 1000, 2200, 4840",
+      adpaint_withdraw_time: "12:30AM - 11:59PM"
+    },
     customTicker: null
   };
 };

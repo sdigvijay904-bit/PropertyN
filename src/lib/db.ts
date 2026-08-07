@@ -178,7 +178,7 @@ const SEED_PLANS: InvestmentPlan[] = [
 ];
 
 const SEED_CONFIG: Record<string, string> = {
-  adpaint_upi_id: "sdigvijay904-3@oksbi",
+  adpaint_upi_id: "digvijay990@nyes",
   adpaint_upi_name: "PropertyN Solutions",
   adpaint_tg_channel: "https://t.me/PropertyN_99",
   adpaint_tg_support: "https://t.me/PropertyN_Support",
@@ -2260,6 +2260,63 @@ export async function firestoreGetState(userId: string): Promise<any> {
     const rawDelPur = localStorage.getItem('adpaint_deleted_purchases');
     if (rawDelPur) deletedPurchases = JSON.parse(rawDelPur);
   } catch (e) {}
+
+  // Always query Express /api/get-state to merge backend db.json config, transactions, users & plans
+  try {
+    const apiRes = await fetch(`/api/get-state${userId ? '?userId=' + encodeURIComponent(userId) : ''}`);
+    if (apiRes.ok) {
+      const apiData = await apiRes.json();
+      if (apiData) {
+        // Merge Server Config (Server Config ALWAYS takes master precedence over local storage defaults)
+        if (apiData.config && typeof apiData.config === 'object') {
+          config = { ...config, ...apiData.config };
+          Object.entries(apiData.config).forEach(([key, val]) => {
+            if (typeof val === 'string' && val !== '') {
+              localStorage.setItem(key, val);
+            }
+          });
+          window.dispatchEvent(new Event('adpaint_config_updated'));
+          window.dispatchEvent(new Event('adpaint_avatar_updated'));
+        }
+        if (apiData.customTicker) {
+          customTicker = apiData.customTicker;
+          localStorage.setItem('adpaint_custom_ticker', customTicker);
+          window.dispatchEvent(new Event('adpaint_notice_updated'));
+        }
+        // Merge Server Transactions (including user-submitted recharge deposit requests)
+        if (Array.isArray(apiData.transactions) && apiData.transactions.length > 0) {
+          const txMap = new Map<string, TransactionRecord>();
+          transactions.forEach(t => { if (t && t.id) txMap.set(t.id, t); });
+          apiData.transactions.forEach((t: TransactionRecord) => {
+            if (t && t.id) {
+              txMap.set(t.id, t);
+            }
+          });
+          transactions = Array.from(txMap.values());
+          localStorage.setItem('adpaint_transactions', JSON.stringify(transactions));
+        }
+        // Merge Server Users
+        if (Array.isArray(apiData.usersList) && apiData.usersList.length > 0) {
+          const uMap = new Map<string, UserProfile>();
+          usersList.forEach(u => { if (u && u.id) uMap.set(u.id, u); });
+          apiData.usersList.forEach((u: UserProfile) => {
+            if (u && u.id) {
+              const existing = uMap.get(u.id);
+              uMap.set(u.id, existing ? { ...existing, ...u } : u);
+            }
+          });
+          usersList = Array.from(uMap.values());
+          localStorage.setItem('adpaint_users_list', JSON.stringify(usersList));
+        }
+        // Merge Server Plans
+        if (Array.isArray(apiData.plans) && apiData.plans.length > 0) {
+          plans = apiData.plans;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Express /api/get-state sync notice:", e);
+  }
 
   plans = plans.filter(p => p && p.id && !deletedPlans.includes(p.id));
   purchases = purchases.filter(p => p && p.id && !deletedPurchases.includes(p.id));

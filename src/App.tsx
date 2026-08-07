@@ -2375,6 +2375,18 @@ export default function App() {
       }
     }
 
+    // Direct immediate save to Express server db.json so Admin Panel gets it instantly regardless of Firestore state
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userProfile.id,
+          transactions: [...transactions, rechargeTx]
+        })
+      }).catch(() => {});
+    } catch (e) {}
+
     saveStateToStorage(userProfile, plans, purchases, [...transactions, rechargeTx], teamMembers);
     triggerToast(`Recharge of ₹${amount % 1 === 0 ? amount.toLocaleString('en-IN') : amount.toFixed(2)} submitted! Waiting for Admin verification.`, 'info');
   };
