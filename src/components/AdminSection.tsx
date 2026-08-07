@@ -488,10 +488,25 @@ export default function AdminSection({
     if (!isQuotaExceeded()) {
       try {
         const configDocRef = doc(db, "global", "config");
-        await setDoc(configDocRef, {
-          config: configMap,
-          customTicker: localStorage.getItem('adpaint_custom_ticker') || null
-        }, { merge: true });
+        const pConfigDocRef1 = doc(db, "settings", "payment_config");
+        const pConfigDocRef2 = doc(db, "settings", "payment");
+
+        const paymentPayload = {
+          upiId: configMap['adpaint_upi_id'] || 'digvijay990@nyes',
+          merchantName: configMap['adpaint_upi_name'] || 'PropertyN Solutions',
+          minDeposit: parseFloat(configMap['adpaint_min_recharge'] || '250'),
+          updatedAt: new Date().toISOString()
+        };
+
+        await Promise.all([
+          setDoc(configDocRef, {
+            config: configMap,
+            customTicker: localStorage.getItem('adpaint_custom_ticker') || null
+          }, { merge: true }),
+          setDoc(pConfigDocRef1, paymentPayload, { merge: true }),
+          setDoc(pConfigDocRef2, paymentPayload, { merge: true })
+        ]);
+
         window.dispatchEvent(new Event('adpaint_config_updated'));
         window.dispatchEvent(new Event('adpaint_avatar_updated'));
       } catch (err) {

@@ -132,13 +132,21 @@ export const firebaseService = {
 
   // --- SETTINGS APIS ---
   getSettings: async (): Promise<PaymentSettings> => {
-    let settings = DEFAULT_SETTINGS;
+    let settings = { ...DEFAULT_SETTINGS };
+    const adpaintUpiId = localStorage.getItem('adpaint_upi_id');
+    const adpaintUpiName = localStorage.getItem('adpaint_upi_name');
+
     if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
         const docRef = doc(db, 'settings', 'payment_config');
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           settings = { ...DEFAULT_SETTINGS, ...(docSnap.data() as PaymentSettings) };
+        } else {
+          const altDocSnap = await getDoc(doc(db, 'settings', 'payment'));
+          if (altDocSnap.exists()) {
+            settings = { ...DEFAULT_SETTINGS, ...(altDocSnap.data() as PaymentSettings) };
+          }
         }
       } catch (e) {
         markQuotaExceeded(e);
@@ -152,8 +160,6 @@ export const firebaseService = {
         settings = { ...settings, ...JSON.parse(saved) };
       } catch {}
     }
-    const adpaintUpiId = localStorage.getItem('adpaint_upi_id');
-    const adpaintUpiName = localStorage.getItem('adpaint_upi_name');
     if (adpaintUpiId) settings.upiId = adpaintUpiId;
     if (adpaintUpiName) settings.merchantName = adpaintUpiName;
     return settings;
@@ -165,25 +171,53 @@ export const firebaseService = {
       updatedAt: new Date().toISOString()
     };
     
-    // Save to Firestore if available
+    // Always persist locally & in sync
+    localStorage.setItem('propertyn_payment_config', JSON.stringify(cleanSettings));
+    localStorage.setItem('adpaint_upi_id', cleanSettings.upiId);
+    localStorage.setItem('adpaint_upi_name', cleanSettings.merchantName);
+    localStorage.setItem('adpaint_min_recharge', cleanSettings.minDeposit.toString());
+    localStorage.setItem('adpaint_max_recharge', cleanSettings.maxDeposit.toString());
+
+    // Save to Firestore collections if available
     if (isRealFirebaseActive && db && !isQuotaExceeded()) {
       try {
-        const docRef = doc(db, 'settings', 'payment_config');
-        await setDoc(docRef, cleanSettings);
+        const docRef1 = doc(db, 'settings', 'payment_config');
+        const docRef2 = doc(db, 'settings', 'payment');
+        const globalConfigRef = doc(db, 'global', 'config');
+        
+        await Promise.all([
+          setDoc(docRef1, cleanSettings, { merge: true }),
+          setDoc(docRef2, cleanSettings, { merge: true }),
+          setDoc(globalConfigRef, {
+            config: {
+              adpaint_upi_id: cleanSettings.upiId,
+              adpaint_upi_name: cleanSettings.merchantName,
+              adpaint_min_recharge: cleanSettings.minDeposit.toString()
+            }
+          }, { merge: true })
+        ]);
       } catch (e) {
         markQuotaExceeded(e);
         console.warn("Firestore updateSettings error:", e);
       }
     }
-    
-    // Always persist locally & in sync with db.json/localStorage
-    localStorage.setItem('propertyn_payment_config', JSON.stringify(cleanSettings));
-    
-    // Sync to App's global configs as well!
-    localStorage.setItem('adpaint_upi_id', cleanSettings.upiId);
-    localStorage.setItem('adpaint_upi_name', cleanSettings.merchantName);
-    localStorage.setItem('adpaint_min_recharge', cleanSettings.minDeposit.toString());
-    localStorage.setItem('adpaint_max_recharge', cleanSettings.maxDeposit.toString());
+
+    // Also persist to Express backend db.json
+    try {
+      fetch('/api/save-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: {
+            adpaint_upi_id: cleanSettings.upiId,
+            adpaint_upi_name: cleanSettings.merchantName,
+            adpaint_min_recharge: cleanSettings.minDeposit.toString()
+          }
+        })
+      }).catch(() => {});
+    } catch (e) {}
+
+    window.dispatchEvent(new Event('adpaint_config_updated'));
   },
 
   // --- DEPOSITS APIS ---

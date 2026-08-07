@@ -95,9 +95,39 @@ export default function DepositPage({ user, triggerToast, onDepositSubmitted, on
   useEffect(() => {
     const fetchSettings = async () => {
       const liveSettings = await firebaseService.getSettings();
+      // Ensure master override from localStorage or server API
+      const localUpi = localStorage.getItem('adpaint_upi_id');
+      const localName = localStorage.getItem('adpaint_upi_name');
+      if (localUpi) liveSettings.upiId = localUpi;
+      if (localName) liveSettings.merchantName = localName;
+
       setSettings(liveSettings);
+
+      // Async fetch from Express server /api/get-state
+      try {
+        const res = await fetch('/api/get-state');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.config?.adpaint_upi_id) {
+            const serverUpi = data.config.adpaint_upi_id;
+            const serverName = data.config.adpaint_upi_name || 'PropertyN Solutions';
+            localStorage.setItem('adpaint_upi_id', serverUpi);
+            localStorage.setItem('adpaint_upi_name', serverName);
+            setSettings(prev => ({
+              ...prev,
+              upiId: serverUpi,
+              merchantName: serverName
+            }));
+          }
+        }
+      } catch (e) {}
     };
+
     fetchSettings();
+    window.addEventListener('adpaint_config_updated', fetchSettings);
+    return () => {
+      window.removeEventListener('adpaint_config_updated', fetchSettings);
+    };
   }, []);
 
   // Countdown timer effect

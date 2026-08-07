@@ -1100,6 +1100,8 @@ export default function App() {
     let unsubPlans: (() => void) | null = null;
     let unsubUsers: (() => void) | null = null;
 
+    let unsubPaymentConfig: (() => void) | null = null;
+
     try {
       const configDocRef = doc(db, "global", "config");
       unsub = onSnapshot(configDocRef, (snapshot) => {
@@ -1152,6 +1154,28 @@ export default function App() {
           unsub = null;
         }
       });
+
+      // Realtime listener for payment config (settings/payment_config)
+      const paymentConfigRef = doc(db, "settings", "payment_config");
+      unsubPaymentConfig = onSnapshot(paymentConfigRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const pData = snapshot.data();
+          if (pData?.upiId) {
+            let changed = false;
+            if (localStorage.getItem('adpaint_upi_id') !== pData.upiId) {
+              localStorage.setItem('adpaint_upi_id', pData.upiId);
+              changed = true;
+            }
+            if (pData?.merchantName && localStorage.getItem('adpaint_upi_name') !== pData.merchantName) {
+              localStorage.setItem('adpaint_upi_name', pData.merchantName);
+              changed = true;
+            }
+            if (changed) {
+              window.dispatchEvent(new Event('adpaint_config_updated'));
+            }
+          }
+        }
+      }, () => {});
 
       // Live Plans collection listener so all browsers and users get admin updated plan prices real-time
       const plansColRef = collection(db, "plans");
@@ -1249,6 +1273,7 @@ export default function App() {
       window.removeEventListener('storage', handleStorageUsersUpdate);
       window.removeEventListener('adpaint_users_updated', handleStorageUsersUpdate);
       if (unsub) unsub();
+      if (unsubPaymentConfig) unsubPaymentConfig();
       if (unsubPlans) unsubPlans();
       if (unsubUsers) unsubUsers();
     };
