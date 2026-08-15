@@ -85,10 +85,9 @@ export default function WithdrawModal({
     .filter((p) => (p.userId === user.id) || (p.userId === user.id.replace('usr_', '')))
     .reduce((sum, p) => sum + (p.totalClaimed || 0), 0);
 
-  // Plan Yield is strictly the actual claimed plan earnings matching Total Income on Home/Profile
+  // Plan Yield is strictly the actual claimed plan daily income
   const totalPlanEarnings = hasPurchasedPlan
     ? Math.max(
-        (user.totalEarnings !== undefined && user.totalEarnings >= 0) ? user.totalEarnings : 0,
         totalClaimedFromPurchases,
         totalClaimedFromTx
       )

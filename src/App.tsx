@@ -2456,7 +2456,6 @@ export default function App() {
 
     const totalPlanEarnings = hasPurchased
       ? Math.max(
-          (userProfile.totalEarnings !== undefined && userProfile.totalEarnings >= 0) ? userProfile.totalEarnings : 0,
           totalClaimedFromPurchases,
           totalClaimedFromTx
         )
